@@ -4,6 +4,7 @@ import { Link } from "@qwik.dev/router";
 import { StreamText } from "~/components/stream-text/stream-text";
 import { GenerativeMesh } from "~/components/generative-mesh/generative-mesh";
 import { profile } from "~/content/profile";
+import { homeGraph, ld, seoMeta } from "~/content/seo";
 
 export default component$(() => {
   useStyles$(`
@@ -53,6 +54,14 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: profile.name,
-  meta: [{ name: "description", content: profile.tagline }],
+  title: profile.jobTitle ? `${profile.name} — ${profile.jobTitle}` : profile.name,
+  meta: seoMeta({
+    path: "/",
+    title: profile.jobTitle ? `${profile.name} — ${profile.jobTitle}` : profile.name,
+    description: profile.tagline,
+    ogType: "profile",
+  }),
+  scripts: [
+    { type: "application/ld+json", key: "ld-home", dangerouslySetInnerHTML: ld(homeGraph()) },
+  ],
 };

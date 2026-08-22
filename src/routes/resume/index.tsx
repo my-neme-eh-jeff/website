@@ -1,6 +1,7 @@
 import { component$, useStyles$ } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
 import { profile, roles, skills } from "~/content/profile";
+import { ld, resumeGraph, seoMeta } from "~/content/seo";
 
 export default component$(() => {
   useStyles$(`
@@ -16,7 +17,7 @@ export default component$(() => {
   return (
     <div class="wrap">
       <h1>Resume</h1>
-      <p class="muted">{profile.location}</p>
+      {profile.city && <p class="muted">{profile.city}</p>}
 
       <h2 style={{ marginTop: "2rem" }}>Experience</h2>
       {roles.length === 0 ? (
@@ -60,5 +61,12 @@ export default component$(() => {
 
 export const head: DocumentHead = {
   title: `Resume — ${profile.name}`,
-  meta: [{ name: "description", content: `Resume and experience for ${profile.name}.` }],
+  meta: seoMeta({
+    path: "/resume/",
+    title: `Resume — ${profile.name}`,
+    description: `Experience, roles and skills for ${profile.name}.`,
+  }),
+  scripts: [
+    { type: "application/ld+json", key: "ld-resume", dangerouslySetInnerHTML: ld(resumeGraph()) },
+  ],
 };

@@ -10,17 +10,72 @@
 
 export const profile = {
   name: "Aman Nambisan",
-  // TODO: your actual one-liner. This shows up in the hero and in meta tags.
+
+  /**
+   * TODO: your actual one-liner.
+   *
+   * This is load-bearing: it renders in the hero AND becomes the meta
+   * description, the og:description, and schema.org Person.description.
+   * Until it is filled in, search results and social cards literally read
+   * "TODO: one line on what you do" under your name. 120-160 chars.
+   */
   tagline: "TODO: one line on what you do",
-  // TODO: 2-3 sentences. Recruiters read this first.
+
+  /** TODO: 2-3 sentences. Recruiters read this before anything else. */
   bio: "TODO: short bio.",
-  location: "TODO: city",
-  email: "TODO: public contact email",
+
+  /**
+   * TODO: pick ONE canonical job title and use the identical string on
+   * LinkedIn and GitHub. Variation is what creates entity ambiguity.
+   */
+  jobTitle: "",
+
+  /** TODO: city. Feeds both the visible resume and PostalAddress.addressLocality. */
+  city: "",
+
+  /** TODO: public contact email, or leave empty to keep it uncrawled. */
+  email: "",
+
+  /** TODO: current employer, or null. */
+  employer: null as { name: string; url: string } | null,
+
+  /**
+   * TODO: topics you would defend in an interview. Feeds Person.knowsAbout.
+   * Name specific technologies, not categories.
+   */
+  knowsAbout: [] as string[],
+
+  /**
+   * Visible links in the hero.
+   * TODO: add LinkedIn and anything else you want public.
+   */
   links: [
     { label: "GitHub", href: "https://github.com/my-neme-eh-jeff" },
-    // TODO: add LinkedIn / X / anything else you want public
   ],
-} as const;
+
+  /**
+   * schema.org sameAs -- the machine-readable "these accounts are one person"
+   * assertion, and the best entity-disambiguation tool available.
+   *
+   * ONLY add URLs you have confirmed are yours and are live. A stale or wrong
+   * profile here actively harms disambiguation. Research surfaced a plausible
+   * LinkedIn slug and a read.cv page, but neither was verified, so neither is
+   * listed -- confirm them first.
+   *
+   * Also make these reciprocal: each profile should link back to this domain.
+   */
+  sameAs: [
+    "https://github.com/my-neme-eh-jeff",
+    // TODO: "https://www.linkedin.com/in/<verified-handle>",
+  ] as string[],
+
+  /**
+   * Path to a 1200x630 social card under public/, e.g. "/og/home.png".
+   * Empty means no og:image tags are emitted at all -- deliberate, because a
+   * referenced-but-missing image renders a blank card, which is worse than none.
+   */
+  ogImage: "",
+};
 
 export type Role = {
   company: string;

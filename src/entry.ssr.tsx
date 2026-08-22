@@ -16,7 +16,7 @@ export default createRenderer((opts) => {
       ...opts,
       // Use container attributes to set attributes on the html tag.
       containerAttributes: {
-        lang: "en-us",
+        lang: "en",
         ...opts.containerAttributes,
       },
       serverData: {

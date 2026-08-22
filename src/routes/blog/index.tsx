@@ -1,6 +1,7 @@
 import { component$, useStyles$ } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
 import { posts, profile } from "~/content/profile";
+import { blogGraph, ld, seoMeta } from "~/content/seo";
 
 // Sorted once at module scope, not per render — see Qwik best practices.
 const sorted = [...posts].sort((a, b) => (a.date < b.date ? 1 : -1));
@@ -28,5 +29,12 @@ export default component$(() => {
 
 export const head: DocumentHead = {
   title: `Writing — ${profile.name}`,
-  meta: [{ name: "description", content: `Posts by ${profile.name}.` }],
+  meta: seoMeta({
+    path: "/blog/",
+    title: `Writing — ${profile.name}`,
+    description: `Technical writing by ${profile.name}.`,
+  }),
+  scripts: [
+    { type: "application/ld+json", key: "ld-blog", dangerouslySetInnerHTML: ld(blogGraph()) },
+  ],
 };
