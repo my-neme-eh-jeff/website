@@ -46,7 +46,8 @@ cost no invocations.
       `npx wrangler deploy`.
 - [x] **3. Apex Custom Domain** — declared in `wrangler.jsonc` `routes` and
       provisioned by `wrangler deploy` inside Workers Builds. The DNS record
-      and TLS certificate are created automatically.
+      and TLS certificate are created automatically. Verified live:
+      HTTP 200, TLS verified, `/no-such-page` correctly 404s.
 - [ ] **4. `www` redirect** — needs two manual steps in the dashboard,
       because Wrangler does not manage arbitrary DNS or Rules:
 
@@ -78,6 +79,12 @@ node — see Open items.
     curl -sI https://amannambisan.com | head -3
     curl -sI https://www.amannambisan.com | head -3   # expect 301
 
+If curl reports "Could not resolve host" right after a DNS change while
+`dig +short A amannambisan.com` returns records, that is a stale negative
+entry in the local resolver cache, not a site fault. Pin past it with
+`curl --resolve amannambisan.com:443:<edge-ip>`, or flush:
+`sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder`.
+
 ## Open items
 
 - **Local node is broken.** `node`, `npm`, and `npx` are nvm shims that fail
@@ -87,10 +94,11 @@ node — see Open items.
 - **No lockfile.** `wrangler` is pinned to an exact version in
   `package.json`, which is the reproducibility guarantee for now. A real
   lockfile needs working local node. Transitive deps stay unpinned.
-- **Custom-domain provisioning in CI is unverified.** Cloudflare's docs do
-  not state whether `wrangler deploy` provisions a Custom Domain
-  non-interactively. If a build stalls or errors on a prompt, set the
-  Workers Builds deploy command to `npx wrangler deploy --yes`.
+- ~~Custom-domain provisioning in CI is unverified.~~ **Resolved.**
+  Cloudflare's docs never stated whether `wrangler deploy` provisions a
+  Custom Domain non-interactively. It does: the apex was created by Workers
+  Builds with no prompt and no `--yes` flag. Keep `--yes` in mind only if a
+  future wrangler version regresses this.
 
 ## Gotchas
 
