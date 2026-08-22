@@ -21,7 +21,7 @@
     "preview": "qwik build preview && vite preview --open",
     "start": "vite --open --mode ssr",
     "qwik": "qwik",
-    "build.server": "qwik check-client src dist && vite build -c adapters/ssg/vite.config.ts && node scripts/emit-404.mjs"
+    "build.server": "qwik check-client src dist && vite build -c adapters/ssg/vite.config.ts && node scripts/postbuild.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

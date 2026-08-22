@@ -1,0 +1,63 @@
+# https://amannambisan.com/robots.txt
+#
+# This site wants to be crawled, indexed, and cited. Everything is allowed.
+#
+# The per-agent Allow blocks below are DOCUMENTATION, not function: an empty
+# robots.txt already means "allow everything" to compliant crawlers. They exist
+# so a future edit can't quietly disallow a retrieval crawler without someone
+# noticing. The one line here that does real work is Sitemap:.
+#
+# Retrieval vs training is a real distinction, and the two groups below are
+# separated on purpose. Retrieval agents decide whether this site can be cited
+# in an AI answer. Training agents decide whether it lands in model weights.
+
+User-agent: *
+Allow: /
+
+# --- Retrieval / search indexing. Blocking any of these removes this site
+# --- from the corresponding AI answer surface.
+
+User-agent: Googlebot
+Allow: /
+
+# Feeds Bing, Copilot, AND ChatGPT's blended index. The worst one to block.
+User-agent: bingbot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# --- Training corpora. Allowed deliberately: for a job-seeking portfolio,
+# --- being in a model's weights is upside, and everything here is a public
+# --- resume we want copied. To opt out of training while keeping every
+# --- citation pathway intact, flip these four to "Disallow: /" and change
+# --- nothing above.
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+Sitemap: https://amannambisan.com/sitemap.xml
