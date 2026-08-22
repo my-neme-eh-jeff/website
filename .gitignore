@@ -3,3 +3,51 @@ node_modules/
 .dev.vars
 .DS_Store
 .claude/settings.local.json
+
+# --- Qwik / Vite ---
+# Build
+/dist
+/lib
+/lib-types
+/server
+
+# Development
+node_modules
+.env
+.planning
+*.local
+
+# Cache
+.cache
+.mf
+.rollup.cache
+tsconfig.tsbuildinfo
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor
+.vscode/*
+!.vscode/launch.json
+!.vscode/*.code-snippets
+
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Yarn
+.yarn/*
+!.yarn/releases
+dist/
+.qwik/
+tmp/
+server/

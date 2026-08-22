@@ -1,0 +1,21 @@
+# Parsed by Cloudflare Workers static assets. Lives in public/ so Qwik's build
+# copies it into dist/ alongside the assets it describes.
+#
+# Workers defaults every asset to `max-age=0, must-revalidate`, which is safe
+# but means a revalidation round trip for files that can never change.
+
+# Qwik emits content-hashed filenames here, so the content is immutable by
+# construction: a change produces a new filename.
+/build/*
+  Cache-Control: public, max-age=31556952, immutable
+
+/assets/*
+  Cache-Control: public, max-age=31556952, immutable
+
+# HTML keeps the safe default so a deploy is visible immediately.
+# No CSP here on purpose: Qwik's resumability relies on inline scripts, so a
+# strict policy needs nonce/hash plumbing rather than a one-line guess.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY

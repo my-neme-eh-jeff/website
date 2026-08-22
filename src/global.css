@@ -1,0 +1,57 @@
+/* Theme tokens. Light is the base; dark overrides only what changes. */
+:root {
+  --bg: #fbfaf8;
+  --surface: #ffffff;
+  --text: #16150f;
+  --muted: #5f5d55;
+  --line: rgba(0, 0, 0, 0.1);
+  --accent: #d97757;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --measure: 68ch;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12110d;
+    --surface: #1b1a15;
+    --text: #f2f0e9;
+    --muted: #a4a096;
+    --line: rgba(255, 255, 255, 0.12);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration-color: var(--line); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--accent); }
+
+h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 0.5rem; }
+h1 { font-size: clamp(2rem, 6vw, 3.25rem); }
+h2 { font-size: clamp(1.25rem, 3vw, 1.6rem); }
+
+p { margin: 0 0 1rem; }
+
+/* Wide content must scroll itself rather than the page. */
+pre, table { overflow-x: auto; max-width: 100%; }
+
+.wrap { width: 100%; max-width: var(--measure); margin: 0 auto; padding: 0 1.25rem; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); font-size: 0.85em; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

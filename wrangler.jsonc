@@ -3,21 +3,22 @@
   // Docs: https://developers.cloudflare.com/workers/static-assets/
   //
   // Assets-only Worker: no "main" entrypoint, because there is no
-  // server-side code yet. Add "main" if/when this site needs a handler.
+  // server-side code yet.
   //
-  // Deliberately assets-only: requests served straight from ./public are
-  // free and unlimited. Introducing a script with run_worker_first would
-  // turn every request into a billable Worker invocation against the
-  // 100k/day free tier. The www -> apex redirect is a Redirect Rule
-  // instead, which runs before Workers and costs no invocations.
+  // Deliberately assets-only: requests served straight from ./dist are free
+  // and unlimited. A script plus run_worker_first would turn every request
+  // into a billable Worker invocation against the 100k/day free tier. When
+  // the AI endpoints land, scope them as run_worker_first: ["/api/*"] so page
+  // views stay on the free asset path.
   "name": "amannambisan",
   "compatibility_date": "2026-08-22",
   "assets": {
-    "directory": "./public",
+    // Qwik SSG output, produced by `npm run build`. Not ./public any more:
+    // public/ is now Qwik's source for static files and gets copied into dist.
+    "directory": "./dist",
+    // dist/404.html is emitted by scripts/emit-404.mjs after SSG.
     "not_found_handling": "404-page"
   },
-  // Provisioned by `wrangler deploy` in Workers Builds, which runs with
-  // account credentials. Creates the Custom Domain and its DNS record.
   "routes": [
     {
       "pattern": "amannambisan.com",
