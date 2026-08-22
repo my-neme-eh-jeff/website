@@ -1,0 +1,12 @@
+{
+  "name": "amannambisan",
+  "private": true,
+  "description": "Personal portfolio — static site on Cloudflare Workers",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.123.0"
+  }
+}

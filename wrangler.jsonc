@@ -1,0 +1,13 @@
+{
+  // Cloudflare Workers static assets.
+  // Docs: https://developers.cloudflare.com/workers/static-assets/
+  //
+  // Assets-only Worker: no "main" entrypoint, because there is no
+  // server-side code yet. Add "main" if/when this site needs a handler.
+  "name": "amannambisan",
+  "compatibility_date": "2026-08-22",
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "404-page"
+  }
+}
