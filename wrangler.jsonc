@@ -4,10 +4,24 @@
   //
   // Assets-only Worker: no "main" entrypoint, because there is no
   // server-side code yet. Add "main" if/when this site needs a handler.
+  //
+  // Deliberately assets-only: requests served straight from ./public are
+  // free and unlimited. Introducing a script with run_worker_first would
+  // turn every request into a billable Worker invocation against the
+  // 100k/day free tier. The www -> apex redirect is a Redirect Rule
+  // instead, which runs before Workers and costs no invocations.
   "name": "amannambisan",
   "compatibility_date": "2026-08-22",
   "assets": {
     "directory": "./public",
     "not_found_handling": "404-page"
-  }
+  },
+  // Provisioned by `wrangler deploy` in Workers Builds, which runs with
+  // account credentials. Creates the Custom Domain and its DNS record.
+  "routes": [
+    {
+      "pattern": "amannambisan.com",
+      "custom_domain": true
+    }
+  ]
 }
