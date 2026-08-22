@@ -10,6 +10,19 @@
   // into a billable Worker invocation against the 100k/day free tier. When
   // the AI endpoints land, scope them as run_worker_first: ["/api/*"] so page
   // views stay on the free asset path.
+  // Custom build step. `wrangler deploy` runs this before deploying, and
+  // Workers Builds' default deploy command is already `npx wrangler deploy` --
+  // so the build lives here in the repo instead of in dashboard-only config
+  // that cannot be version-controlled or reviewed.
+  //
+  // Leave the Workers Builds "build command" field EMPTY. Setting it as well
+  // would build twice.
+  //
+  // `npm ci` first because the CI container's install step is not guaranteed
+  // to have run before the deploy command.
+  "build": {
+    "command": "npm ci && npm run build"
+  },
   "name": "amannambisan",
   "compatibility_date": "2026-08-22",
   "assets": {
