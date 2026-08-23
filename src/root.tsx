@@ -49,6 +49,25 @@ export default component$(() => {
           media="(prefers-color-scheme: dark)"
           content="#12110d"
         />
+
+        {/*
+         * Preload only the one font file needed for first paint: the variable
+         * sans, latin subset. Everything else (latin-ext, both mono weights)
+         * is fetched on demand via unicode-range, so preloading them would be
+         * bytes spent on nothing.
+         *
+         * `crossorigin` is REQUIRED even though this is same-origin. Fonts are
+         * always fetched in CORS mode, so a preload without it is treated as a
+         * different request than the one @font-face makes -- and the file is
+         * downloaded twice.
+         */}
+        <link
+          rel="preload"
+          href="/fonts/hanken-grotesk-v12-latin.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
         {/*
          * Three icons, because no single format covers everything:
          * - .svg is the one that renders for most traffic, and is the only one

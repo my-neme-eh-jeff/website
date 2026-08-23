@@ -27,6 +27,91 @@
 
 @import "tailwindcss";
 
+/*
+ * Self-hosted webfonts. Files and licences: public/fonts/
+ * Regenerate with `npm run fonts` -- never hand-edit the .woff2 filenames,
+ * they carry the upstream Google Fonts version so the URLs stay honest under
+ * `Cache-Control: immutable`.
+ *
+ * Hanken Grotesk is VARIABLE: one file covers weight 300-800, so asking for
+ * 500 or 700 costs no extra request. Do not add per-weight @font-face blocks.
+ *
+ * `font-display: swap` plus a preload in root.tsx: text paints immediately in
+ * the fallback and swaps once the font lands. The alternative, `optional`,
+ * would silently ship the fallback to anyone on a slow first visit.
+ *
+ * The unicode-range split means latin-ext is fetched only if a page actually
+ * uses an accented character -- so it is free to keep.
+ */
+
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url("/fonts/hanken-grotesk-v12-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url("/fonts/hanken-grotesk-v12-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Fira Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/fira-mono-v16-400-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Fira Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/fira-mono-v16-400-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Fira Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/fira-mono-v16-500-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Fira Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/fira-mono-v16-500-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 /* --- Raw palette. Never referenced by components; only by the swap below. -- */
 :root {
   --paper: #fbfaf8;
@@ -85,8 +170,16 @@
 }
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  /*
+   * Fallbacks are not decoration: they are what renders during the swap
+   * window and if a font request ever fails. Hanken Grotesk is a grotesk, so
+   * Helvetica Neue/Arial keep the substitute close in width; the system stack
+   * comes last.
+   */
+  --font-sans:
+    "Hanken Grotesk", "Helvetica Neue", Arial, ui-sans-serif, system-ui,
+    sans-serif;
+  --font-mono: "Fira Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /*
    * Two width tokens, because one was doing two jobs.

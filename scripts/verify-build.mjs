@@ -259,6 +259,54 @@ check("every hero link is also asserted in sameAs", () => {
   return `${hrefs.length} links, all in sameAs`;
 });
 
+check("every referenced font file exists and is a real woff2", () => {
+  /*
+   * A typo in a @font-face url() or a preload href does not error -- the
+   * browser silently renders the fallback stack. The site looks fine, just
+   * wrong, which is the hardest kind of regression to notice.
+   */
+  const css = read("src", "global.css");
+  const refs = [...css.matchAll(/url\("(\/fonts\/[^"]+)"\)/g)].map((m) => m[1]);
+  assert(refs.length > 0, "No /fonts/ references in global.css.");
+
+  for (const ref of new Set(refs)) {
+    const onDisk = p("dist", ref.replace(/^\//, ""));
+    assert(
+      existsSync(onDisk),
+      `global.css references ${ref}, which is not in dist. Run \`npm run fonts\`.`,
+    );
+    // woff2 files start with the ASCII signature 'wOF2'.
+    const sig = readFileSync(onDisk).subarray(0, 4).toString("latin1");
+    assert(
+      sig === "wOF2",
+      `${ref} is not woff2 (signature ${JSON.stringify(sig)}).`,
+    );
+  }
+
+  // A preload for a file that does not exist wastes a request and warns in devtools.
+  const html = read("dist", "index.html");
+  for (const m of html.matchAll(
+    /<link[^>]*rel="preload"[^>]*href="([^"]+)"[^>]*>/g,
+  )) {
+    const [tag, href] = m;
+    if (!href.startsWith("/fonts/")) continue;
+    assert(
+      refs.includes(href),
+      `Preloading ${href}, which no @font-face uses -- so it is downloaded and ignored.`,
+    );
+    /*
+     * Fonts are always fetched in CORS mode. A preload without crossorigin is
+     * a DIFFERENT cache entry than the @font-face request, so the file gets
+     * downloaded twice -- a silent doubling, not an error.
+     */
+    assert(
+      /crossorigin/i.test(tag),
+      `Font preload for ${href} lacks crossorigin, so the file downloads twice.`,
+    );
+  }
+  return `${new Set(refs).size} files`;
+});
+
 // --- Accessibility -------------------------------------------------------
 //
 // Structural and colour checks only. These catch regressions, they do not

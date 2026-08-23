@@ -23,7 +23,8 @@
     "qwik": "qwik",
     "build.server": "qwik check-client src dist && vite build -c adapters/ssg/vite.config.ts",
     "verify": "node scripts/verify-build.mjs",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "fonts": "node scripts/fetch-fonts.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

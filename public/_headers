@@ -28,6 +28,13 @@
 /og/*
   Cache-Control: public, max-age=604800
 
+# Fonts CAN be immutable, unlike the icons above: their filenames carry the
+# upstream Google Fonts version (v12, v16), so a font update produces a new
+# URL rather than needing an old one to expire. See scripts/fetch-fonts.mjs.
+/fonts/*.woff2
+  Cache-Control: public, max-age=31556952, immutable
+  Access-Control-Allow-Origin: *
+
 # HTML keeps the safe default so a deploy is visible immediately.
 /*
   X-Content-Type-Options: nosniff
