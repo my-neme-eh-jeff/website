@@ -26,7 +26,8 @@
     "icons": "node scripts/make-icons.mjs",
     "fonts": "node scripts/fetch-fonts.mjs",
     "audit": "node scripts/audit.mjs",
-    "audit.check": "node scripts/audit.mjs --check"
+    "audit.check": "node scripts/audit.mjs --check",
+    "og": "node scripts/make-og.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

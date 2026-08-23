@@ -365,6 +365,57 @@ check("every class in the output has a CSS rule", () => {
   return `${used.size} tokens, all resolved`;
 });
 
+check("og:image is referenced only if it exists and is a real image", () => {
+  /*
+   * A referenced-but-missing og:image is worse than none: the platform reserves
+   * the card's space and renders it blank. So if the tag is emitted, the file
+   * must be in dist AND actually be an image.
+   */
+  const html = read("dist", "index.html");
+  const tag = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/);
+  if (!tag) return "not emitted (allowed)";
+
+  const url = tag[1];
+  const rel = url.replace(/^https?:\/\/[^/]+/, "").replace(/^\//, "");
+  const onDisk = p("dist", rel);
+  assert(existsSync(onDisk), `og:image points at ${url}, absent from dist.`);
+
+  const buf = readFileSync(onDisk);
+  const jpeg = buf[0] === 0xff && buf[1] === 0xd8;
+  const png = buf.subarray(1, 4).toString("latin1") === "PNG";
+  assert(jpeg || png, `${rel} is neither JPEG nor PNG.`);
+
+  /*
+   * Scrapers fetch this before rendering a preview, and several give up on
+   * large files. A gradient card as lossless PNG lands near 900 kB, which is
+   * why this exists as a ceiling rather than a comment.
+   */
+  const kb = Math.round(buf.length / 1024);
+  assert(
+    buf.length < 400_000,
+    `${rel} is ${kb} kB. Social scrapers fetch this before rendering; keep it ` +
+      `under ~400 kB (JPEG, not PNG, for a gradient).`,
+  );
+
+  // Every platform crops from 1200x630; anything else gets cropped oddly.
+  if (png) {
+    const w = buf.readUInt32BE(16);
+    const h = buf.readUInt32BE(20);
+    assert(w === 1200 && h === 630, `${rel} is ${w}x${h}, expected 1200x630.`);
+  }
+
+  const twitter = html.match(
+    /<meta[^>]*name="twitter:card"[^>]*content="([^"]+)"/,
+  );
+  assert(
+    twitter?.[1] === "summary_large_image",
+    `twitter:card is "${twitter?.[1]}" but an og:image exists — it should be ` +
+      `summary_large_image, or X renders the small card and wastes the image.`,
+  );
+
+  return `${rel}, ${kb} kB`;
+});
+
 // --- Accessibility -------------------------------------------------------
 //
 // Structural and colour checks only. These catch regressions, they do not

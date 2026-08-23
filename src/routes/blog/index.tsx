@@ -11,13 +11,21 @@ export default component$(() => {
     <div class="wrap">
       <div class="max-w-measure">
         <h1 class="mb-6">Writing</h1>
-        {sorted.map((p) => (
-          <article class="hairline" key={p.slug}>
-            <h2 class="mb-1 text-lg">{p.title}</h2>
-            <div class="text-muted text-sm">{p.date}</div>
-            <p class="text-muted mt-1 mb-0">{p.summary}</p>
-          </article>
-        ))}
+        {sorted.length === 0 ? (
+          <div class="callout">
+            Nothing published yet. When there is, it will be here — the list is
+            empty rather than filled with a placeholder, because a fake post is
+            indexable and a missing one is not.
+          </div>
+        ) : (
+          sorted.map((p) => (
+            <article class="hairline" key={p.slug}>
+              <h2 class="mb-1 text-lg">{p.title}</h2>
+              <div class="text-muted text-sm">{p.date}</div>
+              <p class="text-muted mt-1 mb-0">{p.summary}</p>
+            </article>
+          ))
+        )}
       </div>
     </div>
   );

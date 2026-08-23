@@ -97,7 +97,30 @@ export default component$(() => {
                 {pr.updated.slice(0, 7)}
               </span>
             </div>
-            <p class="text-muted mt-1 mb-0">{pr.summary}</p>
+            <p class="text-muted mt-1 mb-3">{pr.summary}</p>
+
+            {/*
+             * The detail paragraphs were already written (drawn from each repo's
+             * README) but rendered nowhere, which is the worst of both: the words
+             * exist and no reader or retrieval engine can see them.
+             *
+             * This is the one lever that raises content depth without inventing
+             * anything — retrieval systems select passages, and a 140-word page
+             * offers almost nothing to select.
+             */}
+            {pr.detail.map((d, i) => (
+              <p class="mb-2 last:mb-3" key={i}>
+                {d}
+              </p>
+            ))}
+
+            <ul class="text-muted flex flex-wrap gap-x-3 gap-y-1 p-0 font-mono text-xs">
+              {pr.stack.map((t) => (
+                <li class="list-none" key={t}>
+                  {t}
+                </li>
+              ))}
+            </ul>
           </article>
         ))}
       </section>
