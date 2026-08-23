@@ -3,10 +3,6 @@ import { Link, useLocation } from "@qwik.dev/router";
 import { ScoreRow } from "~/components/score-ring/score-ring";
 import { profile } from "~/content/profile";
 
-/**
- * Evaluated at build time, because this site is statically generated.
- * The year only advances when the site is rebuilt.
- */
 const buildYear = new Date().getFullYear();
 
 const pages = [
@@ -16,25 +12,21 @@ const pages = [
 ];
 
 /**
- * Two columns: a narrow rail of links, a rule, and everything else.
+ * No sidebar, no rule, no navbar.
  *
  * ---------------------------------------------------------------------------
- * The full-width top navbar is gone. It was a border and four words — it spent
- * a whole band of the viewport saying almost nothing, and it made every page
- * open the same bland way.
+ * The left of the page is deliberately EMPTY — just the grainy gradient
+ * showing through. Everything readable lives in a column on the right.
  *
- * The rail replaces it and does more with less: pages, then profiles, then the
- * measured scores, stacked in one column with the rule as the only divider. The
- * rule sits at 13rem rather than near centre, so the content column keeps the
- * room it needs and the rail reads as an index rather than a sidebar.
+ * A previous attempt put a link rail and a glowing divider on the left, which
+ * turned that emptiness into a sidebar. That is the opposite of the intent: the
+ * space is not a container for navigation, it is the artwork, and the content
+ * is offset into it rather than framed by it.
  *
- * Below `lg` the rail collapses to a horizontal strip, because a 13rem column
- * on a phone leaves nothing for the text.
- *
- * `view-transition-name` is the load-bearing detail for navigation: the rail
- * and the atmosphere are named, so the browser carries them across a route
- * change untouched and only the content animates. Names must be unique per
- * page — two elements sharing one aborts the whole transition.
+ * Hence `margin-inline-start: auto` on a max-width column, not a grid with a
+ * named left cell. Nothing occupies the left; the column simply does not extend
+ * into it. Below `lg` the offset collapses, because a phone has no room to give
+ * away.
  * ---------------------------------------------------------------------------
  */
 export default component$(() => {
@@ -48,9 +40,6 @@ export default component$(() => {
         aria-hidden="true"
         style={{ viewTransitionName: "field" }}
       />
-      {/* Grain is its own layer so it can cover the full viewport uniformly —
-          the field above is masked to fade out, and grain that faded with it
-          would look like a gradient of noise rather than film. */}
       <div
         class="grain-page"
         aria-hidden="true"
@@ -64,104 +53,78 @@ export default component$(() => {
         Skip to content
       </a>
 
-      <div class="lg:grid lg:grid-cols-[13rem_1fr]">
-        <div
-          class="border-line lg:sticky lg:top-0 lg:h-dvh lg:border-r"
-          style={{ viewTransitionName: "rail" }}
-        >
-          <div class="flex h-full flex-col gap-8 px-5 py-6 lg:py-8">
-            <Link
-              href="/"
-              class="text-base font-semibold tracking-tight no-underline"
-            >
-              {profile.name}
-            </Link>
+      <div class="mr-0 ml-auto w-full max-w-[46rem] px-5 lg:max-w-[52rem] lg:pr-16">
+        {/*
+         * Links sit inline at the top of the column, not in a rail. Small,
+         * horizontal, no border — an index line rather than a chrome band.
+         */}
+        <header class="flex flex-wrap items-baseline gap-x-5 gap-y-2 pt-8 lg:pt-14">
+          {pages.map((p) => {
+            const active = path === p.href;
+            return (
+              <Link
+                key={p.href}
+                href={p.href}
+                aria-current={active ? "page" : undefined}
+                class={
+                  active
+                    ? "decoration-accent text-text text-sm underline underline-offset-4"
+                    : "text-muted hover:text-text text-sm no-underline"
+                }
+              >
+                {p.label}
+              </Link>
+            );
+          })}
 
-            <nav aria-label="Pages">
-              <ul class="flex flex-row gap-4 p-0 lg:flex-col lg:gap-1.5">
-                {pages.map((p) => {
-                  const active = path === p.href;
-                  return (
-                    <li class="list-none" key={p.href}>
-                      <Link
-                        href={p.href}
-                        aria-current={active ? "page" : undefined}
-                        class={
-                          active
-                            ? "text-text decoration-accent underline underline-offset-4"
-                            : "text-muted hover:text-text no-underline"
-                        }
-                      >
-                        {p.label}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </nav>
-
-            <nav aria-label="Profiles" class="hidden lg:block">
-              <ul class="flex flex-col gap-1.5 p-0">
-                {profile.links.map((l) => (
-                  <li class="list-none" key={l.href}>
-                    <a
-                      href={l.href}
-                      rel="me noopener"
-                      class="text-muted hover:text-text no-underline"
-                    >
-                      {l.label}
-                      <span
-                        class="text-accent ml-1 font-mono text-xs"
-                        aria-hidden="true"
-                      >
-                        ↗
-                      </span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-
-            {/* Scores sit at the foot of the rail on desktop: there for anyone
-                who looks, never competing with the content. */}
-            <div class="mt-auto hidden lg:block">
-              <p class="eyebrow mb-3">Measured</p>
-              <ScoreRow compact />
-              <p class="text-muted mt-6 mb-0 text-xs">
-                © {buildYear}
-                <br />
-                <a href="https://github.com/my-neme-eh-jeff/website">Source</a>
-              </p>
-            </div>
-          </div>
-        </div>
+          <span class="ml-auto flex flex-wrap gap-x-4 gap-y-2">
+            {profile.links.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                rel="me noopener"
+                class="text-muted hover:text-text text-sm no-underline"
+              >
+                {l.label}
+                <span
+                  class="text-accent ml-1 font-mono text-xs"
+                  aria-hidden="true"
+                >
+                  ↗
+                </span>
+              </a>
+            ))}
+          </span>
+        </header>
 
         <main
           id="main"
           tabIndex={-1}
-          class="min-w-0 py-10 focus:outline-none lg:py-16"
+          class="min-w-0 pt-14 pb-16 focus:outline-none"
           style={{ viewTransitionName: "page" }}
         >
           <Slot />
-
-          {/* The rail hides its lower half below lg, so the same information
-              has to land somewhere on a phone. */}
-          <div class="border-line mt-16 border-t px-5 pt-8 lg:hidden">
-            <p class="eyebrow mb-3">Measured</p>
-            <ScoreRow compact />
-            <div class="text-muted mt-6 flex flex-wrap gap-4 text-xs">
-              <span>
-                © {buildYear} {profile.name}
-              </span>
-              <a
-                class="ml-auto"
-                href="https://github.com/my-neme-eh-jeff/website"
-              >
-                Source
-              </a>
-            </div>
-          </div>
         </main>
+
+        <footer class="text-muted border-line/50 border-t py-8 text-xs">
+          <div class="mb-6">
+            <ScoreRow compact />
+          </div>
+          <div class="flex flex-wrap gap-4">
+            <span>
+              © {buildYear} {profile.name}
+            </span>
+            <a
+              class="ml-auto"
+              href="https://github.com/my-neme-eh-jeff/website"
+            >
+              Source
+              <span class="text-accent ml-1 font-mono" aria-hidden="true">
+                ↗
+              </span>
+            </a>
+          </div>
+        </footer>
       </div>
     </div>
   );

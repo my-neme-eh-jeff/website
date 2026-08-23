@@ -70,7 +70,7 @@ Generator for all of the above: `src/content/seo.ts`. Verify the built output,
 not the source:
 
 ```bash
-npm run build
+pnpm run build
 grep -o 'application/ld+json' dist/index.html | wc -l   # expect exactly 1
 node -e 'const h=require("fs").readFileSync("dist/index.html","utf8");
  const m=h.match(/<script type="application\/ld\+json">(.*?)<\/script>/s);

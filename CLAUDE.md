@@ -1,6 +1,7 @@
 # CLAUDE.md
 
 Static portfolio site. Qwik 2 (beta) → SSG → Cloudflare Workers static assets.
+Package manager is **pnpm** — `npm` commands will fight the lockfile.
 Styling is Tailwind v4. No server code; `dist/` is uploaded as-is.
 
 ## The anti-rot rule
@@ -32,11 +33,11 @@ the docs, when they disagree.
 
 ## Invariants
 
-Most of these are **executed**, not just written down — `npm run verify` checks
+Most of these are **executed**, not just written down — `pnpm run verify` checks
 them against the real build output. Add new ones there, not here.
 
 - **Pin exact. No carets.** `^2.0.0-beta.38` silently installed beta.39 — carets
-  don't pin prereleases. Verify: `npm run verify` (the bare
+  don't pin prereleases. Verify: `pnpm run verify` (the bare
   `grep -c '\^' package.json` returns 1, not 0 — `engines.node` legitimately
   uses carets, which is why the check parses the dependency blocks instead).
 - **Qwik 2 docs are `next.qwik.dev`.** `qwik.dev` is v1; its APIs aren't here.
@@ -47,7 +48,7 @@ them against the real build output. Add new ones there, not here.
   in `wrangler.jsonc` `build.command`, and wrangler runs it even with no `main`.
   Setting the dashboard field too would build twice.
   Verified 2026-08-23 — prints `[custom build]`:
-  `npx wrangler deploy --dry-run`
+  `pnpm exec wrangler deploy --dry-run`
 - **`src/routes/404.tsx` stays a file route**, not a directory route. Qwik's
   sitemap guard tests `endsWith("/404.html")`; Cloudflare's `not_found_handling`
   wants `dist/404.html` exactly there.
@@ -59,5 +60,5 @@ them against the real build output. Add new ones there, not here.
   media query retint the whole site; a hardcoded colour opts out of it.
 - **`--sem-accent` is the focus-ring colour**, so its contrast is a conformance
   property, not a style choice. It needs ≥3:1 on `--sem-bg` in BOTH themes —
-  which is why light uses `--clay-deep` and dark uses `--clay`. `npm run verify`
+  which is why light uses `--clay-deep` and dark uses `--clay`. `pnpm run verify`
   recomputes this; see `.claude/skills/a11y-ui/`.

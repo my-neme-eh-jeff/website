@@ -1,5 +1,5 @@
 /**
- * Lighthouse audit. Run: `npm run audit` (after `npm run build`)
+ * Lighthouse audit. Run: `pnpm run audit` (after `pnpm run build`)
  *
  * Runs Lighthouse against the LIVE site and writes the four category scores to
  * src/content/audit.json, which the footer renders. Pass --local to measure a
@@ -37,7 +37,7 @@
  *
  * Deploys run through Cloudflare Workers Builds, which has no Chrome. Having
  * CI generate the file and commit it back would mean a push triggered by a
- * push. So this is a deliberate manual step, like `npm run icons` -- the
+ * push. So this is a deliberate manual step, like `pnpm run icons` -- the
  * scores only move when the site meaningfully changes.
  *
  * CI still runs Lighthouse, but as a REGRESSION GATE (see ci.yml): it fails

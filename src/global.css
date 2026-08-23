@@ -319,47 +319,77 @@
 @utility field {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: -2;
   pointer-events: none;
+  background-color: var(--sem-bg);
   background-image:
     radial-gradient(
-      50rem 30rem at 12% -8%,
-      color-mix(in oklab, var(--sem-accent) 14%, transparent),
-      transparent 70%
+      70rem 55rem at 8% 12%,
+      color-mix(in oklab, #ff8a3d 30%, transparent),
+      transparent 66%
     ),
     radial-gradient(
-      40rem 28rem at 88% 8%,
-      color-mix(in oklab, var(--sem-accent) 7%, transparent),
-      transparent 70%
+      55rem 48rem at 26% 68%,
+      color-mix(in oklab, #d0341f 24%, transparent),
+      transparent 64%
     ),
-    /*
-     * A cooler third wash. Two washes of one hue read as a tint; adding a
-     * violet turns the ramp into a gradient that goes somewhere, which is the
-     * whole point of the "dreamy" reference. Kept very low so it never
-     * competes with the accent.
-     */
-      radial-gradient(
-        46rem 34rem at 62% 4%,
-        color-mix(in oklab, oklch(62% 0.17 305) 6%, transparent),
-        transparent 72%
-      ),
-    radial-gradient(circle at 1px 1px, var(--sem-dot) 1px, transparent 0);
-  background-size:
-    100% 100%,
-    100% 100%,
-    22px 22px;
-  background-repeat: no-repeat, no-repeat, repeat;
-  mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 72%);
+    radial-gradient(
+      50rem 44rem at 4% 96%,
+      color-mix(in oklab, oklch(52% 0.19 318) 22%, transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      44rem 40rem at 34% 4%,
+      color-mix(in oklab, oklch(72% 0.15 78) 16%, transparent),
+      transparent 60%
+    );
 }
 
 /*
- * Site-wide grain.
+ * The gradient shifts as you scroll, so section one and section two do not sit
+ * on the same wash.
  *
- * Separate from the `grain` utility used on the gradient panel, and much
- * lighter: the panel is saturated artwork that can carry heavy noise, whereas
- * this sits over body text. Above roughly 0.1 opacity it starts to fight the
- * type, and `soft-light` rather than `overlay` keeps it from lifting the
- * background's black point.
+ * CSS scroll-driven animation, not JavaScript: `animation-timeline: scroll()`
+ * ties progress to the scroller instead of to a clock, so there is no
+ * listener, no rAF loop, and nothing to hydrate. It also runs off the main
+ * thread, which a scroll handler cannot.
+ *
+ * Guarded twice, and both guards matter. `@supports` because Safari and
+ * Firefox do not ship scroll timelines yet — without it they would apply the
+ * keyframes as a normal time-based animation and the gradient would swing
+ * through its whole range on load. `prefers-reduced-motion` because a
+ * full-viewport colour shift tied to scrolling is exactly the kind of thing
+ * that causes trouble.
+ *
+ * hue-rotate rather than swapping gradients: it moves every stop together, so
+ * the ember becomes a plum without any stop crossing over another and banding.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .field {
+      animation: field-shift linear both;
+      animation-timeline: scroll(root block);
+      /* Only the first two viewports of scrolling drive it; past that the
+         page settles rather than continuing to churn. */
+      animation-range: 0 200vh;
+    }
+  }
+}
+
+@keyframes field-shift {
+  to {
+    filter: hue-rotate(-58deg) saturate(0.82) brightness(0.92);
+    transform: scale(1.18) translateY(-5%);
+  }
+}
+
+/*
+ * Site-wide grain — the texture, not a whisper of one.
+ *
+ * This was 0.085 / soft-light, which was effectively invisible: the reference
+ * (dreamy gradients with heavy film grain) has grain as a MATERIAL, not a
+ * finishing touch. 0.28 / overlay makes it actually read, and it sits at z-index
+ * -1 over the gradient at -2 so it textures the artwork rather than the text.
  *
  * A fixed layer rather than a background on <body>, so it does not scroll with
  * the content — grain that moves reads as a rendering artefact, grain that
@@ -370,9 +400,46 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  mix-blend-mode: soft-light;
-  opacity: 0.085;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  opacity: 0.28;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/*
+ * Liquid glass.
+ *
+ * Four things together make it read as glass rather than as a grey box:
+ *
+ *   1. A translucent surface, so the gradient field genuinely shows through.
+ *   2. `backdrop-filter` blur PLUS a saturation lift — the saturation is the
+ *      part people miss. Blur alone gives frosted plastic; pushing saturation
+ *      makes the colour behind it bloom the way it does through real glass.
+ *   3. An inset highlight on the top edge only. That is the specular line
+ *      where a pane catches the light, and it is what gives the surface
+ *      thickness rather than looking like a flat overlay.
+ *   4. A wide, soft, offset shadow so it sits above the page instead of on it.
+ *
+ * `backdrop-filter` forces the element onto its own compositor layer, so keep
+ * these few and large. A grid of glass cards is a scroll-performance problem.
+ *
+ * The @supports fallback matters: without backdrop-filter the surface must go
+ * near-opaque, or the text sits on whatever the gradient happens to be doing
+ * and contrast becomes unpredictable.
+ */
+@utility glass {
+  background: color-mix(in oklab, var(--sem-surface) 62%, transparent);
+  border: 1px solid color-mix(in oklab, var(--sem-text) 14%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, white 16%, transparent),
+    inset 0 0 0 1px color-mix(in oklab, white 3%, transparent),
+    0 24px 70px -24px rgb(0 0 0 / 0.55);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .glass {
+    background: color-mix(in oklab, var(--sem-surface) 42%, transparent);
+    backdrop-filter: blur(22px) saturate(165%);
+  }
 }
 
 /*

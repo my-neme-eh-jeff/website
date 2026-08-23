@@ -23,20 +23,27 @@ needs them cleared first:
 
 Then:
 
-    npm ci          # reproducible install from package-lock.json
-    npm start       # dev server
-    npm run build   # client + SSG + type check + lint
-    npm run verify  # assert build invariants against dist/ (run after build)
-    npm run preview # serve the built output
-    npm run fmt     # prettier, incl. Tailwind class sorting
-    npm run icons   # regenerate favicon/touch icon from one geometry source
+    pnpm install --frozen-lockfile   # exact install from pnpm-lock.yaml
+    pnpm start        # dev server
+    pnpm run build    # client + SSG + type check + lint
+    pnpm run verify   # assert build invariants against dist/ (after build)
+    pnpm run audit    # Lighthouse against production -> src/content/audit.json
+    pnpm run preview  # serve the built output
+    pnpm run fmt      # prettier, incl. Tailwind class sorting
+    pnpm run icons    # regenerate favicon/touch icon from one geometry source
+    pnpm run fonts    # re-download the self-hosted webfonts
 
 ## Version pinning, and why it looks paranoid
 
 Every dependency is pinned **exact** — no carets, no `latest`. This is not
 style. The scaffold shipped `^2.0.0-beta.38`, and on a prerelease `^` resolves
-`>=2.0.0-beta.38 <3.0.0`, so a plain `npm install` silently pulled `beta.39`.
-Carets and prereleases do not mix.
+`>=2.0.0-beta.38 <3.0.0`, so a plain install silently pulled `beta.39`. Carets
+and prereleases do not mix. `pnpm run verify` asserts this on every build.
+
+The 7-day release-age cooldown is still enforced by hand. pnpm gained a
+`minimumReleaseAge` setting that would enforce it in the package manager, but
+only in **10.34.0**; this repo develops on 10.12.1, and Cloudflare's build image
+ships 10.11.1. Worth revisiting on a pnpm upgrade.
 
 Qwik is pinned to **`2.0.0-beta.38`** (published 2026-07-16) rather than the
 newest beta, to satisfy the 7-day release-age cooldown. `beta.39` was 3 days
@@ -89,7 +96,7 @@ the unused-code checks. Each is commented in place with what it costs.
 `skipLibCheck` is the one deliberate loosening — Qwik 2's shipped `.d.ts` files
 pull in the type surface of every adapter it supports, so checking them fails
 the build on upstream errors in code this site never imports. Retest on each
-Qwik bump: `npx tsc --noEmit --skipLibCheck false`.
+Qwik bump: `pnpm exec tsc --noEmit --skipLibCheck false`.
 
 ### CI gates, Cloudflare deploys
 
@@ -97,7 +104,7 @@ Qwik bump: `npx tsc --noEmit --skipLibCheck false`.
 `scripts/verify-build.mjs`. It holds **no Cloudflare credentials** and cannot
 publish — deploys stay with Workers Builds watching `main`.
 
-`npm run verify` is the interesting part: it executes the invariants that are
+`pnpm run verify` is the interesting part: it executes the invariants that are
 otherwise only prose in `CLAUDE.md`, against real build output. Today it
 asserts `dist/404.html` exists where `not_found_handling` looks for it, that the
 sitemap excludes the 404, that `wrangler.jsonc` still has no `main`, that every
@@ -119,7 +126,7 @@ request, which is exactly what the point above avoids.
 
     wrangler.jsonc              Worker config, apex Custom Domain, assets dir
     adapters/ssg/vite.config.ts SSG adapter (origin must match the real domain)
-    scripts/verify-build.mjs    post-build invariant checks (npm run verify)
+    scripts/verify-build.mjs    post-build invariant checks (pnpm run verify)
     scripts/make-icons.mjs      favicon + apple-touch-icon, one geometry source
     public/                     copied verbatim into dist/
       _headers                  cache policy + security headers
@@ -162,11 +169,11 @@ Audited against <https://next.qwik.dev/docs/guides/best-practices/>:
 - [x] Apex Custom Domain — declared in `routes`, provisioned by Workers Builds.
       Verified: HTTP 200, TLS valid
 - [x] **Workers Builds build command** — leave it **empty**. An earlier note
-      here said it had to be set to `npm run build`; that was wrong. The build
+      here said it had to be set to `pnpm run build`; that was wrong. The build
       is versioned in `wrangler.jsonc` as `build.command`, and wrangler runs it
       itself. Verified 2026-08-23:
 
-          npx wrangler deploy --dry-run   # prints "[custom build]" then builds
+          pnpm exec wrangler deploy --dry-run   # prints "[custom build]" then builds
 
       Workers Builds' default deploy command is already `npx wrangler deploy`,
       so filling in the dashboard field as well would build twice.

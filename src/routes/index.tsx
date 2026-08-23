@@ -1,53 +1,53 @@
 import { component$ } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
 import { CircledChoice } from "~/components/circled-choice/circled-choice";
-import { GradientPanel } from "~/components/gradient-panel/gradient-panel";
+import { Terminal } from "~/components/terminal/terminal";
 import { profile, projects, roles } from "~/content/profile";
 import { homeGraph, ld, seoMeta } from "~/content/seo";
 
 const current = roles[0];
 
 /**
- * The gradient panel is the hero, with the name set over it.
+ * Two sections, and the gradient behind them is the same element.
  *
- * Text on top of the artwork rather than beside it. A panel parked next to a
- * paragraph is what the last two attempts both did, and it always reads as a
- * widget rather than a composition. Over the panel, the ember gives the name
- * somewhere to sit and the page opens on colour instead of on a border.
+ * Section one is nothing but the wash and the name — no card, no eyebrow, no
+ * boxed panel. Section two is the shell. Between them the background shifts
+ * hue, driven by scroll position in CSS (see `.field` in global.css), so the
+ * change reads as one continuous surface moving rather than two backgrounds
+ * swapping.
  *
- * The overlay text is a fixed near-white, not --sem-text. The panel does not
- * theme-swap (it is artwork), so text that DID swap would turn dark-on-dark in
- * light mode. Every hue in the panel is dark enough for white to hold.
+ * There is no <GradientPanel> any more. The gradient used to be a rounded card
+ * inside the content column, which made it a widget; as the page background it
+ * is the thing the content sits on.
  */
 export default component$(() => {
   return (
-    <div class="wrap">
-      <section class="relative">
-        <GradientPanel class="min-h-[19rem] sm:min-h-[23rem] lg:min-h-[26rem]" />
-
-        <div class="absolute inset-0 flex flex-col justify-end p-6 sm:p-8 lg:p-10">
-          <p class="mb-2 font-mono text-[0.6875rem] tracking-[0.12em] text-white/70 uppercase">
-            {profile.jobTitle} · {profile.city}
-          </p>
-          <h1 class="max-w-[18ch] text-white">{profile.name}</h1>
+    <>
+      {/* Section 1 — gradient and name only. */}
+      <section class="flex min-h-[62vh] flex-col justify-center lg:min-h-[68vh]">
+        <h1 class="max-w-[20ch]">{profile.name}</h1>
+        <p class="max-w-measure text-muted mt-4 text-xl leading-snug">
+          {profile.tagline}
+        </p>
+        <div class="mt-7 flex flex-wrap items-center gap-3">
+          <a class="pill hover:border-accent" href={`mailto:${profile.email}`}>
+            Email
+          </a>
+          <CircledChoice label="say hi" />
         </div>
       </section>
 
-      <p class="max-w-measure text-muted mt-8 text-xl leading-snug">
-        {profile.tagline}
-      </p>
-
-      <p class="max-w-measure mt-4">{profile.bio}</p>
-
-      <div class="mt-6 flex flex-wrap items-center gap-3">
-        <a class="pill hover:border-accent" href={`mailto:${profile.email}`}>
-          Email
-        </a>
-        <CircledChoice label="say hi" />
-      </div>
+      {/* Section 2 — the shell. */}
+      <section class="pt-8">
+        <div class="mb-3 flex items-baseline justify-between gap-4">
+          <p class="eyebrow">Shell</p>
+          <span class="text-muted font-mono text-xs">try `help`</span>
+        </div>
+        <Terminal />
+      </section>
 
       {current && (
-        <section class="max-w-measure mt-16">
+        <section class="max-w-measure mt-20">
           <p class="eyebrow mb-4">Now</p>
           <div class="hairline flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span class="font-medium">{current.title}</span>
@@ -82,6 +82,12 @@ export default component$(() => {
                 {pr.repo ? (
                   <a href={pr.repo} rel="noopener">
                     {pr.title}
+                    <span
+                      class="text-accent ml-1 font-mono text-xs"
+                      aria-hidden="true"
+                    >
+                      ↗
+                    </span>
                   </a>
                 ) : (
                   pr.title
@@ -91,18 +97,11 @@ export default component$(() => {
                 {pr.updated.slice(0, 7)}
               </span>
             </div>
-            <p class="text-muted mt-1 mb-2">{pr.summary}</p>
-            <ul class="text-muted flex flex-wrap gap-x-3 gap-y-1 p-0 font-mono text-xs">
-              {pr.stack.map((t) => (
-                <li class="list-none" key={t}>
-                  {t}
-                </li>
-              ))}
-            </ul>
+            <p class="text-muted mt-1 mb-0">{pr.summary}</p>
           </article>
         ))}
       </section>
-    </div>
+    </>
   );
 });
 

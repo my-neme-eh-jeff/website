@@ -2,9 +2,9 @@
 # directly -- so there is no Cloudflare API token in this repo's secrets and
 # nothing here can publish. See README "Deploys".
 #
-# The last step is the interesting one: scripts/verify-build.mjs asserts the
-# invariants written down in CLAUDE.md against the real build output, so a
-# regression fails here rather than silently in production.
+# The last two steps are the interesting ones: scripts/verify-build.mjs asserts
+# the invariants written down in CLAUDE.md against the real build output, and the
+# Lighthouse step is a performance budget.
 name: CI
 
 on:
@@ -25,46 +25,56 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v7
+
+      # Must come BEFORE setup-node: `cache: pnpm` needs the pnpm binary to
+      # already exist so it can resolve the store path.
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.12.1
 
       - uses: actions/setup-node@v7
         with:
           # 24 is Active LTS and satisfies the `>=21` branch of package.json
           # engines. Pinned to a major so a Node patch cannot change the build.
           node-version: "24"
-          cache: npm
+          cache: pnpm
 
-      # `ci` not `install`: installs exactly the lockfile and fails if
-      # package.json and package-lock.json disagree. On a repo that pins every
-      # dependency exactly, that disagreement is the bug worth catching.
+      # `--frozen-lockfile` is pnpm's `npm ci`: installs exactly the lockfile and
+      # fails if package.json disagrees. On a repo that pins every dependency
+      # exactly, that disagreement is the bug worth catching.
+      #
+      # No `--ignore-scripts` needed: pnpm blocks dependency postinstall scripts
+      # by default, and this project builds with none of them approved. esbuild,
+      # sharp, workerd and @parcel/watcher are each either unused here or only
+      # needed by tooling this build never runs.
       - name: Install
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       # Ordered cheapest-first so an obvious failure reports in seconds rather
       # than after a full SSG pass.
       - name: Format check
-        run: npm run fmt.check
+        run: pnpm run fmt.check
 
       - name: Lint
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Types
-        run: npm run build.types
+        run: pnpm run build.types
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
       - name: Verify build invariants
         run: node scripts/verify-build.mjs
 
-      # Performance budget. Runs the same Lighthouse engine PSI uses, against
-      # the built output, and fails if any category drops below its floor. It
-      # WRITES NOTHING -- src/content/audit.json is refreshed deliberately with
-      # `npm run audit`, because a CI job that commits would trigger itself.
-      #
-      # ubuntu-latest ships google-chrome-stable, which chrome-launcher finds.
+      # Performance budget against the build just produced. `--local` because it
+      # must gate THIS build, not whatever is deployed; its floors are relaxed
+      # accordingly, since the local server has no compression or cache headers.
+      # It writes nothing -- src/content/audit.json is refreshed deliberately
+      # with `pnpm run audit`, because a CI job that commits would trigger itself.
       - name: Lighthouse budget
         run: node scripts/audit.mjs --check --local

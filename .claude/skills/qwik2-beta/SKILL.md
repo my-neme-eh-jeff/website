@@ -126,7 +126,7 @@ each utility so the media query still wins. Dropping the keyword produces a site
 that silently ignores dark mode. Verify:
 
 ```bash
-npm run build && grep -c 'var(--sem-bg)' dist/assets/*.css   # must be > 0
+pnpm run build && grep -c 'var(--sem-bg)' dist/assets/*.css   # must be > 0
 ```
 
 Ordering also matters: `tailwindcss()` goes **before** `qwikRouter()` in
@@ -135,7 +135,7 @@ for SSG.
 
 ## Interactive scaffolding does not work headlessly
 
-`npm run qwik add` uses `@clack/prompts`, which ignores piped stdin and did not
+`pnpm run qwik add` uses `@clack/prompts`, which ignores piped stdin and did not
 accept input through a pty either. Don't burn attempts on it — read the canonical
 config from the starter templates instead:
 

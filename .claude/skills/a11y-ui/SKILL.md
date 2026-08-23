@@ -1,6 +1,6 @@
 ---
 name: a11y-ui
-description: Use for ANY UI work in this repo - new components, restyling, colour or token changes, layout, animation. Covers the accessibility bar this project holds itself to, what `npm run verify` already enforces, what it cannot check, and the Qwik 2 + Tailwind v4 gotchas that have actually bitten here.
+description: Use for ANY UI work in this repo - new components, restyling, colour or token changes, layout, animation. Covers the accessibility bar this project holds itself to, what `pnpm run verify` already enforces, what it cannot check, and the Qwik 2 + Tailwind v4 gotchas that have actually bitten here.
 ---
 
 # Accessibility for UI work in this repo
@@ -12,7 +12,7 @@ and is listed honestly below.
 **Do this first, before reading further:**
 
 ```bash
-npm run build && npm run verify
+pnpm run build && pnpm run verify
 ```
 
 ## What is already enforced
@@ -44,7 +44,7 @@ Hence two clays: `--clay` for dark grounds (6.05:1 on `#12110d`) and
 brand colour works on both themes.** Compute it:
 
 ```bash
-npm run verify   # recomputes from src/global.css on every build
+pnpm run verify   # recomputes from src/global.css on every build
 ```
 
 ## What automation here does NOT check

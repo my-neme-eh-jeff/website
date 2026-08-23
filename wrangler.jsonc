@@ -18,10 +18,17 @@
   // Leave the Workers Builds "build command" field EMPTY. Setting it as well
   // would build twice.
   //
-  // `npm ci` first because the CI container's install step is not guaranteed
-  // to have run before the deploy command.
+  // `--frozen-lockfile` first because the CI container's install step is not
+  // guaranteed to have run before the deploy command, and because it fails
+  // loudly if pnpm-lock.yaml and package.json disagree rather than quietly
+  // resolving something new.
+  //
+  // pnpm is pre-installed in the Workers Builds image (10.11.1 at the time of
+  // writing; this repo develops on 10.12.1). Both read lockfileVersion 9.0, so
+  // no `packageManager` field is pinned -- adding one would route the install
+  // through corepack for no benefit and one more way to fail.
   "build": {
-    "command": "npm ci && npm run build",
+    "command": "pnpm install --frozen-lockfile && pnpm run build",
   },
   "name": "amannambisan",
   "compatibility_date": "2026-08-22",

@@ -112,7 +112,7 @@ check("no caret ranges on dependencies", () => {
     loose.length === 0,
     `Loose ranges: ${loose.map(([k, v]) => `${k}@${v}`).join(", ")}. ` +
       "On a prerelease, ^2.0.0-beta.38 resolves >=2.0.0-beta.38 <3.0.0, so a " +
-      "plain `npm install` silently upgrades the beta. Pin exact.",
+      "plain a plain install silently upgrades the beta. Pin exact.",
   );
   return `${Object.keys(ranges).length} deps, all exact`;
 });
@@ -273,7 +273,7 @@ check("every referenced font file exists and is a real woff2", () => {
     const onDisk = p("dist", ref.replace(/^\//, ""));
     assert(
       existsSync(onDisk),
-      `global.css references ${ref}, which is not in dist. Run \`npm run fonts\`.`,
+      `global.css references ${ref}, which is not in dist. Run \`pnpm run fonts\`.`,
     );
     // woff2 files start with the ASCII signature 'wOF2'.
     const sig = readFileSync(onDisk).subarray(0, 4).toString("latin1");
@@ -325,10 +325,19 @@ check("every class in the output has a CSS rule", () => {
   assert(cssFile, "No stylesheet in dist/assets.");
   const css = read("dist", "assets", cssFile);
 
-  // CSS escapes `:`, `[`, `/` etc. in generated class names; strip to compare.
+  /*
+   * Tailwind escapes `:` `.` `/` `[` in generated class names, so the token
+   * regex must accept an escaped anything (`\\.`) but NOT a bare `,` `.` or
+   * `:`. An earlier version allowed those, and on a grouped selector like
+   *   .border-line,.border-line\\/60{...}
+   * it matched the whole run as ONE token — recording neither real class name
+   * and reporting `border-line` as an orphan when its rule was right there.
+   * A false positive in a guard is worse than no guard, so: bare `,` ends a
+   * token, bare `:` starts a pseudo-class, bare `.` starts the next selector.
+   */
   const base = (c) => c.replace(/\\/g, "").split(":")[0];
   const selectors = new Set(
-    [...css.matchAll(/\.((?:\\.|[-\w[\]()/%.:,#])+)/g)].map((m) => base(m[1])),
+    [...css.matchAll(/\.((?:\\.|[-\w[\]()/%#])+)/g)].map((m) => base(m[1])),
   );
 
   const used = new Set();
