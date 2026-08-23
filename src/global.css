@@ -1,57 +1,240 @@
-/* Theme tokens. Light is the base; dark overrides only what changes. */
+/*
+ * Design system base. Tailwind v4, no config file — everything lives here.
+ *
+ * ---------------------------------------------------------------------------
+ * THE ONE PATTERN TO UNDERSTAND: two-layer colour
+ *
+ * Colours are defined twice on purpose.
+ *
+ *   1. `:root` holds `--sem-*` semantic values, and a prefers-color-scheme
+ *      block swaps them. This is the only place a theme decision is made.
+ *   2. `@theme inline` maps those into Tailwind's colour namespace, so
+ *      `bg-surface` / `text-muted` / `border-line` exist as utilities.
+ *
+ * `inline` is load-bearing. A plain `@theme` would emit `--color-surface:
+ * var(--sem-surface)` and utilities would resolve it once at :root, freezing
+ * the light value. `inline` substitutes the var() into each utility instead,
+ * so the media query below still wins. Verify after any change to this block:
+ *
+ *   npm run build
+ *   grep -o 'var(--sem-bg)' dist/assets/*.css | head    # must be non-empty
+ *
+ * The payoff: almost no `dark:` variants anywhere in the markup. One swap
+ * here retints the whole site, which is what keeps a visual-direction change
+ * cheap.
+ * ---------------------------------------------------------------------------
+ */
+
+@import "tailwindcss";
+
+/* --- Raw palette. Never referenced by components; only by the swap below. -- */
 :root {
-  --bg: #fbfaf8;
-  --surface: #ffffff;
-  --text: #16150f;
-  --muted: #5f5d55;
-  --line: rgba(0, 0, 0, 0.1);
-  --accent: #d97757;
-  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  --measure: 68ch;
+  --paper: #fbfaf8;
+  --ink: #16150f;
+  --clay: #d97757;
+  --cream: #f2f0e9;
+
+  /* Light is the base. */
+  --sem-bg: var(--paper);
+  --sem-surface: #ffffff;
+  --sem-text: var(--ink);
+  --sem-muted: #5f5d55;
+  --sem-line: rgb(0 0 0 / 0.1);
+  --sem-accent: var(--clay);
+
+  /* Tells the UA to render form controls and scrollbars for both themes. */
   color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #12110d;
-    --surface: #1b1a15;
-    --text: #f2f0e9;
-    --muted: #a4a096;
-    --line: rgba(255, 255, 255, 0.12);
+    --sem-bg: #12110d;
+    --sem-surface: #1b1a15;
+    --sem-text: var(--cream);
+    --sem-muted: #a4a096;
+    --sem-line: rgb(255 255 255 / 0.12);
+    /* --sem-accent is unchanged: clay clears 4.5:1 on both grounds. */
   }
 }
 
-* { box-sizing: border-box; }
-
-html { -webkit-text-size-adjust: 100%; }
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 1rem;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
+@theme inline {
+  --color-bg: var(--sem-bg);
+  --color-surface: var(--sem-surface);
+  --color-text: var(--sem-text);
+  --color-muted: var(--sem-muted);
+  --color-line: var(--sem-line);
+  --color-accent: var(--sem-accent);
 }
 
-a { color: inherit; text-decoration-color: var(--line); text-underline-offset: 3px; }
-a:hover { text-decoration-color: var(--accent); }
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
-h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 0.5rem; }
-h1 { font-size: clamp(2rem, 6vw, 3.25rem); }
-h2 { font-size: clamp(1.25rem, 3vw, 1.6rem); }
+  /*
+   * Two width tokens, because one was doing two jobs.
+   *
+   * `--measure` was previously used for BOTH the reading measure and the page
+   * container, which clamped the two-column hero on the home page to a prose
+   * width — the columns had nowhere to go. They are now separate:
+   *   max-w-measure  body copy, capped for legibility (~65-75 chars)
+   *   max-w-page     structural width for nav, footer, and wide layouts
+   */
+  --container-measure: 68ch;
+  --container-page: 72rem;
 
-p { margin: 0 0 1rem; }
+  /*
+   * Named animations, so the keyframes live here rather than being restated in
+   * every component that needs them. Used by StreamText.
+   */
+  --animate-token-in: token-in 420ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  --animate-caret: caret-blink 1.1s step-end infinite;
+  --animate-mesh-pulse: mesh-pulse 3.6s ease-in-out infinite;
+}
 
-/* Wide content must scroll itself rather than the page. */
-pre, table { overflow-x: auto; max-width: 100%; }
+@keyframes token-in {
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
 
-.wrap { width: 100%; max-width: var(--measure); margin: 0 auto; padding: 0 1.25rem; }
-.muted { color: var(--muted); }
-.mono { font-family: var(--mono); font-size: 0.85em; }
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes mesh-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/*
+ * Everything above is tokens. Everything below is the two things Tailwind
+ * deliberately does not give you: document defaults, and the handful of
+ * repeated patterns that would otherwise be copied class-string-by-class-string.
+ */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--sem-bg);
+    color: var(--sem-text);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * Headings are styled globally rather than per-use. There are three of them
+   * and they are semantic, so an h2 should not need to remember its own size.
+   */
+  h1,
+  h2,
+  h3 {
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  h1 {
+    font-size: clamp(2rem, 6vw, 3.25rem);
+  }
+  h2 {
+    font-size: clamp(1.25rem, 3vw, 1.6rem);
+  }
+
+  a {
+    color: inherit;
+    text-decoration-color: var(--sem-line);
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    text-decoration-color: var(--sem-accent);
+  }
+
+  /* Keyboard focus must stay visible; Tailwind's reset does not provide it. */
+  :focus-visible {
+    outline: 2px solid var(--sem-accent);
+    outline-offset: 2px;
+  }
+
+  /* Wide content scrolls itself, so the page body never scrolls sideways. */
+  pre,
+  table {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+/*
+ * `wrap` is the one structural container: nav, footer and every page body use
+ * it, so they all share a left edge. A utility rather than a component because
+ * it is pure layout and appears on every page.
+ *
+ * It is deliberately the PAGE width, not the reading measure. Centring prose
+ * inside its own narrower container instead left the text floating ~370px off
+ * the nav's left edge — two competing centre lines on one page. Prose is
+ * clamped with `max-w-measure` *inside* this, which keeps lines legible while
+ * still starting where the nav starts.
+ */
+@utility wrap {
+  width: 100%;
+  max-width: var(--container-page);
+  margin-inline: auto;
+  padding-inline: --spacing(5);
+}
+
+/*
+ * The three patterns that were previously restated as a `useStyles$` string in
+ * every route that needed them. Utilities rather than components because each
+ * is pure styling spread across different elements — `pill` lands on a Qwik
+ * <Link>, a plain <a> and an <li>, which a wrapper component would fight.
+ *
+ * Each replaces a pair of near-identical declarations. `pill` was `.cta`
+ * (0.45rem/0.94rem) and `.chips li` (0.25rem/0.86rem); `hairline` was `.post`
+ * and `.role`. Those sizes differed by amounts nobody chose, so they are one
+ * value now. Where a call site genuinely wants a different size, it overrides
+ * with a Tailwind class rather than forking the pattern.
+ */
+
+@utility pill {
+  display: inline-flex;
+  align-items: center;
+  gap: --spacing(1.5);
+  border: 1px solid var(--sem-line);
+  border-radius: 9999px;
+  padding: --spacing(1.5) --spacing(3.5);
+  font-size: 0.9375rem;
+  text-decoration: none;
+  transition: border-color 150ms ease;
+}
+
+@utility hairline {
+  border-top: 1px solid var(--sem-line);
+  padding-block: --spacing(5);
+}
+
+@utility callout {
+  border: 1px dashed var(--sem-line);
+  border-radius: var(--radius-xl);
+  padding: --spacing(5);
+  color: var(--sem-muted);
+}
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

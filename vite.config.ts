@@ -2,6 +2,7 @@
  * This is the base config for vite.
  * When building, the adapter config is used which loads this file and extends it.
  */
+import tailwindcss from "@tailwindcss/vite";
 import { qwikVite } from "@qwik.dev/core/optimizer";
 import { qwikRouter } from "@qwik.dev/router/vite";
 import { defineConfig, type UserConfig } from "vite";
@@ -19,9 +20,18 @@ errorOnDuplicatesPkgDeps(devDependencies, dependencies);
 /**
  * Note that Vite normally starts from `index.html` but the qwikRouter plugin makes start at `src/entry.ssr.tsx` instead.
  */
-export default defineConfig(({ command, mode }): UserConfig => {
+export default defineConfig((): UserConfig => {
   return {
-    plugins: [qwikRouter(), qwikVite(), tsconfigPaths({ root: "." })],
+    /**
+     * Tailwind v4 needs no config file and no PostCSS chain -- the vite plugin
+     * is the whole integration. Wiring taken from the starter Qwik itself
+     * ships, which is version-matched to the installed beta:
+     *   node_modules/@qwik.dev/core/dist/starters/features/tailwind/package.json
+     *
+     * It runs before qwikRouter so the CSS is already transformed by the time
+     * Qwik's optimizer collects styles for SSG.
+     */
+    plugins: [tailwindcss(), qwikRouter(), qwikVite(), tsconfigPaths({ root: "." })],
     // This tells Vite which dependencies to pre-build in dev mode.
     optimizeDeps: {
       // Put problematic deps that break bundling here, mostly those with binaries.

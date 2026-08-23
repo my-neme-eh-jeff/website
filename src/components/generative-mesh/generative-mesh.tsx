@@ -1,4 +1,4 @@
-import { component$, useStyles$ } from "@qwik.dev/core";
+import { component$ } from "@qwik.dev/core";
 
 type Props = {
   /** Same seed always yields the same figure. */
@@ -27,7 +27,16 @@ function prng(seed: number) {
 
 type Mesh = {
   pts: Array<{ x: number; y: number; r: number; d: number }>;
-  edges: Array<[number, number]>;
+  /**
+   * Resolved coordinates, not index pairs.
+   *
+   * Indices would force the render to do `pts[a].x`, which under
+   * `noUncheckedIndexedAccess` is `possibly undefined` -- true for the
+   * compiler even though the edge list is built from real indices. Resolving
+   * here removes the lookup instead of asserting it away, and the geometry is
+   * precomputed anyway, so it costs nothing.
+   */
+  edges: Array<{ x1: number; y1: number; x2: number; y2: number }>;
 };
 
 /**
@@ -53,15 +62,15 @@ function buildMesh(seed: number, nodes: number): Mesh {
   }));
 
   // Nearest-neighbour only — a full graph reads as noise.
-  const edges: Array<[number, number]> = [];
+  const edges: Mesh["edges"] = [];
   pts.forEach((p, i) => {
     pts
-      .map((q, j) => ({ j, d: (p.x - q.x) ** 2 + (p.y - q.y) ** 2 }))
+      .map((q, j) => ({ q, j, d: (p.x - q.x) ** 2 + (p.y - q.y) ** 2 }))
       .filter((o) => o.j !== i)
       .sort((a, b) => a.d - b.d)
       .slice(0, 2)
       .forEach((o) => {
-        if (i < o.j) edges.push([i, o.j]);
+        if (i < o.j) edges.push({ x1: p.x, y1: p.y, x2: o.q.x, y2: o.q.y });
       });
   });
 
@@ -71,39 +80,30 @@ function buildMesh(seed: number, nodes: number): Mesh {
 }
 
 export const GenerativeMesh = component$<Props>(({ seed = 7, nodes = 26 }) => {
-  useStyles$(`
-    .gm { display: block; width: 100%; height: auto; }
-    .gm-edge { stroke: var(--accent); stroke-width: 0.4; opacity: 0.28; }
-    .gm-node { fill: var(--accent); }
-    .gm-pulse { animation: gm-pulse 3.6s ease-in-out infinite; }
-    @keyframes gm-pulse { 0%,100% { opacity: 0.25; } 50% { opacity: 0.9; } }
-    @media (prefers-reduced-motion: reduce) { .gm-pulse { animation: none; opacity: 0.5; } }
-  `);
-
   const { pts, edges } = buildMesh(seed, nodes);
 
   return (
     <svg
-      class="gm"
+      class="block h-auto w-full"
       viewBox="0 0 100 60"
       role="img"
       aria-label="Abstract network figure"
       preserveAspectRatio="xMidYMid meet"
     >
-      {edges.map(([a, b], i) => (
+      {edges.map((e, i) => (
         <line
           key={`e${i}`}
-          class="gm-edge"
-          x1={pts[a].x}
-          y1={pts[a].y}
-          x2={pts[b].x}
-          y2={pts[b].y}
+          class="stroke-accent [stroke-width:0.4] opacity-[0.28]"
+          x1={e.x1}
+          y1={e.y1}
+          x2={e.x2}
+          y2={e.y2}
         />
       ))}
       {pts.map((p, i) => (
         <circle
           key={`n${i}`}
-          class="gm-node gm-pulse"
+          class="fill-accent animate-mesh-pulse motion-reduce:animate-none motion-reduce:opacity-50"
           cx={p.x}
           cy={p.y}
           r={p.r}

@@ -49,9 +49,7 @@ export const profile = {
    * Visible links in the hero.
    * TODO: add LinkedIn and anything else you want public.
    */
-  links: [
-    { label: "GitHub", href: "https://github.com/my-neme-eh-jeff" },
-  ],
+  links: [{ label: "GitHub", href: "https://github.com/my-neme-eh-jeff" }],
 
   /**
    * schema.org sameAs -- the machine-readable "these accounts are one person"
@@ -104,6 +102,7 @@ export const posts: Post[] = [
     slug: "hello",
     title: "Placeholder post",
     date: "2026-08-22",
-    summary: "Replace or delete. Exists so the blog index has something to lay out.",
+    summary:
+      "Replace or delete. Exists so the blog index has something to lay out.",
   },
 ];

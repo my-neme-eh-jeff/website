@@ -1,60 +1,56 @@
-import { component$, useStyles$ } from "@qwik.dev/core";
+import { component$ } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
 import { profile, roles, skills } from "~/content/profile";
 import { ld, resumeGraph, seoMeta } from "~/content/seo";
 
 export default component$(() => {
-  useStyles$(`
-    .role { border-top: 1px solid var(--line); padding: 1.25rem 0; }
-    .role-h { display: flex; gap: 0.75rem; align-items: baseline; flex-wrap: wrap; }
-    .role-h h3 { margin: 0; }
-    .period { color: var(--muted); font-size: 0.88rem; margin-left: auto; }
-    .chips { display: flex; gap: 0.5rem; flex-wrap: wrap; padding: 0; list-style: none; }
-    .chips li { border: 1px solid var(--line); border-radius: 999px; padding: 0.25rem 0.7rem; font-size: 0.86rem; }
-    .empty { border: 1px dashed var(--line); border-radius: 10px; padding: 1.25rem; color: var(--muted); }
-  `);
-
   return (
     <div class="wrap">
-      <h1>Resume</h1>
-      {profile.city && <p class="muted">{profile.city}</p>}
+      <div class="max-w-measure">
+        <h1>Resume</h1>
+        {profile.city && <p class="text-muted">{profile.city}</p>}
 
-      <h2 style={{ marginTop: "2rem" }}>Experience</h2>
-      {roles.length === 0 ? (
-        <div class="empty">
-          Nothing here yet. Add entries to <code class="mono">roles</code> in{" "}
-          <code class="mono">src/content/profile.ts</code> — deliberately left empty rather than
-          filled with invented history.
-        </div>
-      ) : (
-        roles.map((r) => (
-          <article class="role" key={`${r.company}-${r.title}`}>
-            <div class="role-h">
-              <h3>{r.title}</h3>
-              <span class="muted">{r.company}</span>
-              <span class="period">{r.period}</span>
-            </div>
-            <ul>
-              {r.points.map((p, i) => (
-                <li key={i}>{p}</li>
-              ))}
-            </ul>
-          </article>
-        ))
-      )}
+        <h2 class="mt-8 mb-2">Experience</h2>
+        {roles.length === 0 ? (
+          <div class="callout">
+            Nothing here yet. Add entries to{" "}
+            <code class="font-mono text-sm">roles</code> in{" "}
+            <code class="font-mono text-sm">src/content/profile.ts</code> —
+            deliberately left empty rather than filled with invented history.
+          </div>
+        ) : (
+          roles.map((r) => (
+            <article class="hairline" key={`${r.company}-${r.title}`}>
+              <div class="flex flex-wrap items-baseline gap-3">
+                <h3 class="text-base font-semibold">{r.title}</h3>
+                <span class="text-muted">{r.company}</span>
+                <span class="text-muted ml-auto text-sm">{r.period}</span>
+              </div>
+              <ul class="mt-2 list-disc pl-5">
+                {r.points.map((p, i) => (
+                  <li key={i}>{p}</li>
+                ))}
+              </ul>
+            </article>
+          ))
+        )}
 
-      <h2 style={{ marginTop: "2rem" }}>Skills</h2>
-      {skills.length === 0 ? (
-        <div class="empty">
-          Add to <code class="mono">skills</code> in <code class="mono">src/content/profile.ts</code>.
-        </div>
-      ) : (
-        <ul class="chips">
-          {skills.map((s) => (
-            <li key={s}>{s}</li>
-          ))}
-        </ul>
-      )}
+        <h2 class="mt-8 mb-2">Skills</h2>
+        {skills.length === 0 ? (
+          <div class="callout">
+            Add to <code class="font-mono text-sm">skills</code> in{" "}
+            <code class="font-mono text-sm">src/content/profile.ts</code>.
+          </div>
+        ) : (
+          <ul class="flex list-none flex-wrap gap-2 p-0">
+            {skills.map((s) => (
+              <li class="pill" key={s}>
+                {s}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 });
@@ -67,6 +63,10 @@ export const head: DocumentHead = {
     description: `Experience, roles and skills for ${profile.name}.`,
   }),
   scripts: [
-    { type: "application/ld+json", key: "ld-resume", dangerouslySetInnerHTML: ld(resumeGraph()) },
+    {
+      type: "application/ld+json",
+      key: "ld-resume",
+      dangerouslySetInnerHTML: ld(resumeGraph()),
+    },
   ],
 };

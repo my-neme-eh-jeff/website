@@ -7,7 +7,7 @@ export default component$(() => {
   return (
     <div class="wrap">
       <h1>404</h1>
-      <p class="muted">That page doesn't exist.</p>
+      <p class="text-muted">That page doesn't exist.</p>
       <p>
         <Link href="/">Back home →</Link>
       </p>

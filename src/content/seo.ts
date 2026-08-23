@@ -19,7 +19,8 @@ export const ORIGIN = "https://amannambisan.com";
  * otherwise break out of the ld+json tag. Escaping it as < is valid JSON
  * and inert HTML.
  */
-export const ld = (obj: unknown) => JSON.stringify(obj).replace(/</g, "\\u003c");
+export const ld = (obj: unknown) =>
+  JSON.stringify(obj).replace(/</g, "\\u003c");
 
 type SeoInput = {
   /** Route path with leading and trailing slash, e.g. "/resume/". */
@@ -37,7 +38,12 @@ type SeoInput = {
  * second conflicting tag rather than overriding the first. Google distrusts
  * both when they conflict.
  */
-export function seoMeta({ path, title, description, ogType = "website" }: SeoInput) {
+export function seoMeta({
+  path,
+  title,
+  description,
+  ogType = "website",
+}: SeoInput) {
   const url = `${ORIGIN}${path}`;
 
   const meta: Array<Record<string, string>> = [
@@ -87,10 +93,22 @@ const personNode = () => ({
   ...(profile.ogImage ? { image: `${ORIGIN}${profile.ogImage}` } : {}),
   ...(profile.knowsAbout.length ? { knowsAbout: [...profile.knowsAbout] } : {}),
   ...(profile.employer
-    ? { worksFor: { "@type": "Organization", name: profile.employer.name, url: profile.employer.url } }
+    ? {
+        worksFor: {
+          "@type": "Organization",
+          name: profile.employer.name,
+          url: profile.employer.url,
+        },
+      }
     : {}),
   ...(profile.city
-    ? { address: { "@type": "PostalAddress", addressLocality: profile.city, addressCountry: "IN" } }
+    ? {
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: profile.city,
+          addressCountry: "IN",
+        },
+      }
     : {}),
   // sameAs is the entity-reconciliation hook. Only ever list profiles that are
   // verified yours and currently live -- a stale or wrong URL actively harms

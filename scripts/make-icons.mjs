@@ -38,7 +38,13 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+  rmSync,
+  existsSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -46,10 +52,10 @@ import { fileURLToPath } from "node:url";
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
 
 // --- Palette: mirrors the tokens in src/global.css -------------------------
-const INK = "#16150f";   // --text
+const INK = "#16150f"; // --text
 const PAPER = "#fbfaf8"; // --bg
 const CREAM = "#f2f0e9"; // dark-mode --text
-const CLAY = "#d97757";  // --accent
+const CLAY = "#d97757"; // --accent
 
 // --- Geometry, 32x32 viewBox ----------------------------------------------
 // The A fills its tile deliberately; at 16 physical pixels timid padding is
@@ -61,7 +67,8 @@ const BAR_Y = 18.4;
 const SW = 3.7;
 const RX = 7;
 
-const xAt = (y) => APEX.x + ((FOOT - APEX.x) * (y - APEX.y)) / (Y_FOOT - APEX.y);
+const xAt = (y) =>
+  APEX.x + ((FOOT - APEX.x) * (y - APEX.y)) / (Y_FOOT - APEX.y);
 // Inset the crossbar so its round caps land inside the legs, never outside them.
 const BX1 = xAt(BAR_Y) + SW * 0.19;
 const BX2 = 2 * APEX.x - BX1;
@@ -124,9 +131,13 @@ const touchSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
  * has room for it. Not currently written to disk.
  */
 export function dagMark({ tile = INK, glyph = PAPER, node = CLAY } = {}) {
-  const R = 3.2, ax = 16, ay = 9;
+  const R = 3.2,
+    ax = 16,
+    ay = 9;
   const edge = (fx, fy) => {
-    const dx = fx - ax, dy = fy - ay, l = Math.hypot(dx, dy);
+    const dx = fx - ax,
+      dy = fy - ay,
+      l = Math.hypot(dx, dy);
     return `M${(ax + (dx / l) * R).toFixed(2)} ${(ay + (dy / l) * R).toFixed(2)} L${fx} ${fy}`;
   };
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
@@ -154,7 +165,7 @@ function findChrome() {
       `No Chromium-based browser found. Looked in:\n  ${CHROMES.join("\n  ")}\n` +
         `Headless Chrome is the rasteriser because no SVG CLI tool (rsvg-convert, ` +
         `ImageMagick, Inkscape) is assumed present, and adding one as an npm ` +
-        `dependency would need review under the repo's dependency policy.`
+        `dependency would need review under the repo's dependency policy.`,
     );
   }
   return hit;
@@ -168,38 +179,44 @@ function rasterise(chrome, dir, svgName, px, outName) {
   execFileSync(
     chrome,
     [
-      "--headless", "--disable-gpu", "--no-sandbox", "--hide-scrollbars",
-      "--default-background-color=00000000",   // METHOD 5
-      "--force-device-scale-factor=1",         // METHOD 1
+      "--headless",
+      "--disable-gpu",
+      "--no-sandbox",
+      "--hide-scrollbars",
+      "--default-background-color=00000000", // METHOD 5
+      "--force-device-scale-factor=1", // METHOD 1
       `--window-size=${px},${px}`,
       `--screenshot=${join(dir, outName)}`,
       `file://${join(dir, htmlName)}`,
     ],
-    { stdio: "ignore" }
+    { stdio: "ignore" },
   );
 }
 
 /** macOS `sips`, so no image library is needed. */
 const downscale = (from, to, px) =>
-  execFileSync("sips", ["-z", String(px), String(px), from, "--out", to], { stdio: "ignore" });
+  execFileSync("sips", ["-z", String(px), String(px), from, "--out", to], {
+    stdio: "ignore",
+  });
 
 /** Multi-entry .ico wrapping PNGs. See METHOD 6. */
 function buildIco(pngs) {
-  const HEADER = 6, ENTRY = 16;
+  const HEADER = 6,
+    ENTRY = 16;
   const head = Buffer.alloc(HEADER);
-  head.writeUInt16LE(0, 0);            // reserved
-  head.writeUInt16LE(1, 2);            // 1 = icon
-  head.writeUInt16LE(pngs.length, 4);  // image count
+  head.writeUInt16LE(0, 0); // reserved
+  head.writeUInt16LE(1, 2); // 1 = icon
+  head.writeUInt16LE(pngs.length, 4); // image count
 
   let offset = HEADER + ENTRY * pngs.length;
   const entries = pngs.map(({ size, data }) => {
     const e = Buffer.alloc(ENTRY);
     e.writeUInt8(size === 256 ? 0 : size, 0); // 0 encodes 256 here
     e.writeUInt8(size === 256 ? 0 : size, 1);
-    e.writeUInt8(0, 2);                       // palette size; 0 = truecolour
-    e.writeUInt8(0, 3);                       // reserved
-    e.writeUInt16LE(1, 4);                    // colour planes
-    e.writeUInt16LE(32, 6);                   // bits per pixel
+    e.writeUInt8(0, 2); // palette size; 0 = truecolour
+    e.writeUInt8(0, 3); // reserved
+    e.writeUInt16LE(1, 4); // colour planes
+    e.writeUInt16LE(32, 6); // bits per pixel
     e.writeUInt32LE(data.length, 8);
     e.writeUInt32LE(offset, 12);
     offset += data.length;
@@ -222,7 +239,11 @@ try {
 
   const pngs = ICO_SIZES.map((size) => {
     rasterise(chrome, dir, "ico.svg", size * 4, `ico-${size}-4x.png`); // METHOD 2
-    downscale(join(dir, `ico-${size}-4x.png`), join(dir, `ico-${size}.png`), size);
+    downscale(
+      join(dir, `ico-${size}-4x.png`),
+      join(dir, `ico-${size}.png`),
+      size,
+    );
     return { size, data: readFileSync(join(dir, `ico-${size}.png`)) };
   });
 
@@ -230,7 +251,10 @@ try {
 
   writeFileSync(join(PUBLIC, "favicon.svg"), faviconSvg);
   writeFileSync(join(PUBLIC, "favicon.ico"), buildIco(pngs));
-  writeFileSync(join(PUBLIC, "apple-touch-icon.png"), readFileSync(join(dir, "touch.png")));
+  writeFileSync(
+    join(PUBLIC, "apple-touch-icon.png"),
+    readFileSync(join(dir, "touch.png")),
+  );
 
   // The touch icon must have no alpha channel at all (METHOD 4). PNG colour
   // type lives at byte 25: 2 = RGB, 6 = RGBA.
@@ -239,14 +263,18 @@ try {
   if (colourType === 6) {
     console.warn(
       "WARNING: apple-touch-icon.png has an alpha channel. iOS renders " +
-        "transparency as black. Check the source SVG is full-bleed and opaque."
+        "transparency as black. Check the source SVG is full-bleed and opaque.",
     );
   }
 
   console.log("wrote:");
   console.log(`  public/favicon.svg            ${faviconSvg.length} B`);
-  console.log(`  public/favicon.ico            ${pngs.reduce((n, p) => n + p.data.length, 0) + 6 + 16 * pngs.length} B  (${ICO_SIZES.join("/")})`);
-  console.log(`  public/apple-touch-icon.png   ${touch.length} B  (${TOUCH_SIZE}px, colour type ${colourType})`);
+  console.log(
+    `  public/favicon.ico            ${pngs.reduce((n, p) => n + p.data.length, 0) + 6 + 16 * pngs.length} B  (${ICO_SIZES.join("/")})`,
+  );
+  console.log(
+    `  public/apple-touch-icon.png   ${touch.length} B  (${TOUCH_SIZE}px, colour type ${colourType})`,
+  );
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }
