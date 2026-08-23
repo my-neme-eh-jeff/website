@@ -21,6 +21,34 @@ export default component$(() => {
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+        {/*
+         * Theme follows the reader's OS setting, with no toggle button.
+         *
+         * The page itself already does this: `src/global.css` swaps its --sem-*
+         * tokens inside a single prefers-color-scheme block, and favicon.svg
+         * carries the same media query so the tab icon swaps too.
+         *
+         * These two tags extend it to the parts of the UI the page does not
+         * own -- the mobile address bar and the PWA title bar. Without them a
+         * cream page sits under dark browser chrome (or worse, the reverse),
+         * which is the seam that makes a site look like it merely tolerates
+         * dark mode rather than supporting it.
+         *
+         * The values must stay in sync with --sem-bg in global.css. They are
+         * literals because there is no way to read a CSS variable from a meta
+         * tag; a mismatch shows up as a visible band above the page.
+         */}
+        <meta
+          name="theme-color"
+          media="(prefers-color-scheme: light)"
+          content="#fbfaf8"
+        />
+        <meta
+          name="theme-color"
+          media="(prefers-color-scheme: dark)"
+          content="#12110d"
+        />
         {/*
          * Three icons, because no single format covers everything:
          * - .svg is the one that renders for most traffic, and is the only one

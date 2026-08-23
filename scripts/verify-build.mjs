@@ -181,6 +181,84 @@ warn("no placeholder text in the homepage's indexable meta tags", () => {
   );
 });
 
+check("theme-color meta matches --sem-bg in both themes", () => {
+  /*
+   * These live in two places that cannot reference each other: a meta tag
+   * cannot read a CSS variable. A mismatch renders as a visible band of the
+   * wrong colour between the browser chrome and the page, so it is asserted
+   * rather than trusted to a comment.
+   */
+  const css = read("src", "global.css");
+  const light = css.match(/--sem-bg:\s*var\(--paper\)/)
+    ? css.match(/--paper:\s*(#[0-9a-f]{3,8})/i)?.[1]
+    : css.match(/--sem-bg:\s*(#[0-9a-f]{3,8})/i)?.[1];
+  const darkBlock = css.slice(css.indexOf("prefers-color-scheme: dark"));
+  const dark = darkBlock.match(/--sem-bg:\s*(#[0-9a-f]{3,8})/i)?.[1];
+  assert(
+    light && dark,
+    "Could not read --sem-bg for both themes from global.css.",
+  );
+
+  const html = read("dist", "index.html");
+  const tags = [
+    ...html.matchAll(
+      /<meta[^>]*name="theme-color"[^>]*media="\(prefers-color-scheme:\s*(light|dark)\)"[^>]*content="([^"]*)"/g,
+    ),
+  ];
+  const got = Object.fromEntries(tags.map(([, k, v]) => [k, v.toLowerCase()]));
+  assert(
+    tags.length === 2,
+    `Expected 2 theme-color tags (light + dark), found ${tags.length}.`,
+  );
+  assert(
+    got.light === light.toLowerCase(),
+    `theme-color light is ${got.light}, but --sem-bg light is ${light}.`,
+  );
+  assert(
+    got.dark === dark.toLowerCase(),
+    `theme-color dark is ${got.dark}, but --sem-bg dark is ${dark}.`,
+  );
+  return `${light} / ${dark}`;
+});
+
+check("every hero link is also asserted in sameAs", () => {
+  /*
+   * A visible profile link missing from sameAs wastes the strongest
+   * entity-disambiguation signal available, and the drift is silent because
+   * both lists render fine independently.
+   *
+   * Reads the Person node's sameAs array specifically -- NOT the whole HTML.
+   * Searching the page for the URL always succeeds, because the hero renders
+   * the same href as a visible <a>, so a whole-document check passes even when
+   * sameAs is empty. That mistake made this check vacuous once already.
+   */
+  const src = read("src", "content", "profile.ts");
+  const start = src.indexOf("links: [");
+  const end = src.indexOf("sameAs:", start);
+  assert(start !== -1 && end > start, "Could not locate the links block.");
+  const hrefs = [...src.slice(start, end).matchAll(/href:\s*"([^"]+)"/g)].map(
+    (m) => m[1],
+  );
+  assert(hrefs.length > 0, "Parsed zero hero links -- would pass vacuously.");
+
+  const m = read("dist", "index.html").match(
+    /<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/,
+  );
+  assert(m, "No JSON-LD block on the homepage.");
+  const person = JSON.parse(m[1])["@graph"].find(
+    (n) => n["@type"] === "Person",
+  );
+  assert(person, "No Person node in the homepage @graph.");
+  const sameAs = person.sameAs ?? [];
+  const missing = hrefs.filter((h) => !sameAs.includes(h));
+  assert(
+    missing.length === 0,
+    `Hero links absent from Person.sameAs: ${missing.join(", ")}. ` +
+      `sameAs currently holds ${sameAs.length} URL(s).`,
+  );
+  return `${hrefs.length} links, all in sameAs`;
+});
+
 // --- Report ---------------------------------------------------------------
 
 for (const ok of passes) console.log(`  ok    ${ok}`);

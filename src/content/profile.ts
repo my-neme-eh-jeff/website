@@ -47,24 +47,40 @@ export const profile = {
 
   /**
    * Visible links in the hero.
-   * TODO: add LinkedIn and anything else you want public.
+   *
+   * Ordered by who is most likely to click: a recruiter opens LinkedIn, an
+   * engineer opens GitHub. Every entry carries rel="me", which is the
+   * RelMeAuth convention -- it lets a profile that links back here be treated
+   * as the same identity, and is what Mastodon-style verification reads.
    */
-  links: [{ label: "GitHub", href: "https://github.com/my-neme-eh-jeff" }],
+  links: [
+    { label: "GitHub", href: "https://github.com/my-neme-eh-jeff" },
+    { label: "LinkedIn", href: "https://www.linkedin.com/in/amannambisan/" },
+    { label: "X", href: "https://x.com/NambisanAman" },
+  ],
 
   /**
    * schema.org sameAs -- the machine-readable "these accounts are one person"
    * assertion, and the best entity-disambiguation tool available.
    *
-   * ONLY add URLs you have confirmed are yours and are live. A stale or wrong
-   * profile here actively harms disambiguation. Research surfaced a plausible
-   * LinkedIn slug and a read.cv page, but neither was verified, so neither is
-   * listed -- confirm them first.
+   * ONLY add URLs confirmed to be yours and live. A stale or wrong profile
+   * here actively harms disambiguation rather than helping it. All three below
+   * were confirmed by Aman on 2026-08-23 and checked to resolve; LinkedIn
+   * answers a bare request with HTTP 999, which is its bot defence and not a
+   * dead page.
    *
-   * Also make these reciprocal: each profile should link back to this domain.
+   * Trailing slashes match each site's own canonical form -- GitHub and X drop
+   * it, LinkedIn keeps it. Matching exactly avoids asserting a URL that
+   * redirects.
+   *
+   * These only pay off when RECIPROCAL. Each profile should link back to
+   * amannambisan.com; without the return link the claim is unverifiable and
+   * search engines weight it far lower. That is a manual step on each site.
    */
   sameAs: [
     "https://github.com/my-neme-eh-jeff",
-    // TODO: "https://www.linkedin.com/in/<verified-handle>",
+    "https://www.linkedin.com/in/amannambisan/",
+    "https://x.com/NambisanAman",
   ] as string[],
 
   /**
