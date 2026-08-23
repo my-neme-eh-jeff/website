@@ -1,26 +1,97 @@
 {
+  /*
+   * `strict: true` alone leaves a lot of unsound code compiling. The block
+   * below turns on the checks it does NOT cover. Each one is here because it
+   * catches a class of bug that this codebase can actually hit -- see the notes
+   * on the ones with real cost.
+   *
+   * Verify the whole set is honoured:  npm run build.types
+   */
   "compilerOptions": {
-    "allowJs": true,
-    "target": "es2020",
+    "target": "es2022",
     "module": "esnext",
     "lib": ["es2022", "DOM", "WebWorker", "DOM.Iterable"],
+    "moduleResolution": "Bundler",
+    "moduleDetection": "force",
+
     "jsx": "react-jsx",
     "jsxImportSource": "@qwik.dev/core",
+
     "strict": true,
+
+    /*
+     * Array and record access yields `T | undefined`.
+     *
+     * This is the highest-value flag here and the only one that required code
+     * changes: the mesh builder indexed `pts[a]` from an edge list, which is
+     * safe by construction but not provably so. Now the impossible case is
+     * handled explicitly instead of assumed.
+     */
+    "noUncheckedIndexedAccess": true,
+
+    /*
+     * Distinguishes `{ x?: string }` from `{ x: string | undefined }`, so
+     * passing an explicit `undefined` where a key is meant to be absent is an
+     * error. Matters for the DocumentHead/meta objects, where an emitted
+     * `undefined` becomes a literal string in the built HTML.
+     */
+    "exactOptionalPropertyTypes": true,
+
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+
+    /*
+     * Forbids reading undeclared keys off an index signature via dot access,
+     * which is how a typo in a content key silently becomes `undefined`.
+     */
+    "noPropertyAccessFromIndexSignature": true,
+
+    /*
+     * Type-only imports must say `import type`. Required for correctness with
+     * `isolatedModules`, and it means the emitted import graph is exactly what
+     * is written -- no surprise runtime import of a types-only module.
+     */
+    "verbatimModuleSyntax": true,
+
+    /*
+     * Bans TS syntax that cannot be erased (enums, namespaces, parameter
+     * properties). Keeps every source file valid under a plain type-stripping
+     * transform, which is what Vite/esbuild actually does -- and what Node's
+     * native TS support requires.
+     */
+    "erasableSyntaxOnly": true,
+
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
-    "moduleResolution": "Bundler",
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "incremental": true,
     "isolatedModules": true,
-    "outDir": "tmp",
+    "incremental": true,
     "noEmit": true,
+    "outDir": "tmp",
+
+    /*
+     * Left ON deliberately, and it is the one loosening here.
+     *
+     * Qwik 2 is a beta; its shipped `.d.ts` files pull in the type surface of
+     * every adapter it supports (Azure, AWS, Netlify...). Checking those means
+     * failing the build on upstream type errors in code this site never
+     * imports. Re-test on each Qwik bump -- if it ever passes, delete this:
+     *   npx tsc --noEmit --skipLibCheck false
+     */
+    "skipLibCheck": true,
+
+    /* No JS in `include`, so nothing needs to be checked loosely. */
+    "allowJs": false,
+
     "paths": {
       "~/*": ["./src/*"]
     },
-    /* if you do not use CSS modules, remove this line and delete the typescript-plugin-css-modules module from package.json */
     "plugins": [{ "name": "typescript-plugin-css-modules" }]
   },
   "include": ["src", "./*.d.ts", "./*.config.ts"]
