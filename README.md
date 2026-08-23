@@ -3,14 +3,15 @@
 Personal portfolio, blog and resume. Qwik 2 compiled to static HTML, served
 from Cloudflare Workers static assets.
 
-| | |
-|---|---|
-| Domain | `amannambisan.com` — Cloudflare Registrar |
-| Framework | Qwik 2 (`@qwik.dev/core`), SSG via the `ssg` adapter |
-| Hosting | Cloudflare Workers static assets |
-| Output | `./dist` (4 prerendered pages + sitemap) |
-| Deploys | Workers Builds, on push to `main` |
-| Cost | $0 — static asset requests are free and unlimited |
+|           |                                                                 |
+| --------- | --------------------------------------------------------------- |
+| Domain    | `amannambisan.com` — Cloudflare Registrar                       |
+| Framework | Qwik 2 (`@qwik.dev/core`), SSG via the `ssg` adapter            |
+| Styling   | Tailwind v4 via `@tailwindcss/vite`; tokens in `src/global.css` |
+| Hosting   | Cloudflare Workers static assets                                |
+| Output    | `./dist` (4 prerendered pages + sitemap)                        |
+| Deploys   | Workers Builds, on push to `main`                               |
+| Cost      | $0 — static asset requests are free and unlimited               |
 
 ## Local development
 
@@ -25,7 +26,10 @@ Then:
     npm ci          # reproducible install from package-lock.json
     npm start       # dev server
     npm run build   # client + SSG + type check + lint
+    npm run verify  # assert build invariants against dist/ (run after build)
     npm run preview # serve the built output
+    npm run fmt     # prettier, incl. Tailwind class sorting
+    npm run icons   # regenerate favicon/touch icon from one geometry source
 
 ## Version pinning, and why it looks paranoid
 
@@ -50,9 +54,64 @@ each one a billable invocation against the 100,000/day free tier.
 When the AI endpoints land, scope them as `run_worker_first: ["/api/*"]` so
 page views stay on the free asset path. Do not use `true`.
 
+### Styling: Tailwind v4, and why not a component library
+
+**Qwik UI does not work on Qwik 2.** `@qwik-ui/headless@0.7.7` — the latest, and
+the repo's `main` — peer-depends on `@builder.io/qwik` and imports it 200 times;
+there is no `@qwik.dev/*` support and no v2 branch. Aliasing the old specifier
+to `@qwik.dev/core` builds and then fails at runtime, because v2 changed the
+optimizer and serialization contract. Re-check with:
+
+    npm view @qwik-ui/headless peerDependencies
+
+Tailwind v4 was chosen instead. It is a first-party Qwik 2 integration — the
+wiring came from `node_modules/@qwik.dev/core/dist/starters/features/tailwind/`,
+so it is version-matched to the installed beta — and being CSS-only it is
+immune to the Qwik 1/2 split above.
+
+There is no `tailwind.config.js`. The vite plugin is the whole integration and
+all theming lives in `src/global.css`. Read that file's header before editing
+it: colours are defined in two layers, and the `@theme inline` block is what
+lets a single `prefers-color-scheme` media query retint the entire site with
+almost no `dark:` variants in markup.
+
+Shared patterns (`pill`, `hairline`, `callout`, `wrap`) are `@utility` blocks in
+the same file rather than components, because each one lands on several
+different elements — `pill` is used on a Qwik `<Link>`, a plain `<a>` and an
+`<li>`.
+
+### Types: strict, plus the checks `strict` misses
+
+`tsconfig.json` turns on `noUncheckedIndexedAccess`,
+`exactOptionalPropertyTypes`, `verbatimModuleSyntax`, `erasableSyntaxOnly` and
+the unused-code checks. Each is commented in place with what it costs.
+
+`skipLibCheck` is the one deliberate loosening — Qwik 2's shipped `.d.ts` files
+pull in the type surface of every adapter it supports, so checking them fails
+the build on upstream errors in code this site never imports. Retest on each
+Qwik bump: `npx tsc --noEmit --skipLibCheck false`.
+
+### CI gates, Cloudflare deploys
+
+`.github/workflows/ci.yml` runs format, lint, types, a real build, and then
+`scripts/verify-build.mjs`. It holds **no Cloudflare credentials** and cannot
+publish — deploys stay with Workers Builds watching `main`.
+
+`npm run verify` is the interesting part: it executes the invariants that are
+otherwise only prose in `CLAUDE.md`, against real build output. Today it
+asserts `dist/404.html` exists where `not_found_handling` looks for it, that the
+sitemap excludes the 404, that `wrangler.jsonc` still has no `main`, that every
+dependency is pinned exact, and that each page emits exactly one JSON-LD block
+and one canonical tag. Add invariants there rather than to a doc.
+
+It also _warns_, without failing, that the homepage's `description` and
+`og:description` currently contain `TODO` text. That is real — it is what a
+search result and a shared link display today — but it is a known pending
+content state, and a CI job that is red from day one gets ignored.
+
 ### Why `www` is a Redirect Rule, not code
 
-Redirect Rules run *before* Workers in Cloudflare's pipeline and cost zero
+Redirect Rules run _before_ Workers in Cloudflare's pipeline and cost zero
 invocations. Doing the redirect in a Worker would require intercepting every
 request, which is exactly what the point above avoids.
 
@@ -60,10 +119,12 @@ request, which is exactly what the point above avoids.
 
     wrangler.jsonc              Worker config, apex Custom Domain, assets dir
     adapters/ssg/vite.config.ts SSG adapter (origin must match the real domain)
-    scripts/emit-404.mjs        copies dist/404/index.html -> dist/404.html
+    scripts/verify-build.mjs    post-build invariant checks (npm run verify)
+    scripts/make-icons.mjs      favicon + apple-touch-icon, one geometry source
     public/                     copied verbatim into dist/
-      _headers                  immutable caching for hashed bundles
+      _headers                  cache policy + security headers
     src/
+      global.css                design tokens, theme swap, shared patterns
       content/profile.ts        ALL site content lives here
       components/               stream-text, generative-mesh
       routes/                   layout + index + resume + blog + 404
@@ -100,9 +161,16 @@ Audited against <https://next.qwik.dev/docs/guides/best-practices/>:
 - [x] Repo connected — Workers Builds on `my-neme-eh-jeff/website`
 - [x] Apex Custom Domain — declared in `routes`, provisioned by Workers Builds.
       Verified: HTTP 200, TLS valid
-- [ ] **Workers Builds build command** — currently empty, which was right for
-      hand-written HTML and is now wrong. Must be set to `npm run build` in the
-      dashboard, or deploys will publish nothing. Dashboard-only setting.
+- [x] **Workers Builds build command** — leave it **empty**. An earlier note
+      here said it had to be set to `npm run build`; that was wrong. The build
+      is versioned in `wrangler.jsonc` as `build.command`, and wrangler runs it
+      itself. Verified 2026-08-23:
+
+          npx wrangler deploy --dry-run   # prints "[custom build]" then builds
+
+      Workers Builds' default deploy command is already `npx wrangler deploy`,
+      so filling in the dashboard field as well would build twice.
+
 - [ ] **`www` redirect** — two manual dashboard steps:
 
       a. DNS -> Records -> Add: type A, name `www`, IPv4 `192.0.2.1`, Proxied.

@@ -21,7 +21,7 @@
   // `npm ci` first because the CI container's install step is not guaranteed
   // to have run before the deploy command.
   "build": {
-    "command": "npm ci && npm run build"
+    "command": "npm ci && npm run build",
   },
   "name": "amannambisan",
   "compatibility_date": "2026-08-22",
@@ -29,13 +29,22 @@
     // Qwik SSG output, produced by `npm run build`. Not ./public any more:
     // public/ is now Qwik's source for static files and gets copied into dist.
     "directory": "./dist",
-    // dist/404.html is emitted by scripts/emit-404.mjs after SSG.
-    "not_found_handling": "404-page"
+    // Serves dist/404.html for any unmatched path. That file is emitted
+    // directly by SSG because src/routes/404.tsx is a FILE route -- a
+    // directory route would produce dist/404/index.html instead and this
+    // setting would find nothing. Asserted by scripts/verify-build.mjs.
+    "not_found_handling": "404-page",
+    // Explicit rather than relying on the default. Qwik SSG emits
+    // resume/index.html and the canonical URLs and sitemap both use a
+    // trailing slash, so /resume and /resume/ must resolve to one page and
+    // one canonical. Naming it here means a change to Cloudflare's default
+    // cannot silently split them.
+    "html_handling": "auto-trailing-slash",
   },
   "routes": [
     {
       "pattern": "amannambisan.com",
-      "custom_domain": true
-    }
-  ]
+      "custom_domain": true,
+    },
+  ],
 }

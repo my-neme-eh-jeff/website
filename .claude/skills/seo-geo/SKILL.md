@@ -14,7 +14,7 @@ read it before building anything, because these ideas keep resurfacing.
   against it. Google states in writing that Search "doesn't use them"; John
   Mueller compared it to the keywords meta tag and noted server logs show AI
   services don't request the file. An SE Ranking study across ~300,000 domains
-  found no significant correlation with AI citations — and *removing* the feature
+  found no significant correlation with AI citations — and _removing_ the feature
   **improved** their model's accuracy, i.e. it was noise. Claims that Claude or
   Perplexity "confirmed" reading it appear only in SEO blogs, never in either
   company's crawler documentation.
@@ -34,15 +34,15 @@ read it before building anything, because these ideas keep resurfacing.
 Two separate questions with separate controls. Getting this wrong either blocks
 citations or opts into training by accident.
 
-| Bot | Purpose | Blocking it means |
-|---|---|---|
-| `OAI-SearchBot` | ChatGPT **retrieval** | ChatGPT can't cite the site |
-| `GPTBot` | OpenAI **training** | Excluded from model weights |
-| `Claude-SearchBot` | Claude **retrieval** | Claude can't cite the site |
-| `ClaudeBot` | Anthropic **training** | Excluded from model weights |
-| `PerplexityBot` | Perplexity **retrieval** | Not in Perplexity answers |
-| `Google-Extended` | Gemini **training** only | No effect on Search or AI Overviews |
-| `CCBot` | Common Crawl | Excluded from many training sets |
+| Bot                | Purpose                  | Blocking it means                   |
+| ------------------ | ------------------------ | ----------------------------------- |
+| `OAI-SearchBot`    | ChatGPT **retrieval**    | ChatGPT can't cite the site         |
+| `GPTBot`           | OpenAI **training**      | Excluded from model weights         |
+| `Claude-SearchBot` | Claude **retrieval**     | Claude can't cite the site          |
+| `ClaudeBot`        | Anthropic **training**   | Excluded from model weights         |
+| `PerplexityBot`    | Perplexity **retrieval** | Not in Perplexity answers           |
+| `Google-Extended`  | Gemini **training** only | No effect on Search or AI Overviews |
+| `CCBot`            | Common Crawl             | Excluded from many training sets    |
 
 **`ChatGPT-User` and `Perplexity-User` ignore robots.txt by their own
 documentation.** They fetch live when a user asks about you. So for
@@ -86,7 +86,7 @@ node -e 'const h=require("fs").readFileSync("dist/index.html","utf8");
 2. **Content.** Both research passes independently put this at ~80% of the
    achievable outcome. Retrieval systems select passages; a page of placeholders
    has no passages to select.
-3. **Google Search Console** as a *Domain* property, DNS-verified via a Cloudflare
+3. **Google Search Console** as a _Domain_ property, DNS-verified via a Cloudflare
    TXT record — keeps the token out of the repo. Then Bing Webmaster Tools.
 4. Structured data and meta tags — already implemented; low remaining upside.
 
@@ -95,7 +95,7 @@ node -e 'const h=require("fs").readFileSync("dist/index.html","utf8");
 For "recruiter asks an AI about this person", LinkedIn and GitHub are
 higher-leverage surfaces than this site — they're searched directly and indexed
 heavily. This site's distinctive job is being the one canonical, self-authored
-page an engine can quote *accurately* rather than reconstructing from a profile
+page an engine can quote _accurately_ rather than reconstructing from a profile
 blob. Optimise for quotability, not for ranking.
 
 A mismatch between the GitHub handle and the domain/display name weakens entity
