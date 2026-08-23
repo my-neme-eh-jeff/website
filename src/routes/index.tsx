@@ -1,62 +1,51 @@
 import { component$ } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
-import { Link } from "@qwik.dev/router";
-import { StreamText } from "~/components/stream-text/stream-text";
 import { CircledChoice } from "~/components/circled-choice/circled-choice";
+import { GradientPanel } from "~/components/gradient-panel/gradient-panel";
 import { profile, projects, roles } from "~/content/profile";
 import { homeGraph, ld, seoMeta } from "~/content/seo";
 
 const current = roles[0];
 
 /**
- * Single column, left-aligned, no hero card.
+ * The gradient panel is the hero, with the name set over it.
  *
- * The previous layout put a boxed figure beside the text, which read as a
- * widget parked next to a paragraph. The generative mesh it contained is now
- * part of the page's atmosphere instead (see the `field` layer in layout.tsx),
- * so the eye lands on the sentence rather than on a rectangle.
+ * Text on top of the artwork rather than beside it. A panel parked next to a
+ * paragraph is what the last two attempts both did, and it always reads as a
+ * widget rather than a composition. Over the panel, the ember gives the name
+ * somewhere to sit and the page opens on colour instead of on a border.
  *
- * Sections are separated by eyebrow labels and hairlines rather than cards.
- * That keeps the page reading as one document, which is what a portfolio is.
+ * The overlay text is a fixed near-white, not --sem-text. The panel does not
+ * theme-swap (it is artwork), so text that DID swap would turn dark-on-dark in
+ * light mode. Every hue in the panel is dark enough for white to hold.
  */
 export default component$(() => {
   return (
     <div class="wrap">
-      <div class="max-w-measure">
-        <p class="eyebrow mb-3">
-          {profile.jobTitle} · {profile.city}
-        </p>
+      <section class="relative">
+        <GradientPanel class="min-h-[19rem] sm:min-h-[23rem] lg:min-h-[26rem]" />
 
-        <h1 class="mb-3">
-          <StreamText text={profile.name} stagger={70} />
-        </h1>
-
-        <p class="text-muted mb-5 text-xl leading-snug">
-          <StreamText text={profile.tagline} stagger={22} caret />
-        </p>
-
-        <p class="mb-6">{profile.bio}</p>
-
-        <div class="flex flex-wrap items-center gap-3">
-          <Link class="pill hover:border-accent" href="/resume/">
-            Resume
-          </Link>
-          {profile.links.map((l) => (
-            <a
-              class="pill hover:border-accent"
-              key={l.href}
-              href={l.href}
-              rel="me noopener"
-            >
-              {l.label}
-            </a>
-          ))}
-          <CircledChoice label="say hi" />
+        <div class="absolute inset-0 flex flex-col justify-end p-6 sm:p-8 lg:p-10">
+          <p class="mb-2 font-mono text-[0.6875rem] tracking-[0.12em] text-white/70 uppercase">
+            {profile.jobTitle} · {profile.city}
+          </p>
+          <h1 class="max-w-[18ch] text-white">{profile.name}</h1>
         </div>
+      </section>
+
+      <p class="max-w-measure text-muted mt-8 text-xl leading-snug">
+        {profile.tagline}
+      </p>
+
+      <p class="max-w-measure mt-4">{profile.bio}</p>
+
+      <div class="mt-6 flex flex-wrap items-center gap-3">
+        <a class="pill hover:border-accent" href={`mailto:${profile.email}`}>
+          Email
+        </a>
+        <CircledChoice label="say hi" />
       </div>
 
-      {/* Now — one line, because "what are you doing currently" is the first
-          thing a recruiter scans for. */}
       {current && (
         <section class="max-w-measure mt-16">
           <p class="eyebrow mb-4">Now</p>

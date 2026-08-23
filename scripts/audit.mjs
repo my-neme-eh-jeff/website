@@ -1,8 +1,9 @@
 /**
  * Lighthouse audit. Run: `npm run audit` (after `npm run build`)
  *
- * Serves ./dist, runs Lighthouse against it, and writes the four category
- * scores to src/content/audit.json, which the footer renders.
+ * Runs Lighthouse against the LIVE site and writes the four category scores to
+ * src/content/audit.json, which the footer renders. Pass --local to measure a
+ * freshly built ./dist instead.
  *
  * ---------------------------------------------------------------------------
  * WHY LOCAL LIGHTHOUSE AND NOT THE PAGESPEED INSIGHTS API
@@ -16,6 +17,21 @@
  * needs no key, no endpoint, no quota, and gives nothing to spam. The trade is
  * that these are lab numbers from whatever machine ran them, which is why the
  * output records the commit and date rather than claiming to be live.
+ *
+ * WHY IT MEASURES PRODUCTION AND NOT ./dist BY DEFAULT
+ *
+ * It used to serve dist with `python3 -m http.server` and measure that. That
+ * server sends no compression and no cache headers, so Lighthouse charged the
+ * site for both: it reported 87-93 with "est. savings 248 KiB" from caching
+ * alone. Cloudflare serves the same bytes with brotli (28.8 kB of HTML becomes
+ * 7.6 kB) and honours public/_headers, and the real score is 95 on mobile and
+ * 100 on desktop.
+ *
+ * So the local harness was not a pessimistic approximation, it was measuring a
+ * different server. Publishing that number would have understated the site by
+ * several points and sent someone optimising the wrong thing. --local stays
+ * available for before/after comparison on an unpushed change, but it prints a
+ * warning, because its absolute numbers are not comparable to production.
  *
  * WHY IT IS COMMITTED RATHER THAN GENERATED AT DEPLOY TIME
  *
@@ -46,14 +62,21 @@ const CATEGORIES = ["performance", "accessibility", "best-practices", "seo"];
  * `--check` mode: assert and exit non-zero, write nothing. This is what CI
  * runs, so a regression fails a pull request instead of quietly shipping.
  *
- * Performance sits below the current 93 on purpose. A shared CI runner is
- * noisier than a laptop, and a gate that flaps gets disabled — which protects
- * nothing. The other three are absolutes: they measure correctness, not speed,
- * so there is no runner variance to allow for.
+ * CI runs `--check --local`, because it must gate the build it just produced
+ * rather than whatever is currently deployed. That means the performance floor
+ * has to absorb BOTH runner noise and the missing compression and cache headers
+ * of the local server — locally the same build measures 87-93 where production
+ * measures 95. Hence 80, which still catches a real regression while never
+ * flapping. A gate that flaps gets disabled, and then it protects nothing.
+ *
+ * The other three are absolutes: they measure correctness, not speed, so there
+ * is no harness variance to allow for.
  */
 const CHECK = process.argv.includes("--check");
+const LOCAL = process.argv.includes("--local");
+const PROD_URL = "https://amannambisan.com/";
 const FLOOR = {
-  performance: 85,
+  performance: 80,
   accessibility: 100,
   "best-practices": 95,
   seo: 100,
@@ -70,13 +93,17 @@ const commit = (() => {
   }
 })();
 
-// A plain static server: Lighthouse must measure the built output, not the
-// dev server, which ships unminified bundles and no immutable caching.
-const server = spawn(
-  "python3",
-  ["-m", "http.server", String(PORT), "--directory", join(ROOT, "dist")],
-  { stdio: "ignore" },
-);
+/*
+ * Only started for --local. python3's http.server has no compression and no
+ * cache headers, which is exactly why it is not the default -- see the header.
+ */
+const server = LOCAL
+  ? spawn(
+      "python3",
+      ["-m", "http.server", String(PORT), "--directory", join(ROOT, "dist")],
+      { stdio: "ignore" },
+    )
+  : null;
 
 /** Poll until the server answers, rather than sleeping a guessed interval. */
 async function waitForServer(url, timeoutMs = 15000) {
@@ -94,8 +121,14 @@ async function waitForServer(url, timeoutMs = 15000) {
 }
 
 async function main() {
-  const url = `http://localhost:${PORT}/`;
-  await waitForServer(url);
+  const url = LOCAL ? `http://localhost:${PORT}/` : PROD_URL;
+  if (LOCAL) {
+    console.warn(
+      "--local: no compression, no cache headers. Useful for A/B on an " +
+        "unpushed change; NOT comparable to production. Do not commit these.\n",
+    );
+    await waitForServer(url);
+  }
 
   const lighthouse = (await import("lighthouse")).default;
   const chromeLauncher = await import("chrome-launcher");
@@ -148,13 +181,21 @@ async function main() {
       // Everything needed to say WHEN and WHAT was measured, so the numbers
       // are never mistaken for live telemetry.
       measuredAt: lhr.fetchTime.slice(0, 10),
+      // The commit is the local HEAD. When measuring production this is only
+      // accurate if HEAD is what is actually deployed, which is why the audit
+      // is refreshed right after a push, not before.
       commit,
+      target: LOCAL ? "local" : "production",
       lighthouseVersion: lhr.lighthouseVersion,
       formFactor: lhr.configSettings.formFactor,
       scores,
     };
 
-    writeFileSync(OUT, JSON.stringify(payload, null, 2) + "\n");
+    if (LOCAL) {
+      console.log("--local run: not written to audit.json.");
+    } else {
+      writeFileSync(OUT, JSON.stringify(payload, null, 2) + "\n");
+    }
 
     console.log(`Lighthouse ${lhr.lighthouseVersion} · ${payload.formFactor}`);
     for (const [k, v] of Object.entries(scores)) {
@@ -170,5 +211,5 @@ async function main() {
 try {
   await main();
 } finally {
-  server.kill();
+  server?.kill();
 }

@@ -9,7 +9,13 @@ import {
 import "./global.css";
 
 export default component$(() => {
-  useQwikRouter();
+  /*
+   * viewTransition is opt-in (QwikRouterProps defaults it to false). With it
+   * on, SPA navigation runs through document.startViewTransition, so the
+   * ::view-transition rules in global.css apply. Browsers without the API just
+   * navigate instantly — there is no polyfill and none is wanted.
+   */
+  useQwikRouter({ viewTransition: true });
   const { url } = useLocation();
 
   /**

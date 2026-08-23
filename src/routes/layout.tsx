@@ -1,44 +1,62 @@
 import { component$, Slot } from "@qwik.dev/core";
-import { Link } from "@qwik.dev/router";
+import { Link, useLocation } from "@qwik.dev/router";
 import { ScoreRow } from "~/components/score-ring/score-ring";
 import { profile } from "~/content/profile";
 
 /**
  * Evaluated at build time, because this site is statically generated.
- * The year only advances when the site is rebuilt — acceptable here, since
- * pushes trigger a deploy, but it is a stale value, not a live clock.
+ * The year only advances when the site is rebuilt.
  */
 const buildYear = new Date().getFullYear();
 
+const pages = [
+  { href: "/", label: "Index" },
+  { href: "/resume/", label: "Resume" },
+  { href: "/blog/", label: "Writing" },
+];
+
 /**
- * Nav, footer and page bodies all use `wrap`, so every page shares one left
- * edge. Prose is clamped inside it with `max-w-measure` rather than by
- * narrowing the container, which would give the text its own centre line.
+ * Two columns: a narrow rail of links, a rule, and everything else.
+ *
+ * ---------------------------------------------------------------------------
+ * The full-width top navbar is gone. It was a border and four words — it spent
+ * a whole band of the viewport saying almost nothing, and it made every page
+ * open the same bland way.
+ *
+ * The rail replaces it and does more with less: pages, then profiles, then the
+ * measured scores, stacked in one column with the rule as the only divider. The
+ * rule sits at 13rem rather than near centre, so the content column keeps the
+ * room it needs and the rail reads as an index rather than a sidebar.
+ *
+ * Below `lg` the rail collapses to a horizontal strip, because a 13rem column
+ * on a phone leaves nothing for the text.
+ *
+ * `view-transition-name` is the load-bearing detail for navigation: the rail
+ * and the atmosphere are named, so the browser carries them across a route
+ * change untouched and only the content animates. Names must be unique per
+ * page — two elements sharing one aborts the whole transition.
+ * ---------------------------------------------------------------------------
  */
 export default component$(() => {
-  return (
-    <div class="flex min-h-dvh flex-col">
-      {/*
-       * The atmosphere layer. Fixed and pointer-events-none, so it holds still
-       * while the page scrolls and can never swallow a click. Decorative, so
-       * aria-hidden -- there is nothing here to announce.
-       */}
-      <div class="field" aria-hidden="true" />
+  const loc = useLocation();
+  const path = loc.url.pathname;
 
-      {/*
-       * Skip link. First thing in the tab order, invisible until focused.
-       *
-       * Uses `focus:` and NOT `focus-visible:`. The link is only ever reached
-       * by Tab, so focus-visible's keyboard heuristic buys nothing -- while
-       * programmatic .focus() (from a script, or some assistive tech) does not
-       * always match :focus-visible, which would leave the link focused and
-       * still invisible. That is the failure mode worth avoiding.
-       *
-       * Without it a keyboard or screen-reader user traverses the whole nav on
-       * every single page before reaching content. It is a plain <a>, not a
-       * Qwik <Link>: this is an in-page fragment jump, and routing it through
-       * the client router would push a history entry and lose the focus move.
-       */}
+  return (
+    <div class="min-h-dvh">
+      <div
+        class="field"
+        aria-hidden="true"
+        style={{ viewTransitionName: "field" }}
+      />
+      {/* Grain is its own layer so it can cover the full viewport uniformly —
+          the field above is masked to fade out, and grain that faded with it
+          would look like a gradient of noise rather than film. */}
+      <div
+        class="grain-page"
+        aria-hidden="true"
+        style={{ viewTransitionName: "grain" }}
+      />
+
       <a
         href="#main"
         class="focus:bg-surface focus:text-text focus:border-line sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:border focus:px-4 focus:py-2"
@@ -46,70 +64,105 @@ export default component$(() => {
         Skip to content
       </a>
 
-      <nav
-        aria-label="Main"
-        class="bg-bg/85 border-line sticky top-0 z-10 border-b backdrop-blur-md"
-      >
-        <div class="wrap flex items-center gap-5 py-3">
-          <Link href="/" class="font-semibold tracking-tight no-underline">
-            {profile.name}
-          </Link>
-          <div class="ml-auto flex gap-4 text-[0.9375rem]">
-            <Link href="/resume/">Resume</Link>
-            <Link href="/blog/">Blog</Link>
-          </div>
-        </div>
-      </nav>
-
-      {/*
-       * tabIndex={-1} makes the fragment jump actually move focus. Without it
-       * some browsers scroll the region into view but leave focus on the skip
-       * link, so the next Tab returns to the nav -- the exact thing the link
-       * exists to avoid.
-       */}
-      <main
-        id="main"
-        tabIndex={-1}
-        class="flex-1 pt-12 pb-16 focus:outline-none"
-      >
-        <Slot />
-      </main>
-
-      <footer class="border-line text-muted border-t py-8 text-sm">
-        <div class="wrap flex flex-col gap-8">
-          {/*
-           * The scores live here rather than in the hero because they are
-           * evidence, not a claim: someone who cares looks for them, and
-           * nobody needs them to understand the page.
-           */}
-          <div class="flex flex-wrap items-start justify-between gap-6">
-            <div>
-              <p class="eyebrow mb-3">Measured</p>
-              <ScoreRow />
-            </div>
-            <p class="mb-0 max-w-xs text-xs leading-relaxed">
-              Static HTML on Cloudflare Workers. No framework runtime until you
-              interact, no analytics, no cookies.{" "}
-              <a href="https://github.com/my-neme-eh-jeff/website">
-                Source is public
-              </a>
-              .
-            </p>
-          </div>
-
-          <div class="border-line flex flex-wrap gap-4 border-t pt-6">
-            <span>
-              © {buildYear} {profile.name}
-            </span>
-            <a
-              class="ml-auto"
-              href="https://github.com/my-neme-eh-jeff/website"
+      <div class="lg:grid lg:grid-cols-[13rem_1fr]">
+        <div
+          class="border-line lg:sticky lg:top-0 lg:h-dvh lg:border-r"
+          style={{ viewTransitionName: "rail" }}
+        >
+          <div class="flex h-full flex-col gap-8 px-5 py-6 lg:py-8">
+            <Link
+              href="/"
+              class="text-base font-semibold tracking-tight no-underline"
             >
-              Source
-            </a>
+              {profile.name}
+            </Link>
+
+            <nav aria-label="Pages">
+              <ul class="flex flex-row gap-4 p-0 lg:flex-col lg:gap-1.5">
+                {pages.map((p) => {
+                  const active = path === p.href;
+                  return (
+                    <li class="list-none" key={p.href}>
+                      <Link
+                        href={p.href}
+                        aria-current={active ? "page" : undefined}
+                        class={
+                          active
+                            ? "text-text decoration-accent underline underline-offset-4"
+                            : "text-muted hover:text-text no-underline"
+                        }
+                      >
+                        {p.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+
+            <nav aria-label="Profiles" class="hidden lg:block">
+              <ul class="flex flex-col gap-1.5 p-0">
+                {profile.links.map((l) => (
+                  <li class="list-none" key={l.href}>
+                    <a
+                      href={l.href}
+                      rel="me noopener"
+                      class="text-muted hover:text-text no-underline"
+                    >
+                      {l.label}
+                      <span
+                        class="text-accent ml-1 font-mono text-xs"
+                        aria-hidden="true"
+                      >
+                        ↗
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            {/* Scores sit at the foot of the rail on desktop: there for anyone
+                who looks, never competing with the content. */}
+            <div class="mt-auto hidden lg:block">
+              <p class="eyebrow mb-3">Measured</p>
+              <ScoreRow compact />
+              <p class="text-muted mt-6 mb-0 text-xs">
+                © {buildYear}
+                <br />
+                <a href="https://github.com/my-neme-eh-jeff/website">Source</a>
+              </p>
+            </div>
           </div>
         </div>
-      </footer>
+
+        <main
+          id="main"
+          tabIndex={-1}
+          class="min-w-0 py-10 focus:outline-none lg:py-16"
+          style={{ viewTransitionName: "page" }}
+        >
+          <Slot />
+
+          {/* The rail hides its lower half below lg, so the same information
+              has to land somewhere on a phone. */}
+          <div class="border-line mt-16 border-t px-5 pt-8 lg:hidden">
+            <p class="eyebrow mb-3">Measured</p>
+            <ScoreRow compact />
+            <div class="text-muted mt-6 flex flex-wrap gap-4 text-xs">
+              <span>
+                © {buildYear} {profile.name}
+              </span>
+              <a
+                class="ml-auto"
+                href="https://github.com/my-neme-eh-jeff/website"
+              >
+                Source
+              </a>
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 });

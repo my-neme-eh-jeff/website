@@ -92,8 +92,30 @@ const Ring = component$<{ name: string; score: number }>(({ name, score }) => {
   );
 });
 
-export const ScoreRow = component$(() => {
+/**
+ * `compact` drops the provenance paragraph to a single line and tightens the
+ * gaps, so the row fits a 13rem rail. The provenance is shortened, never
+ * removed — an unlabelled score implies live telemetry, which these are not.
+ */
+export const ScoreRow = component$<{ compact?: boolean }>(({ compact }) => {
   const entries = Object.entries(audit.scores);
+
+  if (compact) {
+    return (
+      <div>
+        <div class="flex flex-wrap gap-x-3 gap-y-2">
+          {entries.map(([name, score]) => (
+            <Ring key={name} name={name} score={score as number} />
+          ))}
+        </div>
+        <p class="text-muted mt-3 mb-0 font-mono text-[0.625rem] leading-relaxed">
+          Lighthouse {audit.lighthouseVersion}
+          <br />
+          {audit.commit} · {audit.measuredAt}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div class="flex flex-wrap items-start gap-x-5 gap-y-3">

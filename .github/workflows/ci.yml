@@ -67,4 +67,4 @@ jobs:
       #
       # ubuntu-latest ships google-chrome-stable, which chrome-launcher finds.
       - name: Lighthouse budget
-        run: node scripts/audit.mjs --check
+        run: node scripts/audit.mjs --check --local

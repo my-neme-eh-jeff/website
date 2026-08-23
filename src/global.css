@@ -197,44 +197,14 @@
   --container-measure: 68ch;
   --container-page: 72rem;
 
-  /*
-   * Named animations, so the keyframes live here rather than being restated in
-   * every component that needs them. Used by StreamText.
-   */
-  --animate-token-in: token-in 420ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
-  --animate-caret: caret-blink 1.1s step-end infinite;
-  --animate-mesh-pulse: mesh-pulse 3.6s ease-in-out infinite;
+  /* Named animation, so the keyframe lives here rather than in the component. */
   /* Draws the hand-drawn annotation on, like a pen stroke. */
   --animate-ink: ink 900ms 400ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
-}
-
-@keyframes token-in {
-  to {
-    opacity: 1;
-    filter: blur(0);
-    transform: none;
-  }
-}
-
-@keyframes caret-blink {
-  50% {
-    opacity: 0;
-  }
 }
 
 @keyframes ink {
   to {
     stroke-dashoffset: 0;
-  }
-}
-
-@keyframes mesh-pulse {
-  0%,
-  100% {
-    opacity: 0.25;
-  }
-  50% {
-    opacity: 0.9;
   }
 }
 
@@ -304,21 +274,27 @@
 }
 
 /*
- * `wrap` is the one structural container: nav, footer and every page body use
- * it, so they all share a left edge. A utility rather than a component because
- * it is pure layout and appears on every page.
+ * `wrap` is the content-column container. Every page body uses it.
  *
- * It is deliberately the PAGE width, not the reading measure. Centring prose
- * inside its own narrower container instead left the text floating ~370px off
- * the nav's left edge — two competing centre lines on one page. Prose is
- * clamped with `max-w-measure` *inside* this, which keeps lines legible while
- * still starting where the nav starts.
+ * It is deliberately NOT centred. Content now lives in the right cell of a
+ * two-column grid whose left cell is a 13rem rail, so `margin-inline: auto`
+ * would centre the text inside that cell and pull it away from the rule —
+ * giving the page two competing left edges again. Left-aligned with padding
+ * keeps one edge, a fixed distance from the rail.
+ *
+ * Prose is clamped inside this with `max-w-measure`, which is a separate
+ * concern: this sets where content starts, that sets how wide a line gets.
  */
 @utility wrap {
   width: 100%;
-  max-width: var(--container-page);
-  margin-inline: auto;
+  max-width: 64rem;
   padding-inline: --spacing(5);
+}
+
+@media (min-width: 64rem) {
+  .wrap {
+    padding-inline: --spacing(10);
+  }
 }
 
 /*
@@ -356,6 +332,17 @@
       color-mix(in oklab, var(--sem-accent) 7%, transparent),
       transparent 70%
     ),
+    /*
+     * A cooler third wash. Two washes of one hue read as a tint; adding a
+     * violet turns the ramp into a gradient that goes somewhere, which is the
+     * whole point of the "dreamy" reference. Kept very low so it never
+     * competes with the accent.
+     */
+      radial-gradient(
+        46rem 34rem at 62% 4%,
+        color-mix(in oklab, oklch(62% 0.17 305) 6%, transparent),
+        transparent 72%
+      ),
     radial-gradient(circle at 1px 1px, var(--sem-dot) 1px, transparent 0);
   background-size:
     100% 100%,
@@ -363,6 +350,29 @@
     22px 22px;
   background-repeat: no-repeat, no-repeat, repeat;
   mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 72%);
+}
+
+/*
+ * Site-wide grain.
+ *
+ * Separate from the `grain` utility used on the gradient panel, and much
+ * lighter: the panel is saturated artwork that can carry heavy noise, whereas
+ * this sits over body text. Above roughly 0.1 opacity it starts to fight the
+ * type, and `soft-light` rather than `overlay` keeps it from lifting the
+ * background's black point.
+ *
+ * A fixed layer rather than a background on <body>, so it does not scroll with
+ * the content — grain that moves reads as a rendering artefact, grain that
+ * stays reads as film.
+ */
+@utility grain-page {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  opacity: 0.085;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /*
@@ -375,6 +385,64 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--sem-muted);
+}
+
+/*
+ * View transitions between routes.
+ *
+ * Qwik drives these — `useQwikRouter({ viewTransition: true })` in root.tsx —
+ * so navigation is still SPA and this is purely the animation layer.
+ *
+ * The trick that makes it feel like one continuous surface rather than two
+ * pages swapping: the atmosphere layer gets its own `view-transition-name`, so
+ * the browser treats it as the SAME element across the navigation and leaves it
+ * alone. Only the content cross-fades over it. Without this the gradient field
+ * fades out and back in, which reads as a flicker.
+ *
+ * Wrapped in `no-preference` rather than relying on the global reduced-motion
+ * block: that block only shortens durations, and a transition that still runs
+ * at 0.01ms can still cause discomfort. Here it must not run at all.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(page) {
+    animation: page-out 220ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+  ::view-transition-new(page) {
+    animation: page-in 320ms cubic-bezier(0, 0, 0.2, 1) both;
+  }
+}
+
+@keyframes page-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/*
+ * Film grain, as a data URI so it stays self-contained and cacheable with the
+ * stylesheet. feTurbulence is generated once by the browser rather than
+ * downloaded, so this costs bytes measured in hundreds, not kilobytes.
+ *
+ * Grain is what separates a gradient that looks rendered from one that looks
+ * like a CSS default — it hides banding in the ramps and gives the surface a
+ * texture. `mix-blend-mode: overlay` keeps it reading as grain on top of the
+ * colour rather than a grey haze over it.
+ */
+@utility grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /*
