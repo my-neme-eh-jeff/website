@@ -5,54 +5,93 @@
  * and (2) it keeps the escape hatch cheap — porting to another framework means
  * rewriting components, not re-entering content.
  *
- * Everything marked TODO is a placeholder. Nothing here is invented about you.
+ * ---------------------------------------------------------------------------
+ * WHAT IS DELIBERATELY NOT HERE
+ *
+ * Drafted 2026-08-23 from Aman_Nambisan_Resume.pdf. A resume goes to one
+ * recipient; this page goes to Google, GPTBot and every scraper. Two classes
+ * of thing were dropped in the crossing, and should stay dropped:
+ *
+ *   1. Phone number. Publishing it cannot be undone — it is cached and
+ *      scraped within days. Email is here instead, which is revocable.
+ *
+ *   2. Employer internals. The resume cites a per-quarter Sev0 count, an
+ *      enterprise customer count, a support-ticket automation percentage,
+ *      specific Helm and vCluster version numbers, and the kinds of cloud
+ *      identifiers a support bot returns. Those describe Atlan's operational
+ *      posture, not Aman's skill, and they read very differently on an
+ *      indexed page than in a PDF. The bullets below keep the engineering and
+ *      the order of magnitude, and drop the internal figures.
+ *
+ * Keep that line when editing: scale-class yes, internal metrics no.
+ * ---------------------------------------------------------------------------
  */
 
 export const profile = {
   name: "Aman Nambisan",
 
   /**
-   * TODO: your actual one-liner.
-   *
-   * This is load-bearing: it renders in the hero AND becomes the meta
-   * description, the og:description, and schema.org Person.description.
-   * Until it is filled in, search results and social cards literally read
-   * "TODO: one line on what you do" under your name. 120-160 chars.
+   * Renders in the hero AND becomes the meta description, og:description and
+   * schema.org Person.description. 120–160 chars is the useful range.
    */
-  tagline: "TODO: one line on what you do",
+  tagline:
+    "Platform engineer at Atlan. I build the Kubernetes and Terraform machinery that provisions enterprise infrastructure, and the agents that operate it.",
 
-  /** TODO: 2-3 sentences. Recruiters read this before anything else. */
-  bio: "TODO: short bio.",
+  bio: "I work on internal platform and infrastructure at Atlan — Kubernetes, Terraform, Crossplane, Temporal — making provisioning reliable enough that nobody has to think about it. Lately most of my time goes to agentic tooling: MCP servers, upgrade agents, and the plumbing that lets a model touch production safely. Outside work I build MLOps systems, like a GPU-aware autoscaler for vLLM and a training loop that promotes its own models.",
 
   /**
-   * TODO: pick ONE canonical job title and use the identical string on
-   * LinkedIn and GitHub. Variation is what creates entity ambiguity.
+   * ONE canonical title, identical on LinkedIn and GitHub — variation is what
+   * creates entity ambiguity. This is the literal title from the resume.
+   * If LinkedIn says something else, change LinkedIn or change this, not both
+   * differently.
    */
-  jobTitle: "",
-
-  /** TODO: city. Feeds both the visible resume and PostalAddress.addressLocality. */
-  city: "",
-
-  /** TODO: public contact email, or leave empty to keep it uncrawled. */
-  email: "",
-
-  /** TODO: current employer, or null. */
-  employer: null as { name: string; url: string } | null,
+  jobTitle: "Software Engineer II",
 
   /**
-   * TODO: topics you would defend in an interview. Feeds Person.knowsAbout.
-   * Name specific technologies, not categories.
+   * Current base. Note the GitHub profile still says Mumbai, which is now
+   * stale — worth fixing there so the two agree.
    */
-  knowsAbout: [] as string[],
+  city: "Bangalore",
 
   /**
-   * Visible links in the hero.
-   *
-   * Ordered by who is most likely to click: a recruiter opens LinkedIn, an
-   * engineer opens GitHub. Every entry carries rel="me", which is the
-   * RelMeAuth convention -- it lets a profile that links back here be treated
-   * as the same identity, and is what Mastodon-style verification reads.
+   * Public contact. This WILL be scraped; that is the accepted trade for being
+   * reachable by a recruiter. Set to "" to stop emitting it entirely.
    */
+  email: "aman2003nambisan@gmail.com",
+
+  employer: { name: "Atlan", url: "https://atlan.com" } as {
+    name: string;
+    url: string;
+  } | null,
+
+  /**
+   * Feeds Person.knowsAbout. Specific technologies, not categories, and only
+   * things actually shipped with — every entry below appears in the roles or
+   * projects on this page.
+   */
+  knowsAbout: [
+    "Kubernetes",
+    "Terraform",
+    "Crossplane",
+    "ArgoCD",
+    "Helm",
+    "Temporal",
+    "Go",
+    "Python",
+    "TypeScript",
+    "Prometheus",
+    "Grafana",
+    "OpenTelemetry",
+    "vLLM",
+    "KEDA",
+    "MLflow",
+    "Kubeflow Pipelines",
+    "Model Context Protocol",
+    "Platform engineering",
+    "MLOps",
+  ] as string[],
+
+  /** Visible links in the hero. Every entry carries rel="me" (RelMeAuth). */
   links: [
     { label: "GitHub", href: "https://github.com/my-neme-eh-jeff" },
     { label: "LinkedIn", href: "https://www.linkedin.com/in/amannambisan/" },
@@ -60,22 +99,15 @@ export const profile = {
   ],
 
   /**
-   * schema.org sameAs -- the machine-readable "these accounts are one person"
+   * schema.org sameAs — the machine-readable "these accounts are one person"
    * assertion, and the best entity-disambiguation tool available.
    *
-   * ONLY add URLs confirmed to be yours and live. A stale or wrong profile
-   * here actively harms disambiguation rather than helping it. All three below
-   * were confirmed by Aman on 2026-08-23 and checked to resolve; LinkedIn
-   * answers a bare request with HTTP 999, which is its bot defence and not a
-   * dead page.
+   * Only URLs confirmed yours and live. Trailing slashes match each site's own
+   * canonical form so none of these redirects.
    *
-   * Trailing slashes match each site's own canonical form -- GitHub and X drop
-   * it, LinkedIn keeps it. Matching exactly avoids asserting a URL that
-   * redirects.
-   *
-   * These only pay off when RECIPROCAL. Each profile should link back to
-   * amannambisan.com; without the return link the claim is unverifiable and
-   * search engines weight it far lower. That is a manual step on each site.
+   * These pay off only when RECIPROCAL: each profile must link back to
+   * amannambisan.com, or the claim is unverifiable and weighted far lower.
+   * That is a manual step on each site.
    */
   sameAs: [
     "https://github.com/my-neme-eh-jeff",
@@ -83,27 +115,216 @@ export const profile = {
     "https://x.com/NambisanAman",
   ] as string[],
 
-  /**
-   * Path to a 1200x630 social card under public/, e.g. "/og/home.png".
-   * Empty means no og:image tags are emitted at all -- deliberate, because a
-   * referenced-but-missing image renders a blank card, which is worse than none.
-   */
+  /** Path to a 1200x630 card under public/. Empty emits no og:image at all. */
   ogImage: "",
 };
 
 export type Role = {
   company: string;
+  /** Omit when the company is the same as the entry above — renders grouped. */
+  companyUrl?: string;
   title: string;
   period: string;
-  /** Bullets should be outcomes, not duties. */
+  location: string;
+  /** Bullets are outcomes, not duties. */
   points: string[];
 };
 
-/** TODO: your real history. Left empty on purpose — I won't invent this. */
-export const roles: Role[] = [];
+/**
+ * Reverse-chronological. Sanitized per the header note — the engineering and
+ * the order of magnitude stay, the internal metrics do not.
+ */
+export const roles: Role[] = [
+  {
+    company: "Atlan",
+    companyUrl: "https://atlan.com",
+    title: "Software Engineer II",
+    period: "Jan 2026 — Present",
+    location: "Bangalore",
+    points: [
+      "Scaled ArgoCD to deploy thousands of applications across EKS, GKE and AKS, cutting roughly 20 minutes of rollout latency per application through Helm chart upgrades and controller tuning.",
+      "Built an AI agent that carries out infrastructure upgrades inside customer maintenance windows, halving the human time each one costs.",
+      "Architected release-management tooling that tracks per-tenant deployment state across the fleet, replacing unverified upstream rollouts with auditable ring status.",
+      "Shipped a domain-switch workflow coordinating DNS, secrets and ingress changes, collapsing a multi-hour manual runbook into one operation.",
+      "Built internal MCP servers for Grafana, vCluster and other systems so agentic workflows could read real infrastructure state instead of guessing.",
+    ],
+  },
+  {
+    company: "Atlan",
+    title: "Software Engineer I",
+    period: "Jan 2025 — Dec 2025",
+    location: "Bangalore",
+    points: [
+      "Took on-demand infrastructure provisioning from roughly a 50% success rate to consistently above 90% month over month, by fixing Terraform modules and making bootstrap jobs idempotent; moving the flow to Crossplane took it to 100%.",
+      "Owned development and review for Atlan's internal developer portal (Vue.js and Go), used across engineering, sales and customer teams, and established it as the source of truth for tenant metadata.",
+      "Raised that service's test coverage to 75%, taking recurring regressions to zero.",
+      "Wrote a Temporal workflow tracking cloud resource quota with Prometheus metrics and Grafana alerting, catching provisioning and scale-up failures before exhaustion.",
+    ],
+  },
+  {
+    company: "Atlan",
+    title: "Associate Software Engineer I",
+    period: "Nov 2024 — Dec 2024",
+    location: "Mumbai",
+    points: [
+      "Coordinated Loft and vCluster platform upgrades with minimal downtime to running workflows.",
+      "Integrated an OpenTelemetry agent shipping logs into ClickHouse.",
+    ],
+  },
+  {
+    company: "simPPL",
+    companyUrl: "https://simppl.org",
+    title: "Frontend Intern",
+    period: "May 2023 — Aug 2023",
+    location: "Remote",
+    points: [
+      "Built D3.js visualisations over million-row misinformation datasets drawn from X, Facebook and Telegram.",
+      "Built a Discord-triggered content pipeline that scraped articles, summarised them with an LLM and delivered them as a newsletter to a few hundred subscribers.",
+    ],
+  },
+];
 
-/** TODO: skills you'd actually defend in an interview. */
-export const skills: string[] = [];
+export type Project = {
+  /** Short, lowercase, kebab — used as the `k get projects` NAME column. */
+  slug: string;
+  title: string;
+  /** One line. Shown by `k get projects`. */
+  summary: string;
+  /** Longer prose. Shown by `k describe project <slug>`. */
+  detail: string[];
+  stack: string[];
+  repo?: string;
+  /** ISO date of last meaningful work, for the AGE column. */
+  updated: string;
+};
+
+/**
+ * Descriptions are drawn from each repository's own README, not invented.
+ * NOTE: none of these repos has a GitHub description set, which makes them
+ * invisible in GitHub search — worth fixing at the source.
+ */
+export const projects: Project[] = [
+  {
+    slug: "gpu-autoscaler",
+    title: "GPU-Aware Autoscaler for LLM Inference",
+    summary: "Scales vLLM pods on KV cache pressure, not CPU.",
+    detail: [
+      "A Kubernetes autoscaler that scales vLLM inference pods on KV cache pressure and request queue depth rather than CPU, because on a GPU server CPU is not the bottleneck and rises only after users are already waiting.",
+      "Traffic spikes fill the cache, the autoscaler reads that as a leading indicator, KEDA adds a replica and the cluster autoscaler provisions an L4 — so time-to-first-token stays flat through the spike.",
+    ],
+    stack: ["Kubernetes", "vLLM", "KEDA", "Terraform", "Prometheus"],
+    repo: "https://github.com/my-neme-eh-jeff/llmops-benchmarking",
+    updated: "2026-05-03",
+  },
+  {
+    slug: "ml-deploy",
+    title: "Autonomous ML Deployment System",
+    summary: "An LLM proposes model changes; winners ship themselves.",
+    detail: [
+      "Drop in a binary-classification CSV, declare its schema, and a closed loop takes over: Claude proposes a change, the system trains it on Kubernetes, and only candidates that beat the current champion get promoted. Accuracy went from roughly 70% to 80% across 20 iterations.",
+      "DVC versions the data, Kubeflow Pipelines runs training, MLflow holds the champion/challenger registry, and a FastAPI service is rolled forward via GitOps whenever a new champion is promoted. No human in the loop.",
+    ],
+    stack: ["Kubernetes", "Kubeflow", "MLflow", "DVC", "FastAPI", "GitOps"],
+    repo: "https://github.com/my-neme-eh-jeff/deploying-autoresearch",
+    updated: "2026-05-28",
+  },
+  {
+    slug: "ride-booking",
+    title: "Ride Booking Backend",
+    summary: "Go modular monolith with event-driven matching.",
+    detail: [
+      "A Go modular monolith split by domain — booking, matching, pricing — communicating over Kafka, with asynchronous booking processing and real-time ride tracking.",
+      "Redis provides a distributed lock so a rider cannot be double-booked, and Google's S2 library handles spatial indexing for proximity search in the driver-matching service.",
+    ],
+    stack: ["Go", "Kafka", "Redis", "S2"],
+    updated: "2024-10-24",
+  },
+];
+
+export type Achievement = { title: string; note?: string };
+
+export const achievements: Achievement[] = [
+  {
+    title: "IEEE YEIST12 — First in India, top 10 overall",
+    note: "Represented India in a special track held in Tunisia.",
+  },
+  { title: "AWS Certified Cloud Practitioner (CLF-C02)" },
+  {
+    title: "Amazon Sambhav Hackathon — prototype phase",
+    note: "Built a connector for e-commerce platforms including Shopify.",
+  },
+  { title: "Samsung Solve for Tomorrow 2024 — finalist cohort" },
+  { title: "Codeforces Div. 1 top 800 · LeetCode Guardian" },
+];
+
+export const education = {
+  school: "Dwarkadas J Sanghvi College of Engineering",
+  degree: "B.Tech, Computer Engineering",
+  period: "2020 — 2024",
+  note: "GPA 8.13 / 10",
+};
+
+/** Grouped so the resume page can render headings rather than one long list. */
+export const skills: Array<{ group: string; items: string[] }> = [
+  {
+    group: "Platform & Cloud",
+    items: [
+      "Kubernetes",
+      "Docker",
+      "Helm",
+      "Terraform",
+      "Crossplane",
+      "ArgoCD",
+      "Temporal",
+      "KEDA",
+      "AWS",
+      "GCP",
+      "Azure",
+      "GitHub Actions",
+      "Cloudflare",
+      "Kong",
+    ],
+  },
+  {
+    group: "Languages",
+    items: [
+      "Go",
+      "Python",
+      "TypeScript",
+      "Java",
+      "SQL",
+      "Bash",
+      "Node.js",
+      "React",
+      "Vue.js",
+    ],
+  },
+  {
+    group: "ML & AI",
+    items: [
+      "MLflow",
+      "Kubeflow Pipelines",
+      "DVC",
+      "vLLM",
+      "FastAPI",
+      "Anthropic API",
+      "MCP",
+    ],
+  },
+  {
+    group: "Observability & Data",
+    items: [
+      "Prometheus",
+      "Grafana",
+      "OpenTelemetry",
+      "ClickHouse",
+      "Postgres",
+      "Redis",
+      "Kafka",
+      "SpiceDB",
+    ],
+  },
+];
 
 export type Post = {
   slug: string;

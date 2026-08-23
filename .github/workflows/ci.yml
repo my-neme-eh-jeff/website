@@ -59,3 +59,12 @@ jobs:
 
       - name: Verify build invariants
         run: node scripts/verify-build.mjs
+
+      # Performance budget. Runs the same Lighthouse engine PSI uses, against
+      # the built output, and fails if any category drops below its floor. It
+      # WRITES NOTHING -- src/content/audit.json is refreshed deliberately with
+      # `npm run audit`, because a CI job that commits would trigger itself.
+      #
+      # ubuntu-latest ships google-chrome-stable, which chrome-launcher finds.
+      - name: Lighthouse budget
+        run: node scripts/audit.mjs --check

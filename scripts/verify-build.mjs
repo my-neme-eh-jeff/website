@@ -10,7 +10,7 @@
  * Actions, and so the reasoning lives next to the assertion.
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -305,6 +305,55 @@ check("every referenced font file exists and is a real woff2", () => {
     );
   }
   return `${new Set(refs).size} files`;
+});
+
+check("every class in the output has a CSS rule", () => {
+  /*
+   * Tailwind does not error on a class it does not recognise -- it emits
+   * nothing, and the element renders unstyled. `class="mono"` shipped that way
+   * in 8 places: a leftover from before the Tailwind migration, where the real
+   * utility is `font-mono`. The page looked almost right, which is why nobody
+   * would catch it by eye.
+   *
+   * So: collect every class token the built HTML actually uses, and assert each
+   * one appears as a selector in the built CSS. Semantic classes (wrap, pill,
+   * eyebrow) have rules too, so there are no legitimate orphans.
+   */
+  const cssFile = readdirSync(p("dist", "assets")).find((f) =>
+    f.endsWith(".css"),
+  );
+  assert(cssFile, "No stylesheet in dist/assets.");
+  const css = read("dist", "assets", cssFile);
+
+  // CSS escapes `:`, `[`, `/` etc. in generated class names; strip to compare.
+  const base = (c) => c.replace(/\\/g, "").split(":")[0];
+  const selectors = new Set(
+    [...css.matchAll(/\.((?:\\.|[-\w[\]()/%.:,#])+)/g)].map((m) => base(m[1])),
+  );
+
+  const used = new Set();
+  for (const page of [
+    "index.html",
+    "resume/index.html",
+    "blog/index.html",
+    "404.html",
+  ]) {
+    for (const m of read("dist", page).matchAll(/class="([^"]*)"/g)) {
+      m[1]
+        .split(/\s+/)
+        .filter(Boolean)
+        .forEach((c) => used.add(c));
+    }
+  }
+
+  const orphans = [...used].filter((c) => !selectors.has(base(c)));
+  assert(
+    orphans.length === 0,
+    `Classes used in HTML with no CSS rule: ${orphans.join(", ")}. ` +
+      `Either a typo, or a utility that does not exist -- both render silently ` +
+      `as no styling at all.`,
+  );
+  return `${used.size} tokens, all resolved`;
 });
 
 // --- Accessibility -------------------------------------------------------

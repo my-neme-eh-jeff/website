@@ -24,7 +24,9 @@
     "build.server": "qwik check-client src dist && vite build -c adapters/ssg/vite.config.ts",
     "verify": "node scripts/verify-build.mjs",
     "icons": "node scripts/make-icons.mjs",
-    "fonts": "node scripts/fetch-fonts.mjs"
+    "fonts": "node scripts/fetch-fonts.mjs",
+    "audit": "node scripts/audit.mjs",
+    "audit.check": "node scripts/audit.mjs --check"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -35,6 +37,7 @@
     "eslint": "10.0.3",
     "eslint-plugin-qwik": "2.0.0-beta.38",
     "globals": "17.0.0",
+    "lighthouse": "13.4.1",
     "prettier": "3.7.4",
     "prettier-plugin-tailwindcss": "0.8.1",
     "tailwindcss": "4.3.3",

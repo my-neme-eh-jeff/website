@@ -1,5 +1,6 @@
 import { component$, Slot } from "@qwik.dev/core";
 import { Link } from "@qwik.dev/router";
+import { ScoreRow } from "~/components/score-ring/score-ring";
 import { profile } from "~/content/profile";
 
 /**
@@ -17,6 +18,13 @@ const buildYear = new Date().getFullYear();
 export default component$(() => {
   return (
     <div class="flex min-h-dvh flex-col">
+      {/*
+       * The atmosphere layer. Fixed and pointer-events-none, so it holds still
+       * while the page scrolls and can never swallow a click. Decorative, so
+       * aria-hidden -- there is nothing here to announce.
+       */}
+      <div class="field" aria-hidden="true" />
+
       {/*
        * Skip link. First thing in the tab order, invisible until focused.
        *
@@ -67,14 +75,39 @@ export default component$(() => {
         <Slot />
       </main>
 
-      <footer class="border-line text-muted border-t py-6 text-sm">
-        <div class="wrap flex flex-wrap gap-4">
-          <span>
-            © {buildYear} {profile.name}
-          </span>
-          <a class="ml-auto" href="https://github.com/my-neme-eh-jeff/website">
-            Source
-          </a>
+      <footer class="border-line text-muted border-t py-8 text-sm">
+        <div class="wrap flex flex-col gap-8">
+          {/*
+           * The scores live here rather than in the hero because they are
+           * evidence, not a claim: someone who cares looks for them, and
+           * nobody needs them to understand the page.
+           */}
+          <div class="flex flex-wrap items-start justify-between gap-6">
+            <div>
+              <p class="eyebrow mb-3">Measured</p>
+              <ScoreRow />
+            </div>
+            <p class="mb-0 max-w-xs text-xs leading-relaxed">
+              Static HTML on Cloudflare Workers. No framework runtime until you
+              interact, no analytics, no cookies.{" "}
+              <a href="https://github.com/my-neme-eh-jeff/website">
+                Source is public
+              </a>
+              .
+            </p>
+          </div>
+
+          <div class="border-line flex flex-wrap gap-4 border-t pt-6">
+            <span>
+              © {buildYear} {profile.name}
+            </span>
+            <a
+              class="ml-auto"
+              href="https://github.com/my-neme-eh-jeff/website"
+            >
+              Source
+            </a>
+          </div>
         </div>
       </footer>
     </div>
