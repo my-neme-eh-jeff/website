@@ -82,10 +82,14 @@ Do not read a green `verify` as "accessible". These need a person:
   source order decides, and it currently works only because Tailwind emits
   position utilities later. If a focused skip link ever pushes the page down
   instead of overlaying it, this is why.
-- **Qwik inlines the entire stylesheet** into a `<style>` tag and emits no
-  `<link rel="stylesheet">`. `dist/assets/*-style.css` is never fetched — it is
-  referenced only as `data-src`. Patching that file to test CSS changes nothing;
-  patch the inline `<style>` in the HTML.
+- **Qwik switches CSS delivery based on size, so check which mode you are in
+  before trying to patch it.** Below roughly 15 kB it inlines the whole
+  stylesheet into a `<style>` tag and emits no `<link rel="stylesheet">`, so
+  `dist/assets/*-style.css` is present but never fetched (referenced only as
+  `data-src`) and editing it does nothing. Above that it links the file and the
+  inline style disappears. This repo crossed the threshold on 2026-08-23 when
+  the webfonts and atmosphere layer landed (15.4 kB to 21.5 kB). Always check:
+  `grep -c 'rel="stylesheet"' dist/index.html` gives 1 for linked, 0 for inlined.
 - **Reduced motion** is handled globally in `global.css` AND per-element with
   `motion-reduce:` in components. The global rule only shortens durations, so
   anything that must not animate at all needs the variant too.
@@ -93,17 +97,21 @@ Do not read a green `verify` as "accessible". These need a person:
 ## Verifying a theme branch deterministically
 
 Chrome's `--force-light-mode` does **not** override `prefers-color-scheme`, and
-a headless screenshot inherits the OS theme — which silently tested dark twice.
-Flip the branch in the inline style instead:
+a headless screenshot inherits the OS theme -- which silently tested dark twice.
+Disable the dark branch instead, in whichever file actually carries the CSS (see
+the delivery note above).
 
-```bash
-cp -r dist /tmp/t
-python3 - <<'PY'
-f = "/tmp/t/index.html"; h = open(f).read()
-open(f, "w").write(h.replace("@media(prefers-color-scheme:dark){", "@media not all{"))
-PY
-python3 -m http.server 8099 --directory /tmp/t
-```
+**Serve each variant from its own document root.** Asset paths are absolute
+(`/assets/...`), so serving `light/` and `dark/` as subdirectories of one root
+makes both pages request `/assets/...` from that shared root. They load no CSS
+at all and render identically -- which looks exactly like "the theme swap is
+broken".
+
+    rm -rf /tmp/t && mkdir -p /tmp/t/light && cp -r dist/* /tmp/t/light/
+    # Linked mode: patch the stylesheet. Inlined mode: patch index.html.
+    python3 -c "import glob; f=glob.glob('/tmp/t/light/assets/*-style.css')[0]; \
+      s=open(f).read(); open(f,'w').write(s.replace('@media(prefers-color-scheme:dark){','@media not all{'))"
+    cd /tmp/t/light && python3 -m http.server 8082   # own root, not a subpath
 
 ## Precedence when guidance conflicts
 
