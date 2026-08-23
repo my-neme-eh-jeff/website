@@ -31,8 +31,25 @@
 :root {
   --paper: #fbfaf8;
   --ink: #16150f;
-  --clay: #d97757;
   --cream: #f2f0e9;
+
+  /*
+   * Clay exists in two values because one could not serve both grounds.
+   *
+   * --clay (#d97757) measures 2.99:1 on --paper. The focus ring below is drawn
+   * in the accent, and WCAG 1.4.11 requires 3:1 for the visual indication of a
+   * component state -- so on the light theme the ring was non-conformant, by a
+   * hair, and keyboard users are exactly who cannot afford that.
+   *
+   * --clay-deep (#bd5334) is 4.52:1 on --paper, clearing both the 3:1 focus
+   * bar and the 4.5:1 body-text bar. Visible consequence: the mesh figure and
+   * caret read as a deeper terracotta in light mode. That is the cost of the
+   * fix, and it sits better on cream anyway.
+   *
+   * Recompute after any change: npm run verify
+   */
+  --clay: #d97757;
+  --clay-deep: #bd5334;
 
   /* Light is the base. */
   --sem-bg: var(--paper);
@@ -40,7 +57,7 @@
   --sem-text: var(--ink);
   --sem-muted: #5f5d55;
   --sem-line: rgb(0 0 0 / 0.1);
-  --sem-accent: var(--clay);
+  --sem-accent: var(--clay-deep);
 
   /* Tells the UA to render form controls and scrollbars for both themes. */
   color-scheme: light dark;
@@ -53,7 +70,8 @@
     --sem-text: var(--cream);
     --sem-muted: #a4a096;
     --sem-line: rgb(255 255 255 / 0.12);
-    /* --sem-accent is unchanged: clay clears 4.5:1 on both grounds. */
+    /* Dark can use the brighter clay: #d97757 is 6.05:1 on #12110d. */
+    --sem-accent: var(--clay);
   }
 }
 
@@ -161,10 +179,15 @@
     text-decoration-color: var(--sem-accent);
   }
 
-  /* Keyboard focus must stay visible; Tailwind's reset does not provide it. */
+  /*
+   * Keyboard focus must stay visible; Tailwind's reset does not provide it.
+   * 3px rather than 2px so the indicator has enough area to be noticed at a
+   * glance, and a matching outline-color so it never inherits currentColor.
+   */
   :focus-visible {
-    outline: 2px solid var(--sem-accent);
+    outline: 3px solid var(--sem-accent);
     outline-offset: 2px;
+    border-radius: 2px;
   }
 
   /* Wide content scrolls itself, so the page body never scrolls sideways. */

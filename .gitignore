@@ -51,3 +51,7 @@ dist/
 .qwik/
 tmp/
 server/
+
+# Personal, per-developer Claude Code preferences.
+# `*.local` above does not match this, since it ends in .md.
+CLAUDE.local.md

@@ -21,6 +21,8 @@ the docs, when they disagree.
 | Why Qwik UI / any Qwik 1 component lib can't be used | `.claude/skills/qwik2-beta/`                       |
 | SEO, structured data, AI-crawler policy              | `.claude/skills/seo-geo/`                          |
 | Design tokens, theme swap, shared patterns           | `src/global.css` (read the header)                 |
+| **Accessibility bar for any UI work**                | `.claude/skills/a11y-ui/`                          |
+| Visual design direction for NEW surfaces             | `.claude/skills/frontend-design/` (upstream)       |
 | Favicon / og:image generation                        | `scripts/make-icons.mjs` (run it, don't hand-edit) |
 | Every fact the pages render                          | `src/content/profile.ts` (and its comments)        |
 | Meta tags + JSON-LD generation                       | `src/content/seo.ts`                               |
@@ -55,3 +57,7 @@ them against the real build output. Add new ones there, not here.
 - **Colours come from `--sem-*` via Tailwind utilities**, never a raw hex in a
   component. The `@theme inline` block in `src/global.css` is what makes one
   media query retint the whole site; a hardcoded colour opts out of it.
+- **`--sem-accent` is the focus-ring colour**, so its contrast is a conformance
+  property, not a style choice. It needs ≥3:1 on `--sem-bg` in BOTH themes —
+  which is why light uses `--clay-deep` and dark uses `--clay`. `npm run verify`
+  recomputes this; see `.claude/skills/a11y-ui/`.

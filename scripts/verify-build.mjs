@@ -259,6 +259,173 @@ check("every hero link is also asserted in sameAs", () => {
   return `${hrefs.length} links, all in sameAs`;
 });
 
+// --- Accessibility -------------------------------------------------------
+//
+// Structural and colour checks only. These catch regressions, they do not
+// certify the site: keyboard order, screen-reader announcement and 400% zoom
+// still need a human. See .claude/skills/a11y-ui/ for what is NOT covered.
+
+/** sRGB relative luminance, per WCAG 2.x. */
+function luminance(hexColour) {
+  let h = hexColour.replace("#", "");
+  if (h.length === 3) h = [...h].map((c) => c + c).join("");
+  const [r, g, b] = [0, 2, 4]
+    .map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+const contrast = (a, b) => {
+  const [x, y] = [luminance(a), luminance(b)];
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+};
+
+check("colour contrast meets WCAG AA in both themes", () => {
+  const css = read("src", "global.css");
+  const val = (name, scope = css) =>
+    scope.match(new RegExp(`--${name}:\\s*(#[0-9a-f]{3,8})`, "i"))?.[1];
+  const raw = {
+    paper: val("paper"),
+    ink: val("ink"),
+    cream: val("cream"),
+    clay: val("clay"),
+    "clay-deep": val("clay-deep"),
+  };
+  const darkBlock = css.slice(css.indexOf("prefers-color-scheme: dark"));
+
+  // Resolve one indirection: `--sem-x: var(--raw)` or a literal.
+  const sem = (name, scope) => {
+    const m = scope.match(new RegExp(`--sem-${name}:\\s*([^;]+);`));
+    assert(m, `--sem-${name} not found`);
+    const v = m[1].trim();
+    const ref = v.match(/^var\(--([a-z-]+)\)$/);
+    return ref ? raw[ref[1]] : v;
+  };
+
+  const themes = {
+    light: {
+      bg: sem("bg", css),
+      text: sem("text", css),
+      muted: sem("muted", css),
+      accent: sem("accent", css),
+    },
+    dark: {
+      bg: sem("bg", darkBlock),
+      text: sem("text", darkBlock),
+      muted: sem("muted", darkBlock),
+      accent: sem("accent", darkBlock),
+    },
+  };
+
+  const results = [];
+  for (const [name, t] of Object.entries(themes)) {
+    // 4.5:1 -- WCAG 1.4.3, normal-size body text.
+    for (const key of ["text", "muted"]) {
+      const r = contrast(t[key], t.bg);
+      assert(
+        r >= 4.5,
+        `${name}: --sem-${key} on --sem-bg is ${r.toFixed(2)}:1, needs 4.5:1 ` +
+          `(WCAG 1.4.3, body text).`,
+      );
+    }
+    /*
+     * 3:1 -- WCAG 1.4.11. The :focus-visible ring is drawn in --sem-accent,
+     * and focus is a component STATE, so its indicator is non-text contrast
+     * rather than decoration. This is the check that caught #d97757 at
+     * 2.99:1 on the light ground.
+     */
+    const focus = contrast(t.accent, t.bg);
+    assert(
+      focus >= 3,
+      `${name}: --sem-accent on --sem-bg is ${focus.toFixed(2)}:1, needs 3:1. ` +
+        `The focus ring uses this colour, so keyboard focus would be ` +
+        `non-conformant (WCAG 1.4.11).`,
+    );
+    results.push(`${name} focus ${focus.toFixed(2)}:1`);
+  }
+  return results.join(", ");
+});
+
+check("skip link is present, first, and points at a real target", () => {
+  for (const page of ["index.html", "resume/index.html", "blog/index.html"]) {
+    const html = read("dist", page);
+    const body = html.slice(html.indexOf("<body"));
+    const firstAnchor = body.match(/<a\b[^>]*href="([^"]*)"[^>]*>/);
+    assert(
+      firstAnchor && firstAnchor[1].startsWith("#"),
+      `${page}: the first focusable link is not a skip link. Without one, ` +
+        `keyboard and screen-reader users traverse the whole nav on every page.`,
+    );
+    const target = firstAnchor[1].slice(1);
+    assert(
+      new RegExp(`id="${target}"`).test(html),
+      `${page}: skip link points at #${target}, which no element has.`,
+    );
+    /*
+     * The target must be focusable or the fragment jump moves the viewport
+     * without moving focus, and the next Tab goes back to the nav.
+     */
+    const el = html.match(new RegExp(`<[a-z]+[^>]*id="${target}"[^>]*>`, "i"));
+    assert(
+      el && /tabindex="-1"/i.test(el[0]),
+      `${page}: #${target} lacks tabindex="-1", so focus does not follow the jump.`,
+    );
+  }
+  return "3 pages";
+});
+
+check("document structure: lang, one h1, no skipped heading levels", () => {
+  for (const page of ["index.html", "resume/index.html", "blog/index.html"]) {
+    const html = read("dist", page);
+    assert(
+      /<html[^>]*\slang="[a-z]{2}/i.test(html),
+      `${page} has no lang attribute, so screen readers guess pronunciation.`,
+    );
+    const h1s = html.match(/<h1\b/g) ?? [];
+    assert(
+      h1s.length === 1,
+      `${page} has ${h1s.length} <h1>, expected exactly 1.`,
+    );
+
+    const levels = [...html.matchAll(/<h([1-6])\b/g)].map((m) => Number(m[1]));
+    let prev = 0;
+    for (const lvl of levels) {
+      assert(
+        prev === 0 || lvl <= prev + 1,
+        `${page} jumps from h${prev} to h${lvl}. Skipped levels break ` +
+          `heading-navigation, which is how screen-reader users scan a page.`,
+      );
+      prev = lvl;
+    }
+  }
+  return "3 pages";
+});
+
+check("every graphic has an accessible name or is hidden", () => {
+  for (const page of ["index.html", "resume/index.html", "blog/index.html"]) {
+    const html = read("dist", page);
+    for (const tag of html.match(/<img\b[^>]*>/g) ?? []) {
+      assert(
+        /\salt=/.test(tag),
+        `${page}: <img> without alt: ${tag.slice(0, 70)}`,
+      );
+    }
+    /*
+     * An <svg> is either meaningful (role="img" + a name) or decorative
+     * (aria-hidden). Neither means a screen reader announces raw path data.
+     */
+    for (const tag of html.match(/<svg\b[^>]*>/g) ?? []) {
+      const named = /aria-label=|aria-labelledby=/.test(tag);
+      const hidden = /aria-hidden="true"/.test(tag);
+      assert(
+        named || hidden,
+        `${page}: <svg> is neither named nor aria-hidden: ${tag.slice(0, 70)}`,
+      );
+    }
+  }
+  return "3 pages";
+});
+
 // --- Report ---------------------------------------------------------------
 
 for (const ok of passes) console.log(`  ok    ${ok}`);
