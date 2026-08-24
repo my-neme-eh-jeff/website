@@ -6,6 +6,21 @@
  * freshly built ./dist instead.
  *
  * ---------------------------------------------------------------------------
+ * WHY IT RUNS THREE TIMES AND TAKES THE MEDIAN
+ *
+ * Performance is not a stable measurement. Three consecutive runs against the
+ * same deployed commit returned 99, 100 and 98 — the metric moves with CPU
+ * contention on the measuring machine, not with the site. Publishing a single
+ * run means publishing whichever number happened to come up, and re-running
+ * looks like the site is flapping when it is the harness.
+ *
+ * Median of three, not mean: a mean lets one bad outlier drag the published
+ * figure, whereas a median ignores it. The correctness categories
+ * (accessibility, best practices, SEO) do not vary at all, but they go through
+ * the same path so there is one code path rather than two.
+ * ---------------------------------------------------------------------------
+ *
+ * ---------------------------------------------------------------------------
  * WHY LOCAL LIGHTHOUSE AND NOT THE PAGESPEED INSIGHTS API
  *
  * PSI is free of charge but NOT free of a key: the keyless quota is literally
@@ -73,6 +88,8 @@ const CATEGORIES = ["performance", "accessibility", "best-practices", "seo"];
  * is no harness variance to allow for.
  */
 const CHECK = process.argv.includes("--check");
+/** Odd, so the median is an actual observation rather than an interpolation. */
+const RUNS = 3;
 const LOCAL = process.argv.includes("--local");
 const PROD_URL = "https://amannambisan.com/";
 const FLOOR = {
@@ -138,23 +155,36 @@ async function main() {
   });
 
   try {
-    const result = await lighthouse(
-      url,
-      { port: chrome.port, output: "json", logLevel: "error" },
-      // Mobile is the default Lighthouse config and the harsher of the two, so
-      // it is the honest number to publish.
-      undefined,
-    );
-    if (!result?.lhr) throw new Error("Lighthouse returned no result.");
+    // Mobile is Lighthouse's default and the harsher of the two, so it is the
+    // honest figure to publish.
+    const opts = { port: chrome.port, output: "json", logLevel: "error" };
 
-    const { lhr } = result;
-    const scores = {};
-    for (const key of CATEGORIES) {
-      const cat = lhr.categories[key];
-      if (!cat || cat.score == null) {
-        throw new Error(`Lighthouse gave no score for "${key}".`);
+    const runs = [];
+    let lhr;
+    for (let i = 0; i < RUNS; i++) {
+      const result = await lighthouse(url, opts, undefined);
+      if (!result?.lhr) throw new Error("Lighthouse returned no result.");
+      lhr = result.lhr;
+      const one = {};
+      for (const key of CATEGORIES) {
+        const cat = lhr.categories[key];
+        if (!cat || cat.score == null) {
+          throw new Error(`Lighthouse gave no score for "${key}".`);
+        }
+        one[key] = Math.round(cat.score * 100);
       }
-      scores[key] = Math.round(cat.score * 100);
+      runs.push(one);
+      if (!CHECK) console.log(`  run ${i + 1}: ${JSON.stringify(one)}`);
+    }
+
+    const median = (nums) =>
+      [...nums].sort((a, b) => a - b)[Math.floor(nums.length / 2)];
+    const scores = {};
+    const spread = {};
+    for (const key of CATEGORIES) {
+      const vals = runs.map((r) => r[key]);
+      scores[key] = median(vals);
+      spread[key] = Math.max(...vals) - Math.min(...vals);
     }
 
     if (CHECK) {
@@ -188,6 +218,8 @@ async function main() {
       target: LOCAL ? "local" : "production",
       lighthouseVersion: lhr.lighthouseVersion,
       formFactor: lhr.configSettings.formFactor,
+      // Recorded so the footer's number is traceable to how it was obtained.
+      runs: RUNS,
       scores,
     };
 
@@ -197,10 +229,13 @@ async function main() {
       writeFileSync(OUT, JSON.stringify(payload, null, 2) + "\n");
     }
 
-    console.log(`Lighthouse ${lhr.lighthouseVersion} · ${payload.formFactor}`);
+    console.log(
+      `\nLighthouse ${lhr.lighthouseVersion} · ${payload.formFactor} · median of ${RUNS}`,
+    );
     for (const [k, v] of Object.entries(scores)) {
       const bar = "█".repeat(Math.round(v / 5)).padEnd(20, "·");
-      console.log(`  ${k.padEnd(15)} ${String(v).padStart(3)}  ${bar}`);
+      const noise = spread[k] > 0 ? `  ±${spread[k]}` : "";
+      console.log(`  ${k.padEnd(15)} ${String(v).padStart(3)}  ${bar}${noise}`);
     }
     console.log(`\nwrote src/content/audit.json (commit ${commit})`);
   } finally {

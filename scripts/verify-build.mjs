@@ -11,6 +11,7 @@
  */
 
 import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -581,6 +582,58 @@ check("every graphic has an accessible name or is hidden", () => {
     }
   }
   return "3 pages";
+});
+
+warn("published Lighthouse scores still describe the current build", () => {
+  /*
+   * This is the failure the scores actually had: audit.json said 93 for
+   * performance while production measured 98-100, because it was stamped four
+   * commits back — taken before the typing animation came out and before the
+   * preloader was tuned. Nothing noticed, because a stale number looks exactly
+   * like a fresh one.
+   *
+   * A WARNING rather than a failure, and the reason is structural: the scores
+   * are measured against PRODUCTION, so the sequence is push -> deploy ->
+   * measure -> commit. The commit immediately after any change is therefore
+   * stale by construction, and failing here would make that unresolvable.
+   *
+   * audit.json is excluded from the comparison, since committing it is itself a
+   * change under src/.
+   */
+  const audit = JSON.parse(read("src", "content", "audit.json"));
+  const at = audit.commit;
+  assert(at && at !== "unknown", "audit.json has no commit stamp.");
+
+  let changed;
+  try {
+    changed = execFileSync(
+      "git",
+      [
+        "diff",
+        "--name-only",
+        `${at}..HEAD`,
+        "--",
+        "src",
+        "public",
+        ":!src/content/audit.json",
+      ],
+      { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    )
+      .split("\n")
+      .filter(Boolean);
+  } catch {
+    // Shallow clone (CI checks out depth 1) or an unknown commit. Not a defect.
+    return;
+  }
+
+  assert(
+    changed.length === 0,
+    `Measured at ${at} (${audit.measuredAt}), but ${changed.length} file(s) ` +
+      `affecting the output changed since: ${changed.slice(0, 6).join(", ")}` +
+      `${changed.length > 6 ? ", …" : ""}. The footer is publishing numbers for ` +
+      `a build that no longer exists. Re-run \`pnpm run audit\` after the next ` +
+      `deploy lands.`,
+  );
 });
 
 // --- Report ---------------------------------------------------------------
