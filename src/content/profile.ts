@@ -201,6 +201,15 @@ export type Project = {
   detail: string[];
   stack: string[];
   repo?: string;
+  /**
+   * ASCII architecture, shown by `k describe project <slug>`.
+   *
+   * Only where there is a real mechanism worth drawing — a diagram that just
+   * restates the summary in boxes is noise. Keep every line under 64 columns
+   * so it never wraps in the shell, and remember it is rendered aria-hidden:
+   * the `detail` prose has to carry the same information for a screen reader.
+   */
+  diagram?: string[];
   /** ISO date of last meaningful work, for the AGE column. */
   updated: string;
 };
@@ -220,6 +229,23 @@ export const projects: Project[] = [
       "Traffic spikes fill the cache, the autoscaler reads that as a leading indicator, KEDA adds a replica and the cluster autoscaler provisions an L4 — so time-to-first-token stays flat through the spike.",
     ],
     stack: ["Kubernetes", "vLLM", "KEDA", "Terraform", "Prometheus"],
+    diagram: [
+      "  traffic spike",
+      "       │",
+      "       ▼",
+      "  ┌──────────────┐   KV cache %    ┌─────────────┐",
+      "  │  vLLM pods   │ ──────────────▶ │    KEDA     │",
+      "  │  (L4 GPU)    │   queue depth   │   scaler    │",
+      "  └──────────────┘                 └──────┬──────┘",
+      "        ▲                                 │ scale out",
+      "        │                                 ▼",
+      "        │                   ┌──────────────────────┐",
+      "        │                   │  cluster autoscaler  │",
+      "        └── new replica ────┤  provisions an L4    │",
+      "                            └──────────────────────┘",
+      "",
+      "  a CPU-based HPA only reacts here ──▶ already too late",
+    ],
     repo: "https://github.com/my-neme-eh-jeff/llmops-benchmarking",
     updated: "2026-05-03",
   },
@@ -232,6 +258,24 @@ export const projects: Project[] = [
       "DVC versions the data, Kubeflow Pipelines runs training, MLflow holds the champion/challenger registry, and a FastAPI service is rolled forward via GitOps whenever a new champion is promoted. No human in the loop.",
     ],
     stack: ["Kubernetes", "Kubeflow", "MLflow", "DVC", "FastAPI", "GitOps"],
+    diagram: [
+      "  ┌────────────┐",
+      "  │   Claude   │  proposes a change to the model",
+      "  └─────┬──────┘",
+      "        ▼",
+      "  ┌────────────┐  DVC-versioned data",
+      "  │  Kubeflow  │  trains the candidate on Kubernetes",
+      "  └─────┬──────┘",
+      "        ▼",
+      "  ┌────────────┐  challenger vs champion",
+      "  │   MLflow   │  promoted only if it wins",
+      "  └─────┬──────┘",
+      "        ▼",
+      "  ┌────────────┐",
+      "  │   GitOps   │  FastAPI rolls forward automatically",
+      "  └─────┬──────┘",
+      "        └──────────────▶ back to the top, no human in the loop",
+    ],
     repo: "https://github.com/my-neme-eh-jeff/deploying-autoresearch",
     updated: "2026-05-28",
   },

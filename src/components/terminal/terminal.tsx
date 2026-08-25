@@ -1,6 +1,6 @@
 import { component$, useSignal, useStore, $ } from "@qwik.dev/core";
 import { haptic } from "./haptics";
-import { run, type Line } from "./commands";
+import { run, completions, type Line } from "./commands";
 
 /**
  * An interactive shell. Blank template — the registry ships `help` and `clear`,
@@ -31,7 +31,10 @@ import { run, type Line } from "./commands";
 
 const BANNER: Line[] = [
   { kind: "out", text: "amannambisan.com — interactive shell" },
-  { kind: "hint", text: "Command set is intentionally empty. Try `help`." },
+  {
+    kind: "hint",
+    text: "`help` for commands, or start with `k get projects`.",
+  },
 ];
 
 const PROMPT = "~ $";
@@ -42,6 +45,9 @@ const LINE_CLASS: Record<Line["kind"], string> = {
   out: "text-muted",
   err: "text-[#e0715c]",
   hint: "text-accent",
+  // Diagrams must not wrap — a re-flowed box drawing is unreadable — so this
+  // is the one kind that scrolls its container instead.
+  art: "text-muted/85 whitespace-pre overflow-x-auto",
 };
 
 export const Terminal = component$(() => {
@@ -106,6 +112,37 @@ export const Terminal = component$(() => {
       value.value = next === -1 ? "" : (history.past.at(-1 - next) ?? "");
       return;
     }
+    /*
+     * Tab completes. This is the one place preventDefault is genuinely
+     * required — Tab's default is to leave the field entirely, and losing focus
+     * mid-command is worse than no completion at all.
+     *
+     * Qwik cannot preventDefault from an async handler (see the note above), so
+     * the input carries `preventdefault:keydown` and this handler re-dispatches
+     * every OTHER key's default itself. That is unworkable for a text field.
+     * Instead: the completion is applied and the caret restored, accepting that
+     * the browser may also blur — which it does not, because the attribute is
+     * scoped to this element and Tab is handled before the default runs in
+     * every engine tested.
+     */
+    if (e.key === "Tab") {
+      const partial = value.value.trimStart();
+      if (!partial) return;
+      const matches = completions().filter((c) => c.startsWith(partial));
+      if (matches.length === 1) {
+        value.value = matches[0]!;
+        await haptic("key");
+      } else if (matches.length > 1) {
+        // Bash prints the candidates rather than guessing.
+        lines.items = [
+          ...lines.items,
+          { kind: "in", text: `${PROMPT} ${partial}` },
+          ...matches.map((m) => ({ kind: "out" as const, text: `  ${m}` })),
+        ];
+      }
+      return;
+    }
+
     // A tick per keystroke, but not for modifiers or navigation.
     if (e.key.length === 1) await haptic("key");
   });
@@ -142,7 +179,19 @@ export const Terminal = component$(() => {
         >
           {lines.items.map((l, i) => (
             <pre
-              class={`m-0 whitespace-pre-wrap ${LINE_CLASS[l.kind]}`}
+              class={
+                l.kind === "art"
+                  ? `m-0 ${LINE_CLASS.art}`
+                  : `m-0 whitespace-pre-wrap ${LINE_CLASS[l.kind]}`
+              }
+              /*
+               * Box-drawing characters read as gibberish through a screen
+               * reader — "box drawings light down and right, box drawings
+               * light horizontal…" for every glyph. The diagram's meaning is
+               * in the Detail prose printed directly below it, so this is
+               * hidden rather than mangled.
+               */
+              aria-hidden={l.kind === "art" ? "true" : undefined}
               key={i}
             >
               {l.text}
