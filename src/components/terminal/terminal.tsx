@@ -1,6 +1,7 @@
 import { component$, useSignal, useStore, $ } from "@qwik.dev/core";
 import { haptic } from "./haptics";
 import { run, completions, type Line } from "./commands";
+import { MESH_BACKDROP } from "./mesh";
 
 /**
  * An interactive shell. Blank template — the registry ships `help` and `clear`,
@@ -148,77 +149,111 @@ export const Terminal = component$(() => {
   });
 
   return (
-    <div class="glass overflow-hidden rounded-2xl">
-      {/* Chrome. The dots are decorative — they are not buttons, so they are
-          not focusable and carry no labels. */}
+    /*
+     * Three layers, and the order is what produces the effect:
+     *   1. the triangle mesh, slightly oversized and offset
+     *   2. the glass panel, whose backdrop-filter blurs (1)
+     *   3. the terminal content, sharp, on top of (2)
+     *
+     * The mesh is deliberately larger than the panel and nudged up-left, so the
+     * facets the glass refracts are not the same ones visible around its edge.
+     * Matching them exactly makes the panel look like a flat overlay rather
+     * than something with thickness.
+     */
+    <div class="relative isolate">
       <div
-        class="border-line/60 flex items-center gap-2 border-b px-4 py-2.5"
+        class="pointer-events-none absolute -inset-3 -z-10 rounded-3xl bg-cover bg-center opacity-70"
+        style={{
+          backgroundImage: `url(${MESH_BACKDROP})`,
+          /*
+           * Fade the edges. Without this the backdrop ends in a hard rectangle
+           * a few pixels outside the panel, which reads as a stray coloured
+           * card behind the terminal rather than as depth beneath it.
+           */
+          maskImage:
+            "radial-gradient(120% 120% at 30% 20%, black 35%, transparent 78%)",
+        }}
         aria-hidden="true"
-      >
-        <span class="flex gap-1.5">
-          <span class="size-2.5 rounded-full bg-[#e0715c]/70" />
-          <span class="size-2.5 rounded-full bg-[#d9a557]/70" />
-          <span class="size-2.5 rounded-full bg-[#5faa78]/70" />
-        </span>
-        <span class="text-muted ml-1 font-mono text-xs">shell</span>
-      </div>
-
-      {/*
-       * Clicking anywhere in the body focuses the input, which is what people
-       * expect from a terminal. The <label> is what makes that accessible: it
-       * gives the input a name and makes the whole body a legitimate click
-       * target, rather than a div with an onClick that a screen reader cannot
-       * describe.
-       */}
-      <label class="block cursor-text px-4 py-4" for="term-input">
-        <span class="sr-only">Terminal input</span>
-
+      />
+      <div class="glass overflow-hidden rounded-2xl">
+        {/* Chrome. The dots are decorative — they are not buttons, so they are
+          not focusable and carry no labels. */}
         <div
-          class="flex flex-col gap-1 font-mono text-[0.8125rem] leading-relaxed"
-          aria-live="polite"
+          class="border-line/60 flex items-center gap-2 border-b px-4 py-2.5"
+          aria-hidden="true"
         >
-          {lines.items.map((l, i) => (
-            <pre
-              class={
-                l.kind === "art"
-                  ? `m-0 ${LINE_CLASS.art}`
-                  : `m-0 whitespace-pre-wrap ${LINE_CLASS[l.kind]}`
-              }
-              /*
-               * Box-drawing characters read as gibberish through a screen
-               * reader — "box drawings light down and right, box drawings
-               * light horizontal…" for every glyph. The diagram's meaning is
-               * in the Detail prose printed directly below it, so this is
-               * hidden rather than mangled.
-               */
-              aria-hidden={l.kind === "art" ? "true" : undefined}
-              key={i}
-            >
-              {l.text}
-            </pre>
-          ))}
-
-          <div class="mt-1 flex items-center gap-2">
-            <span class="text-accent shrink-0 font-mono text-[0.8125rem]">
-              {PROMPT}
-            </span>
-            <input
-              id="term-input"
-              ref={inputRef}
-              type="text"
-              value={value.value}
-              spellcheck={false}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              placeholder="help"
-              class="text-text placeholder:text-muted/50 min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[0.8125rem] focus:outline-none"
-              onInput$={(_, el) => (value.value = el.value)}
-              onKeyDown$={onKeyDown}
-            />
-          </div>
+          <span class="flex gap-1.5">
+            <span class="size-2.5 rounded-full bg-[#e0715c]/70" />
+            <span class="size-2.5 rounded-full bg-[#d9a557]/70" />
+            <span class="size-2.5 rounded-full bg-[#5faa78]/70" />
+          </span>
+          <span class="text-muted ml-1 font-mono text-xs">shell</span>
         </div>
-      </label>
+
+        {/*
+         * Clicking anywhere in the body focuses the input, which is what people
+         * expect from a terminal. The <label> is what makes that accessible: it
+         * gives the input a name and makes the whole body a legitimate click
+         * target, rather than a div with an onClick that a screen reader cannot
+         * describe.
+         */}
+        <label class="block cursor-text px-4 py-4" for="term-input">
+          <span class="sr-only">Terminal input</span>
+
+          <div
+            class="flex flex-col gap-1 font-mono text-[0.8125rem] leading-relaxed"
+            aria-live="polite"
+          >
+            {lines.items.map((l, i) => (
+              <pre
+                class={
+                  l.kind === "art"
+                    ? `m-0 ${LINE_CLASS.art}`
+                    : `m-0 whitespace-pre-wrap ${LINE_CLASS[l.kind]}`
+                }
+                /*
+                 * Box-drawing characters read as gibberish through a screen
+                 * reader — "box drawings light down and right, box drawings
+                 * light horizontal…" for every glyph. The diagram's meaning is
+                 * in the Detail prose printed directly below it, so this is
+                 * hidden rather than mangled.
+                 */
+                aria-hidden={l.kind === "art" ? "true" : undefined}
+                key={i}
+              >
+                {l.text}
+              </pre>
+            ))}
+
+            <div class="mt-1 flex items-center gap-2">
+              <span class="text-accent shrink-0 font-mono text-[0.8125rem]">
+                {PROMPT}
+              </span>
+              <input
+                id="term-input"
+                ref={inputRef}
+                type="text"
+                value={value.value}
+                spellcheck={false}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                /*
+                 * Placeholder is text, and WCAG does not exempt it. At /50 it
+                 * measured 2.33:1 against the glass — which the token-vs-token
+                 * contrast check in verify cannot see, because it tests
+                 * --sem-muted on --sem-bg, not muted-at-50%-over-a-blurred-mesh.
+                 * Measured from rendered pixels instead.
+                 */
+                placeholder="help"
+                class="text-text placeholder:text-muted min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[0.8125rem] focus:outline-none"
+                onInput$={(_, el) => (value.value = el.value)}
+                onKeyDown$={onKeyDown}
+              />
+            </div>
+          </div>
+        </label>
+      </div>
     </div>
   );
 });
