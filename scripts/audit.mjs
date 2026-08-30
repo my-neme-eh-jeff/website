@@ -18,6 +18,12 @@
  * figure, whereas a median ignores it. The correctness categories
  * (accessibility, best practices, SEO) do not vary at all, but they go through
  * the same path so there is one code path rather than two.
+ *
+ * A median is not enough on its own, though, and there is now a spread guard
+ * further down that refuses to write when the runs disagree by more than 3
+ * points. A median cancels one bad run; it cannot rescue a set where the whole
+ * sample is depressed, and it reports a confident-looking number from
+ * 100 / 95 / 95 just as readily as from 100 / 100 / 100.
  * ---------------------------------------------------------------------------
  *
  * ---------------------------------------------------------------------------
@@ -63,6 +69,7 @@
 
 import { execFileSync, spawn } from "node:child_process";
 import { writeFileSync } from "node:fs";
+import { loadavg, cpus } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -223,8 +230,46 @@ async function main() {
       scores,
     };
 
+    /*
+     * Refuse to publish an unstable measurement.
+     *
+     * A median of three cancels ONE bad run. It cannot rescue a set where
+     * every run is depressed, and it happily reports a confident-looking
+     * number from a set like 100 / 95 / 95 — which is what a loaded machine
+     * produces. Two medians taken minutes apart on the same deployed commit
+     * gave 98 and 95 while a single quiet run gave 100, with load average
+     * sitting at 13-20 throughout.
+     *
+     * The header above already says the metric "moves with CPU contention on
+     * the measuring machine, not with the site". This is that sentence made
+     * executable: if the runs disagree by more than SPREAD_LIMIT, the sample
+     * is measuring the machine and must not become the footer's number.
+     *
+     * 3 points, because a 1-2 point wobble is normal at the rounding boundary
+     * (FCP and Speed Index both sit near 0.99 here, so the category legitimately
+     * rounds between 99 and 100), while 5 is the signature of contention.
+     *
+     * Deliberately NOT applied in --check mode: CI gates on a floor, and a
+     * noisy sample that still clears the floor is not a reason to fail a build.
+     */
+    const SPREAD_LIMIT = 3;
+    const unstable = CATEGORIES.filter((k) => spread[k] > SPREAD_LIMIT);
+
     if (LOCAL) {
       console.log("--local run: not written to audit.json.");
+    } else if (unstable.length) {
+      const load = loadavg()
+        .map((n) => n.toFixed(2))
+        .join(" ");
+      console.error(
+        `\nNOT WRITTEN. ${unstable
+          .map((k) => `${k} spread ${spread[k]}`)
+          .join(", ")} — above the limit of ${SPREAD_LIMIT}.\n` +
+          `Load average ${load} on ${cpus().length} cores. These runs measured ` +
+          `this machine as much as the site.\nRe-run when it is quiet; ` +
+          `audit.json still holds the last stable measurement.`,
+      );
+      process.exitCode = 1;
     } else {
       writeFileSync(OUT, JSON.stringify(payload, null, 2) + "\n");
     }
@@ -237,7 +282,13 @@ async function main() {
       const noise = spread[k] > 0 ? `  ±${spread[k]}` : "";
       console.log(`  ${k.padEnd(15)} ${String(v).padStart(3)}  ${bar}${noise}`);
     }
-    console.log(`\nwrote src/content/audit.json (commit ${commit})`);
+    // Only claim the write when one happened. This line used to print
+    // unconditionally, so a refused run still ended by saying it had written
+    // the file — the exact kind of confident-but-wrong output this script's
+    // guards exist to prevent.
+    if (!LOCAL && !unstable.length) {
+      console.log(`\nwrote src/content/audit.json (commit ${commit})`);
+    }
   } finally {
     await chrome.kill();
   }
