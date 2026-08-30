@@ -108,7 +108,7 @@ export default component$(() => {
 
         <footer class="text-muted border-line/50 border-t py-8 text-xs">
           <div class="mb-6">
-            <ScoreRow compact />
+            <ScoreRow />
           </div>
           <div class="flex flex-wrap gap-4">
             <span>

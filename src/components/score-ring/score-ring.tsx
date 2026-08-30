@@ -100,68 +100,81 @@ const Ring = component$<{ name: string; score: number }>(({ name, score }) => {
  * Derived from the scores rather than written down. A hardcoded "all 100"
  * would keep congratulating itself straight through a regression, and the only
  * thing that makes publishing these numbers mean anything is that they are
- * free to go down.
+ * free to go down. The sub-100 branch is phrased as a floor so it stays true
+ * whatever the spread is.
  */
 const headline = (scores: number[]) => {
   const worst = Math.min(...scores);
+  const n = scores.length;
   return worst === 100
-    ? `A straight 100 in all ${scores.length} Lighthouse categories.`
-    : `${scores.filter((s) => s >= 90).length} of ${scores.length} Lighthouse ` +
-        `categories at 90 or above, lowest ${worst}.`;
+    ? `This website has a straight 100 in all ${n} Lighthouse categories.`
+    : `This website has ${worst} or better in all ${n} Lighthouse categories.`;
 };
 
 /**
- * `compact` stacks the block and tightens the gaps. Its only caller is the page
- * footer (`src/routes/layout.tsx`), which is a full-width column, NOT the 13rem
- * left rail an older version of this comment described — that rail was deleted,
- * see the header of layout.tsx. Compact is about not letting four gauges
- * outweigh a copyright line, not about fitting a narrow container.
- *
- * The commit hash is deliberately NOT rendered in either variant. Provenance is
- * shortened, never removed — an unlabelled score implies live telemetry, which
- * these are not — but "496fc87" is provenance only to someone holding this
- * repo. The version, form factor and date are the parts a visitor can weigh.
- * Staleness is a machine's job anyway: `audit.commit` stays in audit.json and
- * verify-build.mjs diffs it against HEAD to catch scores describing a build
- * that no longer exists.
+ * Written out rather than passed to `Intl`: SSG bakes this string into the HTML
+ * at build time, so a locale-aware formatter would let the builder's machine
+ * decide what the page says. Same reasoning as the seeded geometry rule.
  */
-export const ScoreRow = component$<{ compact?: boolean }>(({ compact }) => {
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+const humanDate = (iso: string) => {
+  const [y, m, d] = iso.split("-");
+  const month = MONTHS[Number(m) - 1];
+  return month ? `${Number(d)} ${month} ${y}` : iso;
+};
+
+/**
+ * Rings left, claim right. One layout, not two: this used to carry a `compact`
+ * prop that stacked the block for the footer, but the footer is the only caller
+ * and it wanted the side-by-side form anyway, so the variants had converged
+ * into near-duplicates with one of them dead.
+ *
+ * What is NOT rendered, and why:
+ *
+ * - The commit hash. "496fc87" is provenance only to someone holding this repo.
+ *   It stays in audit.json, where verify-build.mjs asserts it and diffs it
+ *   against HEAD — catching scores that describe a build which no longer
+ *   exists is a machine's job, not a footer's.
+ * - The Lighthouse version. Reproducibility detail, and the reader is not
+ *   reproducing. Still in audit.json for whoever is.
+ *
+ * What survives is the pair a reader can actually weigh: the form factor and
+ * the date. Provenance is shortened, never removed — an unlabelled score
+ * implies live telemetry, and these are lab runs from one machine on one
+ * deploy. The form factor earns its place by making the claim stronger, not
+ * merely more honest: mobile is the harder test.
+ */
+export const ScoreRow = component$(() => {
   const entries = Object.entries(audit.scores);
   const line = headline(entries.map(([, score]) => score as number));
 
-  if (compact) {
-    return (
-      <div>
-        <div class="flex flex-wrap gap-x-3 gap-y-2">
-          {entries.map(([name, score]) => (
-            <Ring key={name} name={name} score={score as number} />
-          ))}
-        </div>
-        <p class="text-text mt-3 mb-0 text-xs">{line}</p>
-        <p class="text-muted mt-1 mb-0 font-mono text-[0.625rem] leading-relaxed">
-          Lighthouse {audit.lighthouseVersion} · {audit.measuredAt}
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div class="flex flex-wrap items-start gap-x-5 gap-y-3">
-      {entries.map(([name, score]) => (
-        <Ring key={name} name={name} score={score as number} />
-      ))}
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-3">
+      <div class="flex flex-wrap gap-x-3 gap-y-2">
+        {entries.map(([name, score]) => (
+          <Ring key={name} name={name} score={score as number} />
+        ))}
+      </div>
 
-      {/*
-         The claim and its provenance sit next to the numbers on purpose. These
-         are lab scores from one machine on one deploy, not live field data, and
-         saying so is what makes publishing them honest.
-      */}
-      <div class="max-w-56 self-center">
-        <p class="text-text mb-1 text-xs">{line}</p>
-        <p class="text-muted mb-0 font-mono text-[0.625rem] leading-relaxed">
-          Lighthouse {audit.lighthouseVersion} · {audit.formFactor}
-          <br />
-          {audit.measuredAt}
+      {/* Wraps below the rings rather than beside them once the column narrows. */}
+      <div class="max-w-80">
+        <p class="text-text mb-0 text-xs">{line}</p>
+        <p class="text-muted mt-1 mb-0 font-mono text-[0.625rem]">
+          Measured on {audit.formFactor}, {humanDate(audit.measuredAt)}
         </p>
       </div>
     </div>
