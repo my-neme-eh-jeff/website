@@ -1,5 +1,6 @@
 import { component$, useSignal, useStore, $, sync$ } from "@qwik.dev/core";
 import { haptic } from "./haptics";
+import { sound, isMuted, setMuted, type Tone } from "./sounds";
 import { run, completions, type Line } from "./commands";
 
 /**
@@ -95,6 +96,62 @@ const DIALOG_ID = "term-dialog";
 const CLOSE_BTN_ID = "term-close";
 const MIN_BTN_ID = "term-min";
 const MAX_BTN_ID = "term-max";
+const MUTE_BTN_ID = "term-mute";
+
+/**
+ * The glyph inside a lamp, as macOS draws it.
+ *
+ * Hidden until the cluster is hovered or holds focus, which is what a Mac
+ * does — at rest the lights are just colour. `group-focus-within` rather than
+ * `group-hover` alone so the glyphs are not pointer-only; tabbing to a lamp
+ * reveals them too.
+ *
+ * aria-hidden throughout: the button already has an sr-only name that says
+ * what pressing it will do, and "times" announced next to "Close shell" is
+ * noise. That name is also why the glyph never has to carry meaning on its
+ * own — it is a visual affordance, not the label.
+ *
+ * No colour class. `currentColor` picks up the glyph shade from the `lamp-*`
+ * utility, so the symbol is tinted into its own button the way Apple does it —
+ * a dark red x on red, not a black one. A neutral black glyph is the most
+ * obvious tell that traffic lights have been reimplemented rather than copied.
+ *
+ * SIZED TO FILL, which the first version got wrong twice over. The dash in a
+ * real 12px light spans about 8px — two thirds of the button. This svg is 8px,
+ * but the artwork inside it was drawn across the middle 9 units of a 16 unit
+ * box, so it rendered at ~4.5px and the glyphs read as smudges. The paths
+ * below use nearly the whole viewBox.
+ */
+const Glyph = ({ d, fill = false }: { d: string[]; fill?: boolean }) => (
+  <svg
+    viewBox="0 0 16 16"
+    class="size-2 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100"
+    fill={fill ? "currentColor" : "none"}
+    stroke={fill ? "none" : "currentColor"}
+    stroke-width="2.2"
+    stroke-linecap="round"
+    aria-hidden="true"
+  >
+    {d.map((path) => (
+      <path d={path} key={path} />
+    ))}
+  </svg>
+);
+
+/**
+ * Two triangles hugging opposite corners — outward to zoom, inward to restore.
+ *
+ * Each triangle nearly fills its half — legs of 11 units in a 16 unit box —
+ * leaving a diagonal gap that renders at roughly 1.4px. The first attempt used
+ * legs of 6.6 set at opposite corners, which put a 4.5px void between two 3px
+ * triangles: at 8px that reads as one smudge, not as a pair of arrowheads.
+ *
+ * Restore flips WHICH diagonal they hug rather than trying to reverse where
+ * they point. At this size an arrowhead's direction is not legible, but the
+ * diagonal swapping from ↘ to ↗ plainly is.
+ */
+const ZOOM_OUT = ["M1.5 1.5h11L1.5 12.5z", "M14.5 14.5h-11L14.5 3.5z"];
+const ZOOM_IN = ["M14.5 1.5v11L3.5 1.5z", "M1.5 14.5v-11L12.5 14.5z"];
 
 /**
  * Retry `fn` on a short timer until it reports success, or the tries run out.
@@ -260,6 +317,32 @@ export const Terminal = component$(() => {
    * view transition. False on the server, so the SSG output is unchanged.
    */
   const stirred = useSignal(false);
+
+  /*
+   * Whether the shell is muted, for the toggle's ICON only.
+   *
+   * Never the source of truth — sounds.ts reads the persisted value at play
+   * time, so a returning visitor who muted us is silent from the first
+   * keystroke regardless of what this says. It starts false because that is
+   * what the server rendered, and it is reconciled by `feedback` below on the
+   * first interaction of any kind. See the persistence note in sounds.ts.
+   */
+  const muted = useSignal(false);
+
+  /**
+   * One tick of feedback: audible, tactile, and self-correcting.
+   *
+   * Both channels are additive and both are absent somewhere — vibrate does
+   * not exist on iOS or desktop, audio is off if the visitor muted it — which
+   * is why every action they accompany also changes something visible.
+   *
+   * Assigning the return value is what reconciles the mute icon with storage,
+   * on whatever the first interaction happens to be.
+   */
+  const feedback = $(async (tone: Tone) => {
+    muted.value = await sound(tone);
+    await haptic(tone === "chrome" ? "key" : tone);
+  });
   const history = useStore<{ past: string[]; cursor: number }>({
     past: [],
     cursor: -1,
@@ -297,7 +380,7 @@ export const Terminal = component$(() => {
     } else {
       view.value = view.value === "min" ? "open" : "min";
     }
-    await haptic("key");
+    await feedback("chrome");
   });
 
   const toggleMax = $(async () => {
@@ -354,7 +437,7 @@ export const Terminal = component$(() => {
         return true;
       });
     }
-    await haptic("key");
+    await feedback("chrome");
   });
 
   /**
@@ -416,7 +499,7 @@ export const Terminal = component$(() => {
       view.value = "closed";
       if (wasMax) restoreFocusTo(CLOSE_BTN_ID);
     }
-    await haptic("enter");
+    await feedback("chrome");
   });
 
   /*
@@ -439,13 +522,13 @@ export const Terminal = component$(() => {
     if (result === null) {
       // `clear` — the buffer belongs to the shell, so it is handled here.
       lines.items = [];
-      await haptic("enter");
+      await feedback("enter");
       return;
     }
 
     lines.items = [...lines.items, ...result];
     stickToBottom(lines.items.length);
-    await haptic(result.some((l) => l.kind === "err") ? "error" : "enter");
+    await feedback(result.some((l) => l.kind === "err") ? "error" : "enter");
   });
 
   /**
@@ -493,7 +576,7 @@ export const Terminal = component$(() => {
       const matches = completions().filter((c) => c.startsWith(partial));
       if (matches.length === 1) {
         value.value = matches[0]!;
-        await haptic("key");
+        await feedback("key");
       } else if (matches.length > 1) {
         // Bash prints the candidates rather than guessing.
         lines.items = [
@@ -507,7 +590,26 @@ export const Terminal = component$(() => {
     }
 
     // A tick per keystroke, but not for modifiers or navigation.
-    if (e.key.length === 1) await haptic("key");
+    if (e.key.length === 1) await feedback("key");
+  });
+
+  /**
+   * Mute toggle.
+   *
+   * Reads the persisted value rather than inverting the local signal, because
+   * that signal is only an icon hint and may not yet have been reconciled —
+   * inverting a stale `false` on a muted visitor's first click would leave
+   * them muted while the icon claimed otherwise.
+   *
+   * Unmuting plays its own confirmation, which is the only honest way to
+   * report that sound is back on.
+   */
+  const toggleMute = $(async () => {
+    const next = !(await isMuted());
+    muted.value = next;
+    await setMuted(next);
+    if (!next) await sound("chrome");
+    await haptic("key");
   });
 
   /**
@@ -563,12 +665,15 @@ export const Terminal = component$(() => {
        * against each other, so 24px is the pitch and there is no legal way to
        * pull them closer.
        *
-       * What IS adjustable is how much of that pitch the dot fills. At 10px
-       * the gap between dots was 14px — wider than the dots themselves, which
-       * is what made three related controls read as three unrelated ones. At
-       * 12px the gap is 12px, so dot and gap are equal and the cluster reads as
-       * a cluster. macOS is 12px dots on a 20px pitch; this is the closest
-       * approach to it that keeps a conformant target.
+       * What IS adjustable is how much of that pitch the dot fills. The dots
+       * are 12px, which IS the macOS diameter; macOS then sets them on a 20px
+       * pitch and this has to use 24px. That 4px is the one dimension of these
+       * controls that is not native, and it is not recoverable — the
+       * alternative is targets a pointer user can miss.
+       *
+       * Everything else is: measured fills, a rim a step darker, and glyphs
+       * tinted in each button's own hue, revealed on hover of the cluster the
+       * way a Mac does. See the `lamp` utility in global.css.
        *
        * The hover wash and the press scale are on the button, not the dot, so
        * the real 24px target is what responds — otherwise a pointer inside the
@@ -577,7 +682,7 @@ export const Terminal = component$(() => {
        * The visible dot is aria-hidden; the name lives in the sr-only span.
        */}
       <div class="border-line/60 flex items-center gap-2 border-b px-3 py-1.5">
-        <span class="flex">
+        <span class="group flex">
           <button
             type="button"
             id={CLOSE_BTN_ID}
@@ -587,10 +692,9 @@ export const Terminal = component$(() => {
             <span class="sr-only">
               {view.value === "closed" ? "Reopen shell" : "Close shell"}
             </span>
-            <span
-              class="bg-lamp-close/75 size-3 rounded-full"
-              aria-hidden="true"
-            />
+            <span class="lamp lamp-close" aria-hidden="true">
+              <Glyph d={["M2.6 2.6l10.8 10.8", "M13.4 2.6L2.6 13.4"]} />
+            </span>
           </button>
 
           {/*
@@ -610,10 +714,9 @@ export const Terminal = component$(() => {
                 <span class="sr-only">
                   {view.value === "min" ? "Expand shell" : "Minimise shell"}
                 </span>
-                <span
-                  class="bg-lamp-min/75 size-3 rounded-full"
-                  aria-hidden="true"
-                />
+                <span class="lamp lamp-min" aria-hidden="true">
+                  <Glyph d={["M1.4 8h13.2"]} />
+                </span>
               </button>
 
               <button
@@ -625,17 +728,62 @@ export const Terminal = component$(() => {
                 <span class="sr-only">
                   {view.value === "max" ? "Restore shell" : "Maximise shell"}
                 </span>
-                <span
-                  class="bg-lamp-max/75 size-3 rounded-full"
-                  aria-hidden="true"
-                />
+                <span class="lamp lamp-max" aria-hidden="true">
+                  <Glyph d={maxed ? ZOOM_IN : ZOOM_OUT} fill />
+                </span>
               </button>
             </>
           )}
         </span>
-        <span class="text-muted ml-1 font-mono text-xs">
-          {view.value === "closed" ? "shell — closed" : "shell"}
-        </span>
+        {/*
+         * No title while the shell is open. The section this panel sits in is
+         * already headed "Shell", so a title bar reading "shell" said the same
+         * word twice, three lines apart.
+         *
+         * The closed state still needs saying: a collapsed panel with nothing
+         * in it is otherwise indistinguishable from a broken one. A screen
+         * reader gets this from the red button's name flipping to "Reopen
+         * shell"; this is the sighted equivalent.
+         */}
+        {view.value === "closed" && (
+          <span class="text-muted ml-1 font-mono text-xs">closed</span>
+        )}
+
+        {/*
+         * Mute. Sound ships ON, so the control that turns it off has to be
+         * findable without hunting — hence a permanent button in the chrome
+         * rather than something revealed on hover like the lamp glyphs.
+         *
+         * It relabels itself rather than toggling aria-pressed, matching every
+         * other control here: the name states what pressing it will do.
+         */}
+        <button
+          type="button"
+          id={MUTE_BTN_ID}
+          onClick$={toggleMute}
+          class="hover:bg-text/10 text-muted ml-auto grid size-6 place-items-center rounded-full transition duration-150 active:scale-90"
+        >
+          <span class="sr-only">
+            {muted.value ? "Unmute shell sounds" : "Mute shell sounds"}
+          </span>
+          <svg
+            viewBox="0 0 16 16"
+            class="size-3.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M8.5 3L5 6H2.5v4H5l3.5 3z" />
+            {muted.value ? (
+              <path d="M11 6.5l3 3M14 6.5l-3 3" />
+            ) : (
+              <path d="M11 6a3 3 0 010 4" />
+            )}
+          </svg>
+        </button>
       </div>
 
       {/*

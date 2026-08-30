@@ -356,7 +356,19 @@ check("every class in the output has a CSS rule", () => {
     }
   }
 
-  const orphans = [...used].filter((c) => !selectors.has(base(c)));
+  /*
+   * Tailwind's variant MARKERS are real classes with no rule of their own, by
+   * design: `group` exists only so `group-hover:*` has something to select
+   * against, and the rule generated is `.group:hover .group-hover\\:x`, which
+   * never contains a bare `.group` selector. Same for `peer`. They are the one
+   * legitimate orphan, so they are named here rather than the check being
+   * loosened -- a typo like `gorup` must still fail.
+   */
+  const MARKERS = new Set(["group", "peer"]);
+
+  const orphans = [...used].filter(
+    (c) => !MARKERS.has(c) && !selectors.has(base(c)),
+  );
   assert(
     orphans.length === 0,
     `Classes used in HTML with no CSS rule: ${orphans.join(", ")}. ` +
