@@ -97,9 +97,36 @@ export default component$(() => {
                   pr.title
                 )}
               </h2>
-              <span class="text-muted ml-auto font-mono text-xs">
-                {pr.updated.slice(0, 7)}
-              </span>
+
+              {/*
+               * Demo, write-up, whatever exists off the repo — in the space the
+               * date used to occupy. A repo link asks someone to read source
+               * before they know if they care; a 3-minute demo shows the thing
+               * working. Where both exist, this is the better first click.
+               *
+               * The visible label is short so the row stays quiet, so the
+               * project title is appended sr-only: a screen reader listing
+               * links hears "Demo video, Autonomous ML Deployment System"
+               * rather than three identical "Demo video" entries.
+               */}
+              {pr.links && pr.links.length > 0 && (
+                <span class="ml-auto flex flex-wrap items-baseline gap-x-3">
+                  {pr.links.map((l) => (
+                    <a
+                      key={l.href}
+                      href={l.href}
+                      rel="noopener"
+                      class="text-muted hover:text-text font-mono text-xs"
+                    >
+                      {l.label}
+                      <span class="sr-only">, {pr.title}</span>
+                      <span class="text-accent ml-1" aria-hidden="true">
+                        ↗
+                      </span>
+                    </a>
+                  ))}
+                </span>
+              )}
             </div>
             <p class="text-muted mt-1 mb-3">{pr.summary}</p>
 

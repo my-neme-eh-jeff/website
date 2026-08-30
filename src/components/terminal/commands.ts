@@ -81,22 +81,11 @@ function wrap(text: string, width = 68, indent = "  "): Line[] {
   return lines.map((l) => out(indent + l));
 }
 
-/**
- * kubectl-style relative age.
- *
- * Safe to compute from the clock here, unlike anything the pages render: this
- * only ever runs in the browser, inside a handler, after somebody types. The
- * server-rendered banner contains no dates, so SSG output stays byte-stable.
+/*
+ * There was an `age()` helper here that rendered a kubectl-style relative age
+ * ("3mo", "2y") for the AGE column and the Updated field. Both are gone, and
+ * so is it — see the note on `updated` in profile.ts for why.
  */
-function age(iso: string): string {
-  const then = new Date(iso + "T00:00:00Z").getTime();
-  const days = Math.max(0, Math.floor((Date.now() - then) / 86_400_000));
-  if (days < 1) return "today";
-  if (days < 60) return `${days}d`;
-  const months = Math.floor(days / 30);
-  if (months < 24) return `${months}mo`;
-  return `${Math.floor(days / 365)}y`;
-}
 
 /** `key: value` block, aligned, as `kubectl describe` prints it. */
 function fields(pairs: Array<[string, string]>): Line[] {
@@ -122,8 +111,8 @@ const RESOURCES: Resource[] = [
     aliases: ["project", "proj"],
     list: () =>
       table(
-        ["NAME", "SUMMARY", "AGE"],
-        projects.map((p) => [p.slug, p.summary, age(p.updated)]),
+        ["NAME", "SUMMARY"],
+        projects.map((p) => [p.slug, p.summary]),
       ),
     describe: (key) => {
       const p = projects.find((x) => x.slug === key);
@@ -139,7 +128,8 @@ const RESOURCES: Resource[] = [
           ["Title", p.title],
           ["Stack", p.stack.join(", ")],
           ["Repo", p.repo ?? "(private)"],
-          ["Updated", `${p.updated} (${age(p.updated)})`],
+          // Rendered as `out` lines, so the shell linkifies them for free.
+          ...(p.links ?? []).map((l) => [l.label, l.href] as [string, string]),
         ]),
         out(""),
         out("Summary:"),

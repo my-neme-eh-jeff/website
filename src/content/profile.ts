@@ -210,7 +210,31 @@ export type Project = {
    * the `detail` prose has to carry the same information for a screen reader.
    */
   diagram?: string[];
-  /** ISO date of last meaningful work, for the AGE column. */
+  /**
+   * Off-repo material: a demo video, a write-up, a talk, a LinkedIn post.
+   *
+   * A repo link asks a visitor to read source before they know whether they
+   * care. A 3-minute demo asks for 3 minutes and shows the thing working, so
+   * where one exists it is usually the better first click — which is why these
+   * render alongside the title rather than buried in the detail prose.
+   *
+   * Every entry must be a URL that actually resolves. This is the one place on
+   * the site where a plausible-looking guess would be published as fact.
+   */
+  links?: { label: string; href: string }[];
+  /**
+   * ISO date of last meaningful work. DATA ONLY — deliberately not rendered.
+   *
+   * It used to appear in three places: an AGE column in `k get projects`, an
+   * `Updated:` field in `k describe`, and a `2024-10` stamp beside every
+   * project on the home page. All three are gone, because a date is not
+   * neutral information on a portfolio — a visitor who reads "2y" decides the
+   * work is stale and never opens it, which is the opposite of what a project
+   * list is for. The work did not get worse; the label just told them to skip.
+   *
+   * Kept as a field because it is true and useful for ordering. If it is ever
+   * rendered again, that should be a deliberate decision rather than a default.
+   */
   updated: string;
 };
 
@@ -277,6 +301,9 @@ export const projects: Project[] = [
       "        └──────────────▶ back to the top, no human in the loop",
     ],
     repo: "https://github.com/my-neme-eh-jeff/deploying-autoresearch",
+    // "Autoresearch with reliable CI CD on the cloud" — 3:30, linked from the
+    // repo's own README. Verified to resolve.
+    links: [{ label: "Demo video", href: "https://youtu.be/O0uPoLO-2JM" }],
     updated: "2026-05-28",
   },
   {
