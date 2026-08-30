@@ -756,7 +756,10 @@ check("every plain @theme token reaches the built CSS", () => {
     .filter((f) => f.endsWith(".css"))
     .map((f) => read("dist", "assets", f))
     .join("\n");
-  assert(dist.length > 0, "no built CSS in dist/assets -- run `pnpm run build`");
+  assert(
+    dist.length > 0,
+    "no built CSS in dist/assets -- run `pnpm run build`",
+  );
 
   const dead = [];
   let n = 0;
@@ -815,7 +818,10 @@ check("field's static fallback matches the 0% keyframe", () => {
     drift.length === 0,
     `${drift.join(", ")} differ between the two.\n    ` +
       drift
-        .map((n) => `${n}: field has ${fallback[n] ?? "(nothing)"}, 0% has ${start[n]}`)
+        .map(
+          (n) =>
+            `${n}: field has ${fallback[n] ?? "(nothing)"}, 0% has ${start[n]}`,
+        )
         .join("\n    ") +
       `\n    The fallback is what paints without a scroll timeline or under ` +
       `reduced motion, so a mismatch is a wrong opening palette.`,
