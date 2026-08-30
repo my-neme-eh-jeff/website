@@ -1,5 +1,5 @@
 /**
- * Lighthouse audit. Run: `pnpm run audit` (after `pnpm run build`)
+ * Lighthouse audit. Run: `pnpm run audit`
  *
  * Runs Lighthouse against the LIVE site and writes the four category scores to
  * src/content/audit.json, which the footer renders. Pass --local to measure a

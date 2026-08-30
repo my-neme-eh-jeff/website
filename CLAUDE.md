@@ -13,6 +13,16 @@ note — it makes a future session skip verification instead of doing it.
 command that re-verifies it.** No command, no trust. Read `node_modules`, not
 the docs, when they disagree.
 
+That rule covers facts, which carry numbers. Two things it kept missing:
+
+- **A comment describing structure or another file must be backed by a check,
+  or not written.** Every stale comment an audit has found here was that shape —
+  a layout that changed, a parity claim nothing compared, a guard described as
+  stricter than it is. None carried a number, so none attracted verification.
+- **Don't match the surrounding comment density.** The long blocks are
+  load-bearing measurements, not a house style. Default to none, and earn each
+  one: if removing it wouldn't confuse a future reader, don't write it.
+
 ## Where things live
 
 | Looking for                                          | Go to                                              |

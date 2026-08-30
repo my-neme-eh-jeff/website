@@ -241,17 +241,8 @@
     sans-serif;
   --font-mono: "Fira Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /*
-   * Two width tokens, because one was doing two jobs.
-   *
-   * `--measure` was previously used for BOTH the reading measure and the page
-   * container, which clamped the two-column hero on the home page to a prose
-   * width — the columns had nowhere to go. They are now separate:
-   *   max-w-measure  body copy, capped for legibility (~65-75 chars)
-   *   max-w-page     structural width for nav, footer, and wide layouts
-   */
+  /* Body copy, capped for legibility (~65-75 chars). */
   --container-measure: 68ch;
-  --container-page: 72rem;
 
   /* Named animation, so the keyframe lives here rather than in the component. */
   /* Draws the hand-drawn annotation on, like a pen stroke. */
@@ -330,13 +321,12 @@
 }
 
 /*
- * `wrap` is the content-column container. Every page body uses it.
+ * `wrap` is the opt-in content-column container: pages that need a column of
+ * their own use it, the rest lay out inside the shell directly.
  *
- * It is deliberately NOT centred. Content now lives in the right cell of a
- * two-column grid whose left cell is a 13rem rail, so `margin-inline: auto`
- * would centre the text inside that cell and pull it away from the rule —
- * giving the page two competing left edges again. Left-aligned with padding
- * keeps one edge, a fixed distance from the rail.
+ * It is deliberately NOT centred. `layout.tsx` already offsets the column, so
+ * `margin-inline: auto` here would re-centre content inside that offset and
+ * give the page two competing left edges. Padding-only keeps a single one.
  *
  * Prose is clamped inside this with `max-w-measure`, which is a separate
  * concern: this sets where content starts, that sets how wide a line gets.
@@ -398,9 +388,9 @@
  * L=52 exists around hue 318 but clips around hue 195, and a clipped stop
  * lands somewhere the interpolation did not intend.
  *
- * Every x position stays under 26%. The left of the page is the artwork and
- * the content column sits to the right of it; a blob wandering right would
- * put text on a hot stop.
+ * Every x position stays at or left of 34%, and the two animated ones stay
+ * under 22%. The left of the page is the artwork and the content column sits
+ * to the right of it; a blob wandering right would put text on a hot stop.
  * ---------------------------------------------------------------------------
  */
 @property --f1 {

@@ -30,7 +30,7 @@
  * is already here, and it renders the exact CSS the site uses — the gradient
  * and the grain are the same declarations, not an approximation of them.
  *
- * Fonts are referenced from the built output rather than by family name. A
+ * Fonts are read from public/fonts and inlined, not named by family. A
  * headless Chrome has no idea what "Hanken Grotesk" is; without the @font-face
  * it silently falls back to Helvetica and the card is off-brand in a way that
  * is easy to miss.
@@ -130,12 +130,11 @@ const html = `<!doctype html><meta charset="utf-8">
    * and 0.013 on light — invisible. The card was shipping it to every link
    * preview for a week after the page stopped using it.
    *
-   * It drifted because the grain lives in two places and only one of them is
-   * checked. Nothing here can catch it: this file renders through headless
-   * Chrome to a JPEG, so pnpm run verify sees a picture, not a stylesheet.
-   * If you change the grain in global.css, change it here too and re-run
-   * pnpm run og. The reasoning behind each part of the recipe — forced
-   * alpha, doubled contrast, why 0.75 and not 1.0 — is documented once, there.
+   * It drifted because the grain lives in two places and nothing compared
+   * them. `pnpm run verify` now does, so a mismatch fails the build instead of
+   * the card. Change it here too and re-run `pnpm run og`. The reasoning
+   * behind each part of the recipe — forced alpha, doubled contrast, why 0.75
+   * and not 1.0 — is documented once, there.
    */
   .grain {
     position: absolute; inset: 0; mix-blend-mode: overlay; opacity: 0.38;

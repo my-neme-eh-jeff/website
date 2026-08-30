@@ -284,7 +284,8 @@ check("every referenced font file exists and is a real woff2", () => {
     );
   }
 
-  // A preload for a file that does not exist wastes a request and warns in devtools.
+  // A preload no @font-face claims is fetched and then ignored. (On-disk
+  // existence is a separate check, above.)
   const html = read("dist", "index.html");
   for (const m of html.matchAll(
     /<link[^>]*rel="preload"[^>]*href="([^"]+)"[^>]*>/g,
@@ -631,7 +632,7 @@ check("every graphic has an accessible name or is hidden", () => {
       );
     }
     /*
-     * An <svg> is either meaningful (role="img" + a name) or decorative
+     * An <svg> is either meaningful (carries an accessible name) or decorative
      * (aria-hidden). Neither means a screen reader announces raw path data.
      */
     for (const tag of html.match(/<svg\b[^>]*>/g) ?? []) {
@@ -696,6 +697,84 @@ warn("published Lighthouse scores still describe the current build", () => {
       `a build that no longer exists. Re-run \`pnpm run audit\` after the next ` +
       `deploy lands.`,
   );
+});
+
+// --- Cross-file parity -----------------------------------------------------
+
+/*
+ * The grain recipe lives in two files, and for a week they disagreed: the OG
+ * card kept opacity 0.28 and a bare feTurbulence -- the recipe global.css had
+ * already measured as invisible, 1.80 luma levels on the dark wash and 0.013
+ * on light -- while a comment above it asserted the two matched.
+ *
+ * A parity claim written in prose is one nothing re-checks. Asserted here
+ * instead, so the claim and the check are the same object.
+ */
+check("OG card's grain matches grain-page in global.css", () => {
+  const decls = (src, open) => {
+    const i = src.indexOf(open);
+    assert(i !== -1, `could not find \`${open}\` -- was the rule renamed?`);
+    const body = src.slice(i + open.length, src.indexOf("}", i));
+    const get = (prop) => {
+      const m = body.match(new RegExp(`${prop}:\\s*([^;]+);`));
+      assert(m, `\`${open}\` declares no ${prop}`);
+      return m[1].trim();
+    };
+    return {
+      opacity: get("opacity"),
+      "mix-blend-mode": get("mix-blend-mode"),
+      "background-image": get("background-image"),
+    };
+  };
+
+  const site = decls(read("src", "global.css"), "@utility grain-page {");
+  const card = decls(read("scripts", "make-og.mjs"), ".grain {");
+  for (const prop of Object.keys(site)) {
+    assert(
+      site[prop] === card[prop],
+      `${prop} differs -- global.css: ${site[prop].slice(0, 48)}… / ` +
+        `make-og.mjs: ${card[prop].slice(0, 48)}…\n    ` +
+        `Sync make-og.mjs and re-run \`pnpm run og\`.`,
+    );
+  }
+  return "opacity, blend mode and noise URI identical";
+});
+
+/*
+ * A design token nothing uses never reaches the stylesheet, but the header
+ * above it goes on describing what it is for. `--container-page` sat here with
+ * zero uses and a documented purpose until an audit went looking.
+ *
+ * Only plain `@theme` is checked. `@theme inline` substitutes its values into
+ * each utility rather than emitting the custom property, so its colour tokens
+ * are correctly absent from the output by name -- which is the whole reason
+ * `inline` is load-bearing here.
+ */
+check("every plain @theme token reaches the built CSS", () => {
+  const css = read("src", "global.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const dist = readdirSync(p("dist", "assets"))
+    .filter((f) => f.endsWith(".css"))
+    .map((f) => read("dist", "assets", f))
+    .join("\n");
+  assert(dist.length > 0, "no built CSS in dist/assets -- run `pnpm run build`");
+
+  const dead = [];
+  let n = 0;
+  for (const m of css.matchAll(/@theme(\s+inline)?\s*\{([^}]*)\}/g)) {
+    if (m[1]) continue;
+    for (const tok of m[2].match(/--[a-z0-9-]+(?=\s*:)/gi) ?? []) {
+      n++;
+      if (!dist.includes(tok)) dead.push(tok);
+    }
+  }
+  assert(n > 0, "parsed no tokens -- the @theme block shape changed");
+  assert(
+    dead.length === 0,
+    `declared but never emitted: ${dead.join(", ")}.\n    ` +
+      `Tailwind only emits a token something uses, so these are dead. Delete ` +
+      `them together with the lines documenting them.`,
+  );
+  return `${n} tokens, none dead`;
 });
 
 // --- Report ---------------------------------------------------------------

@@ -5,8 +5,7 @@ import { load as loadHistory, save as saveHistory } from "./history";
 import { run, completions, type Line } from "./commands";
 
 /**
- * An interactive shell. Blank template — the registry ships `help` and `clear`,
- * and `k get projects` slots in later.
+ * An interactive shell. The command registry lives in `commands.ts`.
  *
  * ---------------------------------------------------------------------------
  * HOW THIS COSTS NOTHING UNTIL SOMEONE USES IT
