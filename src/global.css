@@ -450,9 +450,28 @@
     .field {
       animation: field-shift linear both;
       animation-timeline: scroll(root block);
-      /* Only the first two viewports of scrolling drive it; past that the
-         page settles rather than continuing to churn. */
-      animation-range: 0 200vh;
+      /*
+       * No animation-range, deliberately. A scroll timeline already defaults
+       * to the scroller's full range, so 100% lands exactly at the bottom of
+       * whatever page it is on.
+       *
+       * It used to say `0 200vh`, which made the endpoint UNREACHABLE on a
+       * tall window. The homepage is roughly 1786px of content plus a 68vh
+       * hero, so the scrollable distance is about 1786 - 0.32vh while the
+       * range asks for 2vh; those cross at vh = 770. Below that the journey
+       * finishes, above it the page bottoms out mid-plum and the teal
+       * keyframe is never seen. A maximised browser clears 770 easily.
+       *
+       * That did not matter when this was a hue-rotate sweep, because any
+       * point along it looked deliberate. It matters now that the endpoint is
+       * an authored palette.
+       *
+       * Verify at any window size by scrolling to the bottom and sampling the
+       * left of the viewport — it must be teal. Note that getComputedStyle is
+       * NO USE here: Chrome does not report scroll-timeline-animated custom
+       * properties through it, and returns the 0% value at every position.
+       * Measure pixels.
+       */
     }
   }
 }
