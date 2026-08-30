@@ -298,51 +298,131 @@
 }
 
 /*
- * The atmosphere layer: a dotted field with two gradient washes over it.
+ * ---------------------------------------------------------------------------
+ * THE SCROLL MORPH
  *
- * One fixed, pointer-events-none element behind everything, rather than a
- * background on <body>. That keeps it still while the page scrolls, and means
- * it cannot intercept a click or a text selection.
+ * Every gradient stop, and the position of two of the four blobs, is a
+ * REGISTERED custom property. The registration is the whole trick: an
+ * unregistered `--x` is only a string, so animating it snaps between values.
+ * `@property` with `syntax: "<color>"` gives the property a type, and a typed
+ * property interpolates — so the browser walks each stop through real
+ * intermediate colours and the field travels ember -> plum -> teal rather than
+ * cross-fading between two stacked layers.
  *
- * The dot grid is a repeating radial-gradient, not an image: it costs nothing
- * to download, is resolution-independent, and retints with the theme because
- * it reads --sem-dot. `background-position: 1px 1px` centres each dot in its
- * cell so the grid does not look nudged.
+ * This replaces `filter: hue-rotate()`, which was the previous mechanism and
+ * could only ever be a tint: one rotation applied to every stop at once, so
+ * the palette could shift but the relationships inside it could not change.
+ * Rotating far enough to reach a cool palette dragged the entire page's cast
+ * along with it, text included, because a filter applies to the whole element.
  *
- * The mask is what stops it reading like graph paper — dots are strongest at
- * the top of the viewport and gone by two thirds down, so the field feels lit
- * rather than tiled.
+ * EVERY STOP KEEPS ITS OKLCH L AND ITS ALPHA — 75 / 56.5 / 52 / 72 at
+ * .30 / .24 / .22 / .16 — and only hue and chroma move. (The first two start
+ * life as #ff8a3d and #d0341f, which measure L=75 C=.167 H=50.5 and L=56.5
+ * C=.196 H=31.1; that is where the later stops take their L from.)
  *
- * Gradients use color-mix against --sem-accent so they follow the theme swap
- * instead of being two hardcoded oranges.
+ * Be precise about what that buys, because it is easy to overclaim and this
+ * comment previously did. It keeps any SINGLE blob from brightening or dimming
+ * as it travels. It does NOT hold the composite luminance steady, and measured,
+ * it does not: over the artwork on the left the ground runs 34 -> 50 -> 56 luma
+ * across the journey. Two things break the equivalence — equal oklch L at
+ * different hues is not equal relative luminance, and the blobs move, so
+ * coverage changes independently of colour.
+ *
+ * What actually protects body-text contrast is geometry, not lightness: the
+ * wash has fallen off almost entirely by the time it reaches the content
+ * column. Measured under the text at 0 / 55 / 100%, the ground is luma
+ * 17.9 / 18.9 / 18.1 — a swing of 0.9 — holding body text at 16.4:1 and the
+ * muted colour at 7.13:1 worst case, against a 4.5:1 bar.
+ *
+ * So the constraint to preserve when editing is the x positions below, more
+ * than the L values. Re-check both after any change:
+ *   pnpm run build && node scripts/measure-render.mjs
+ *
+ * Chroma drops in the cool stops because sRGB has less room there: 0.19 at
+ * L=52 exists around hue 318 but clips around hue 195, and a clipped stop
+ * lands somewhere the interpolation did not intend.
+ *
+ * Every x position stays under 26%. The left of the page is the artwork and
+ * the content column sits to the right of it; a blob wandering right would
+ * put text on a hot stop.
+ * ---------------------------------------------------------------------------
  */
+@property --f1 {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: rgb(255 138 61 / 0.3);
+}
+@property --f2 {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: rgb(208 52 31 / 0.24);
+}
+@property --f3 {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: rgb(129 61 178 / 0.22);
+}
+@property --f4 {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: rgb(214 154 60 / 0.16);
+}
+@property --fx1 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 8%;
+}
+@property --fy1 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 12%;
+}
+@property --fx3 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 4%;
+}
+@property --fy3 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 96%;
+}
+
 @utility field {
   position: fixed;
   inset: 0;
   z-index: -2;
   pointer-events: none;
   background-color: var(--sem-bg);
+
+  /*
+   * These repeat the 0% keyframe and must stay in sync with it. They are not
+   * a duplicate: they are what renders when the animation never runs — no
+   * scroll-timeline support, or reduced motion — so this is the static
+   * fallback, and it is the palette the page has always opened on.
+   */
+  --f1: color-mix(in oklab, #ff8a3d 30%, transparent);
+  --f2: color-mix(in oklab, #d0341f 24%, transparent);
+  --f3: color-mix(in oklab, oklch(52% 0.19 318) 22%, transparent);
+  --f4: color-mix(in oklab, oklch(72% 0.15 78) 16%, transparent);
+  --fx1: 8%;
+  --fy1: 12%;
+  --fx3: 4%;
+  --fy3: 96%;
+
   background-image:
     radial-gradient(
-      70rem 55rem at 8% 12%,
-      color-mix(in oklab, #ff8a3d 30%, transparent),
+      70rem 55rem at var(--fx1) var(--fy1),
+      var(--f1),
       transparent 66%
     ),
+    radial-gradient(55rem 48rem at 26% 68%, var(--f2), transparent 64%),
     radial-gradient(
-      55rem 48rem at 26% 68%,
-      color-mix(in oklab, #d0341f 24%, transparent),
-      transparent 64%
-    ),
-    radial-gradient(
-      50rem 44rem at 4% 96%,
-      color-mix(in oklab, oklch(52% 0.19 318) 22%, transparent),
+      50rem 44rem at var(--fx3) var(--fy3),
+      var(--f3),
       transparent 62%
     ),
-    radial-gradient(
-      44rem 40rem at 34% 4%,
-      color-mix(in oklab, oklch(72% 0.15 78) 16%, transparent),
-      transparent 60%
-    );
+    radial-gradient(44rem 40rem at 34% 4%, var(--f4), transparent 60%);
 }
 
 /*
@@ -361,8 +441,9 @@
  * full-viewport colour shift tied to scrolling is exactly the kind of thing
  * that causes trouble.
  *
- * hue-rotate rather than swapping gradients: it moves every stop together, so
- * the ember becomes a plum without any stop crossing over another and banding.
+ * Comparison with the mechanism this replaced is in the SCROLL MORPH note
+ * above: hue-rotate needed no @property support but could only tint, and it
+ * filtered the element rather than the palette.
  */
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: scroll()) {
@@ -376,24 +457,118 @@
   }
 }
 
+/*
+ * Three stops, not two.
+ *
+ * Two stops can only ever be a fade from A to B, and the midpoint of a fade is
+ * the average of the ends — which is where colour goes muddy. A middle
+ * keyframe makes the midpoint a palette somebody chose, so the journey reads
+ * as ember -> plum -> teal rather than as ember dissolving into teal.
+ *
+ * 55% rather than 50%: the ember palette is the site's identity and the first
+ * section is the one every visitor sees, so it holds a little longer than an
+ * even split would give it.
+ */
 @keyframes field-shift {
-  to {
-    filter: hue-rotate(-58deg) saturate(0.82) brightness(0.92);
-    transform: scale(1.18) translateY(-5%);
+  0% {
+    --f1: color-mix(in oklab, #ff8a3d 30%, transparent);
+    --f2: color-mix(in oklab, #d0341f 24%, transparent);
+    --f3: color-mix(in oklab, oklch(52% 0.19 318) 22%, transparent);
+    --f4: color-mix(in oklab, oklch(72% 0.15 78) 16%, transparent);
+    --fx1: 8%;
+    --fy1: 12%;
+    --fx3: 4%;
+    --fy3: 96%;
+    transform: none;
+  }
+  55% {
+    --f1: color-mix(in oklab, oklch(75% 0.14 330) 30%, transparent);
+    --f2: color-mix(in oklab, oklch(56.5% 0.17 300) 24%, transparent);
+    --f3: color-mix(in oklab, oklch(52% 0.17 285) 22%, transparent);
+    --f4: color-mix(in oklab, oklch(72% 0.12 345) 16%, transparent);
+    --fx1: 18%;
+    --fy1: 30%;
+    --fx3: 13%;
+    --fy3: 78%;
+  }
+  100% {
+    --f1: color-mix(in oklab, oklch(75% 0.13 205) 30%, transparent);
+    --f2: color-mix(in oklab, oklch(56.5% 0.13 225) 24%, transparent);
+    --f3: color-mix(in oklab, oklch(52% 0.12 195) 22%, transparent);
+    --f4: color-mix(in oklab, oklch(72% 0.1 200) 16%, transparent);
+    --fx1: 6%;
+    --fy1: 46%;
+    --fx3: 22%;
+    --fy3: 90%;
+    transform: scale(1.14) translateY(-4%);
   }
 }
 
 /*
- * Site-wide grain — the texture, not a whisper of one.
+ * ---------------------------------------------------------------------------
+ * Site-wide film grain.
  *
- * This was 0.085 / soft-light, which was effectively invisible: the reference
- * (dreamy gradients with heavy film grain) has grain as a MATERIAL, not a
- * finishing touch. 0.28 / overlay makes it actually read, and it sits at z-index
- * -1 over the gradient at -2 so it textures the artwork rather than the text.
+ * The recipe is three things, and every one of them was measured rather than
+ * chosen. Method: render the page twice, once with this layer and once with it
+ * display:none, screenshot both headless at 1440x900, and take the mean
+ * absolute luma difference between horizontally adjacent pixels over a flat
+ * region. That number is the grain you can actually see; the layer's opacity
+ * is not.
+ *
+ *   1. THE NOISE IS FORCED OPAQUE. feTurbulence emits RGB*A* noise — the alpha
+ *      channel is noise too, averaging 0.5 — so half the layer's strength was
+ *      being thrown away before compositing. `feFuncA type='discrete'
+ *      tableValues='1'` pins alpha to 1. Measured: 1.80 -> 3.44 for free, with
+ *      no change in mean brightness.
+ *
+ *   2. CONTRAST IS DOUBLED. `slope='2' intercept='-0.5'` pushes the noise
+ *      toward the ends of its range, which is what `overlay` rewards. 3.44 ->
+ *      8.40 at the same opacity.
+ *
+ *   3. IT IS DESATURATED FIRST. feTurbulence's channels are independent, so
+ *      raw output is coloured confetti, not grain. feColorMatrix saturate 0
+ *      collapses it to luminance.
+ *
+ * WHY THE OLD VALUE LOOKED LIKE NOTHING. The previous note here claimed "0.28
+ * / overlay makes it actually read". Measured, it did not: it produced 1.80 on
+ * the dark wash and 0.013 on light — about one luma level and about zero.
+ * `overlay` is a conditional blend, multiply below mid-grey and screen above,
+ * so its output is compressed toward the backdrop at BOTH ends of the range.
+ * A near-black or near-white ground therefore erases it, and the site has one
+ * of each. Raising opacity does not fix that; overlay's gain at the extremes
+ * is set by the backdrop, not by the layer. Boosting the noise's own contrast
+ * does fix it, which is why (2) exists.
+ *
+ * Measured on the shipped recipe, mean absolute adjacent-pixel luma delta:
+ *
+ *              dark wash   light wash   flat dark   flat paper
+ *   before        1.80        ~0.01        0.51        0.01
+ *   after         8.40         7.26        2.32        0.66
+ *
+ * The two "wash" columns are where the gradient actually is, and they land
+ * within 15% of each other — one recipe covers both themes, so this needs no
+ * prefers-color-scheme branch. The flat columns are the far edge of the page
+ * where the wash has fallen off; grain being strongest over the gradient is
+ * correct, because hiding the ramp's banding is half of what it is for.
+ *
+ * On the shipped page as a whole, measured by the script below over the
+ * empty left column, the same change reads 0.76 -> 5.12 luma levels with the
+ * mean moving -0.07. It is lower than the 8.40 above because that region
+ * spans both the lit part of the wash and the flat edge beyond it; 5.12 is
+ * the number the command prints, so it is the one to compare against.
+ *
+ * baseFrequency stays at 0.75. At 1.0 the noise period aligns with the pixel
+ * grid and the layer measures ZERO on a flat ground — it renders, and it is
+ * invisible. Do not "round it up".
+ *
+ * Re-measure after any change to this block:
+ *   node scripts/measure-render.mjs
  *
  * A fixed layer rather than a background on <body>, so it does not scroll with
  * the content — grain that moves reads as a rendering artefact, grain that
- * stays reads as film.
+ * stays put reads as film. It sits at z-index -1 over the gradient at -2, so
+ * it textures the artwork and not the text.
+ * ---------------------------------------------------------------------------
  */
 @utility grain-page {
   position: fixed;
@@ -401,8 +576,8 @@
   z-index: -1;
   pointer-events: none;
   mix-blend-mode: overlay;
-  opacity: 0.28;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.38;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='2' intercept='-0.5'/%3E%3CfeFuncG type='linear' slope='2' intercept='-0.5'/%3E%3CfeFuncB type='linear' slope='2' intercept='-0.5'/%3E%3CfeFuncA type='discrete' tableValues='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /*
@@ -491,25 +666,6 @@
     opacity: 0;
     transform: translateY(10px);
   }
-}
-
-/*
- * Film grain, as a data URI so it stays self-contained and cacheable with the
- * stylesheet. feTurbulence is generated once by the browser rather than
- * downloaded, so this costs bytes measured in hundreds, not kilobytes.
- *
- * Grain is what separates a gradient that looks rendered from one that looks
- * like a CSS default — it hides banding in the ramps and gives the surface a
- * texture. `mix-blend-mode: overlay` keeps it reading as grain on top of the
- * colour rather than a grey haze over it.
- */
-@utility grain {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  mix-blend-mode: overlay;
-  opacity: 0.5;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /*

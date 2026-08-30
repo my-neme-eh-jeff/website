@@ -15,38 +15,54 @@ export default createRenderer((opts) => {
     options: {
       ...opts,
       /*
-       * Preloader tuning.
+       * Preloader: OFF. Measured, not assumed.
        *
-       * Measured before touching this: a cold page load with NO interaction
-       * fetched 34 bundles totalling 174 kB. That is Qwik working as designed
-       * — `maxIdlePreloads` defaults to 25, so it warms likely bundles during
-       * idle time to make the first interaction instant — and it is also what
-       * Lighthouse reports as "unused JavaScript".
+       * Method: build, serve dist, load / in headless Chrome with no
+       * interaction, and count what the browser actually fetched. Brotli
+       * figures are `brotli -q 11` over the same files, because production
+       * serves compressed and python's http.server does not — measuring the
+       * uncompressed number is how this repo previously talked itself into a
+       * wrong conclusion (see scripts/audit.mjs).
        *
-       * Qwik's own docs state the trade plainly: preload links "can delay LCP,
-       * which is a Core Web Vital", in exchange for a better TTI, which is not.
-       * On this site that trade is bad value. There are two interactive things
-       * on the whole page (the shell and the contact chooser), so warming 25
-       * bundles buys a few milliseconds on an interaction most visitors never
-       * make, and spends it against the metric everyone measures.
+       *   preloader config          JS requests   raw      brotli
+       *   ssrPreloads 0 / idle 4         26      183.4 kB  65.1 kB
+       *   ssrPreloads 0 / idle 0         26      183.4 kB  65.1 kB
+       *   false                           8      140.9 kB  48.5 kB
        *
-       *   ssrPreloads: 0    no <link rel=preload> for JS in the HTML at all,
-       *                     so nothing competes with the font and the CSS for
-       *                     the critical path.
-       *   maxIdlePreloads: 4  still warms the handful this page can actually
-       *                     need, during idle time, after paint.
+       * THE MIDDLE ROW IS THE POINT. maxIdlePreloads does nothing here at any
+       * value, because of the sentence in its own docs: bundles that reach
+       * 100% probability — the static imports of a bundle already being
+       * loaded — "will always be preloaded immediately, no limit". Once the
+       * core loads, its import graph follows regardless. The previous note in
+       * this file claimed `maxIdlePreloads: 4` "still warms the handful this
+       * page can actually need"; it warmed 25, and setting it to 0 warmed the
+       * same 25. The knob is effectively binary.
        *
-       * Not `preloader: false`: that would leave the first keystroke to fetch
-       * its bundle cold, which on a slow connection is a visible stall. This
-       * keeps the warming, just proportionate to a page with two widgets.
+       * So `false`, which saves 18 requests and 16.6 kB on the wire.
        *
-       * Re-measure after changing (expect far fewer than 34):
-       *   npm run build && npx http-server dist  # then count /build/*.js hits
+       * What this does NOT save, and cannot: q-CqMIWLV0.js, the Qwik core and
+       * router, 111 kB raw / 36.6 kB brotli. It is fetched even with the
+       * preloader off because the container carries eager listeners that name
+       * it — `q-d:qinit`, `q-d:qcinit`, `q-d:qrouterpopstate` — which the
+       * router registers for client-side navigation. That bundle is the floor
+       * for using Qwik Router at all, and it is 75% of the remaining JS.
+       * Verify it is still the floor rather than something we added:
+       *   grep -o 'q-d:q[a-z]*="[^"]*"' dist/index.html
+       *
+       * Cost of turning it off: the first keystroke in the shell fetches its
+       * bundle cold (8.3 kB raw / ~3 kB brotli) instead of finding it warm.
+       * Qwik's loader queues and replays the event, so no input is lost — it
+       * arrives late, not never. That trade is the one the shell was designed
+       * for: "load on interaction only". Speculative preloading was quietly
+       * doing the opposite, shipping the shell to every visitor who never
+       * opens it.
+       *
+       * Re-measure after changing this (expect 8 script requests):
+       *   pnpm run build
+       *   python3 -m http.server 8199 --directory dist &
+       *   # load http://localhost:8199/ and count /build/*.js in devtools
        */
-      preloader: {
-        ssrPreloads: 0,
-        maxIdlePreloads: 4,
-      },
+      preloader: false,
       // Use container attributes to set attributes on the html tag.
       containerAttributes: {
         lang: "en",
