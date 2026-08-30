@@ -81,11 +81,10 @@ const LINE_CLASS: Record<Line["kind"], string> = {
  *   - `role="dialog"` and modal semantics, without asserting aria-modal on a
  *     div that would not have earned it
  *
- * The cost is that the panel is REPARENTED when maximising: the same markup is
- * rendered inside the dialog instead of in flow. State survives because it
- * lives in signals rather than in the DOM. The one thing that does not survive
- * is focus — the button that was clicked no longer exists — so `close` puts it
- * back explicitly. See restoreFocusToMax.
+ * The cost is that the panel is REPARENTED when maximising. State survives
+ * because it lives in signals, not the DOM; focus does not, because the button
+ * that was clicked no longer exists — so `close` restores it. See
+ * restoreFocusToMax.
  * ---------------------------------------------------------------------------
  */
 type View = "open" | "min" | "max" | "closed";
@@ -280,14 +279,11 @@ function untilDone(fn: () => boolean, tries = 30) {
 /**
  * Keep the prompt in view after output is appended.
  *
- * Matters in BOTH views now. It used to matter only while maximised, because
- * the normal view had no height of its own and simply grew the page -- which
- * is the behaviour that made this read as a transcript rather than a terminal.
- * The body is now a capped scroller in either view, so output always has an
- * edge to fall past. Measured before any of this existed: `k describe projects
- * gpu-autoscaler` left scrollHeight 931 against clientHeight 517 with scrollTop
- * still 0, putting the prompt 378px past the bottom edge. You would be typing
- * somewhere you cannot see.
+ * The body is a capped scroller in either view, so output always has an edge to
+ * fall past. Measured before this existed: `k describe projects gpu-autoscaler`
+ * left scrollHeight 931 against clientHeight 517 with scrollTop still 0,
+ * putting the prompt 378px below the bottom edge — typing somewhere you cannot
+ * see.
  *
  * IT WAITS FOR THE NODES, NOT FOR A DURATION, AND THAT DISTINCTION IS THE
  * WHOLE FUNCTION. The previous version settled when a scroll-to-bottom left
@@ -310,11 +306,8 @@ function untilDone(fn: () => boolean, tries = 30) {
  * Two passes, not one: an `art` line can grow a horizontal scrollbar as it
  * lays out, which changes scrollHeight after the count is already satisfied.
  *
- * Module-level rather than a closure in the component: a plain function
- * captured by a `$()` handler would have to be serialisable, and this one
- * touches nothing but the DOM, so it has no business being captured at all.
- * Harmless when the body is not a scroller — scrollTop on a non-overflowing
- * element is a no-op.
+ * Module-level rather than a closure: a plain function captured by a `$()`
+ * handler would have to be serialisable, and this one touches only the DOM.
  */
 function stickToBottom(lineCount: number) {
   let scrolled = false;

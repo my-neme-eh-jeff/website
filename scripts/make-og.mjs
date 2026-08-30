@@ -131,8 +131,8 @@ const html = `<!doctype html><meta charset="utf-8">
    * preview for a week after the page stopped using it.
    *
    * It drifted because the grain lives in two places and nothing compared
-   * them. `pnpm run verify` now does, so a mismatch fails the build instead of
-   * the card. Change it here too and re-run `pnpm run og`. The reasoning
+   * them. \`pnpm run verify\` now does, so a mismatch fails the build instead of
+   * the card. Change it here too and re-run \`pnpm run og\`. The reasoning
    * behind each part of the recipe — forced alpha, doubled contrast, why 0.75
    * and not 1.0 — is documented once, there.
    */

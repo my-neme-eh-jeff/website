@@ -442,8 +442,8 @@
   background-color: var(--sem-bg);
 
   /*
-   * These repeat the 0% keyframe and must stay in sync with it. They are not
-   * a duplicate: they are what renders when the animation never runs — no
+   * These repeat the 0% keyframe, and `pnpm run verify` compares them. Not a
+   * duplicate: they are what renders when the animation never runs — no
    * scroll-timeline support, or reduced motion — so this is the static
    * fallback, and it is the palette the page has always opened on.
    */
@@ -573,12 +573,10 @@
  * ---------------------------------------------------------------------------
  * Site-wide film grain.
  *
- * The recipe is three things, and every one of them was measured rather than
- * chosen. Method: render the page twice, once with this layer and once with it
- * display:none, screenshot both headless at 1440x900, and take the mean
- * absolute luma difference between horizontally adjacent pixels over a flat
- * region. That number is the grain you can actually see; the layer's opacity
- * is not.
+ * Every value here was measured, not chosen. Method: render the page with and
+ * without this layer, screenshot both headless at 1440x900, and take the mean
+ * absolute luma delta between horizontally adjacent pixels. That is the grain
+ * you can see; the layer's opacity is not.
  *
  *   1. THE NOISE IS FORCED OPAQUE. feTurbulence emits RGB*A* noise — the alpha
  *      channel is noise too, averaging 0.5 — so half the layer's strength was
@@ -594,33 +592,26 @@
  *      raw output is coloured confetti, not grain. feColorMatrix saturate 0
  *      collapses it to luminance.
  *
- * WHY THE OLD VALUE LOOKED LIKE NOTHING. The previous note here claimed "0.28
- * / overlay makes it actually read". Measured, it did not: it produced 1.80 on
- * the dark wash and 0.013 on light — about one luma level and about zero.
- * `overlay` is a conditional blend, multiply below mid-grey and screen above,
- * so its output is compressed toward the backdrop at BOTH ends of the range.
- * A near-black or near-white ground therefore erases it, and the site has one
- * of each. Raising opacity does not fix that; overlay's gain at the extremes
- * is set by the backdrop, not by the layer. Boosting the noise's own contrast
- * does fix it, which is why (2) exists.
+ * WHY THE OLD VALUE LOOKED LIKE NOTHING. The previous note claimed "0.28 /
+ * overlay makes it actually read". It measured 1.80 on the dark wash and 0.013
+ * on light — about one luma level and about zero. `overlay` is a conditional
+ * blend, multiply below mid-grey and screen above, so its output compresses
+ * toward the backdrop at BOTH ends; a near-black or near-white ground erases
+ * it, and the site has one of each. Raising opacity cannot fix that — overlay's
+ * gain at the extremes is set by the backdrop, not the layer. Boosting the
+ * noise's own contrast does, which is why (2) exists.
  *
- * Measured on the shipped recipe, mean absolute adjacent-pixel luma delta:
+ * Mean absolute adjacent-pixel luma delta on the shipped recipe:
  *
  *              dark wash   light wash   flat dark   flat paper
  *   before        1.80        ~0.01        0.51        0.01
  *   after         8.40         7.26        2.32        0.66
  *
- * The two "wash" columns are where the gradient actually is, and they land
- * within 15% of each other — one recipe covers both themes, so this needs no
- * prefers-color-scheme branch. The flat columns are the far edge of the page
- * where the wash has fallen off; grain being strongest over the gradient is
- * correct, because hiding the ramp's banding is half of what it is for.
- *
- * On the shipped page as a whole, measured by the script below over the
- * empty left column, the same change reads 0.76 -> 5.12 luma levels with the
- * mean moving -0.07. It is lower than the 8.40 above because that region
- * spans both the lit part of the wash and the flat edge beyond it; 5.12 is
- * the number the command prints, so it is the one to compare against.
+ * The two wash columns are where the gradient is, and they land within 15% of
+ * each other — one recipe covers both themes, no prefers-color-scheme branch
+ * needed. Over the whole left column the same change reads 0.76 -> 5.12, lower
+ * because that region spans both the lit wash and the flat edge beyond it;
+ * 5.12 is what the command prints, so it is the one to compare against.
  *
  * baseFrequency stays at 0.75. At 1.0 the noise period aligns with the pixel
  * grid and the layer measures ZERO on a flat ground — it renders, and it is
@@ -629,10 +620,9 @@
  * Re-measure after any change to this block:
  *   node scripts/measure-render.mjs
  *
- * A fixed layer rather than a background on <body>, so it does not scroll with
- * the content — grain that moves reads as a rendering artefact, grain that
- * stays put reads as film. It sits at z-index -1 over the gradient at -2, so
- * it textures the artwork and not the text.
+ * Fixed rather than a background on <body>, so it does not scroll: grain that
+ * moves reads as a rendering artefact, grain that stays put reads as film.
+ * z-index -1 over the gradient at -2, so it textures the artwork not the text.
  * ---------------------------------------------------------------------------
  */
 @utility grain-page {

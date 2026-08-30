@@ -777,6 +777,52 @@ check("every plain @theme token reaches the built CSS", () => {
   return `${n} tokens, none dead`;
 });
 
+/*
+ * `field`'s custom properties repeat the 0% keyframe of `field-shift`, and the
+ * comment there says they must stay in sync. Nothing compared them.
+ *
+ * Drift here is close to invisible: the static values are what paints when the
+ * animation never runs -- no scroll-timeline support, or reduced motion -- so a
+ * mismatch ships the wrong opening palette to exactly the visitors least likely
+ * to be the one reviewing it.
+ */
+check("field's static fallback matches the 0% keyframe", () => {
+  const css = read("src", "global.css");
+
+  const declsIn = (body) =>
+    Object.fromEntries(
+      [...body.matchAll(/(--[a-z0-9-]+):\s*([^;]+);/gi)].map((m) => [
+        m[1],
+        m[2].trim(),
+      ]),
+    );
+
+  const util = css.indexOf("@utility field {");
+  assert(util !== -1, "no `@utility field` -- was it renamed?");
+  const fallback = declsIn(css.slice(util, css.indexOf("}", util)));
+
+  const kf = css.indexOf("@keyframes field-shift {");
+  assert(kf !== -1, "no `@keyframes field-shift` -- was it renamed?");
+  const zero = css.indexOf("0% {", kf);
+  assert(zero !== -1, "field-shift has no 0% keyframe");
+  const start = declsIn(css.slice(zero, css.indexOf("}", zero)));
+
+  const names = Object.keys(start);
+  assert(names.length > 0, "parsed no declarations from the 0% keyframe");
+
+  const drift = names.filter((n) => fallback[n] !== start[n]);
+  assert(
+    drift.length === 0,
+    `${drift.join(", ")} differ between the two.\n    ` +
+      drift
+        .map((n) => `${n}: field has ${fallback[n] ?? "(nothing)"}, 0% has ${start[n]}`)
+        .join("\n    ") +
+      `\n    The fallback is what paints without a scroll timeline or under ` +
+      `reduced motion, so a mismatch is a wrong opening palette.`,
+  );
+  return `${names.length} declarations identical`;
+});
+
 // --- Report ---------------------------------------------------------------
 
 for (const ok of passes) console.log(`  ok    ${ok}`);

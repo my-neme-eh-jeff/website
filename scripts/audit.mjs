@@ -19,11 +19,7 @@
  * (accessibility, best practices, SEO) do not vary at all, but they go through
  * the same path so there is one code path rather than two.
  *
- * A median is not enough on its own, though, and there is now a spread guard
- * further down that refuses to write when the runs disagree by more than 3
- * points. A median cancels one bad run; it cannot rescue a set where the whole
- * sample is depressed, and it reports a confident-looking number from
- * 100 / 95 / 95 just as readily as from 100 / 100 / 100.
+ * A median alone is not enough; the spread guard below says why.
  * ---------------------------------------------------------------------------
  *
  * ---------------------------------------------------------------------------

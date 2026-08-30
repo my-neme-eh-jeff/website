@@ -80,14 +80,11 @@ const markPaths = `<path d="M${FOOT} ${Y_FOOT} L${APEX.x} ${APEX.y} L${(2 * APEX
 const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="A">
   <style>
     /*
-     * Styled with plain CSS rules rather than custom properties: \`var()\` in an
-     * SVG presentation attribute has a patchy history in WebKit, and a dropped
-     * \`stroke\` would fall back to \`none\` — a blank tile with no letter, which is
-     * worse than the scaffold icon this replaced.
+     * Plain CSS rules, not custom properties — see METHOD 3 in the header.
      *
-     * The swap matters because a ${INK} tile disappears into a dark tab strip.
-     * Chrome and Firefox honour prefers-color-scheme in a favicon; favicon.ico
-     * covers whatever does not.
+     * The theme swap matters because a ${INK} tile disappears into a dark tab
+     * strip. Chrome and Firefox honour prefers-color-scheme in a favicon;
+     * favicon.ico covers whatever does not.
      */
     .tile { fill: ${INK} }
     .mark { stroke: ${PAPER} }
@@ -126,9 +123,9 @@ const touchSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
  * terminate on its boundary instead of meeting in a point beneath it (that
  * difference is what separates "node with two out-edges" from "lollipop").
  *
- * Unusable as a favicon — the node degrades to a speck at 16px — but it reads
- * well from about 64px up. Kept here for the pending 1200x630 og:image, which
- * has room for it. Not currently written to disk.
+ * Unusable as a favicon — see METHOD 1 — but it reads well from about 64px up.
+ * The og:image shipped without it, so this currently has no callers and is
+ * written nowhere: an alternate mark kept for a surface with room for it.
  */
 export function dagMark({ tile = INK, glyph = PAPER, node = CLAY } = {}) {
   const R = 3.2,
