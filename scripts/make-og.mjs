@@ -120,10 +120,26 @@ const html = `<!doctype html><meta charset="utf-8">
     font-family: "HG", sans-serif;
     color: #f2f0e9;
   }
-  /* Same grain as the site, at the same blend and opacity. */
+  /*
+   * Grain, and it must stay in step with grain-page in src/global.css.
+   *
+   * This block previously claimed to be "the same grain as the site" while
+   * being a copy of the recipe the site had already abandoned: opacity 0.28,
+   * a bare feTurbulence with its noisy alpha channel, and no contrast boost.
+   * global.css measured that combination at 1.80 luma levels on the dark wash
+   * and 0.013 on light — invisible. The card was shipping it to every link
+   * preview for a week after the page stopped using it.
+   *
+   * It drifted because the grain lives in two places and only one of them is
+   * checked. Nothing here can catch it: this file renders through headless
+   * Chrome to a JPEG, so pnpm run verify sees a picture, not a stylesheet.
+   * If you change the grain in global.css, change it here too and re-run
+   * pnpm run og. The reasoning behind each part of the recipe — forced
+   * alpha, doubled contrast, why 0.75 and not 1.0 — is documented once, there.
+   */
   .grain {
-    position: absolute; inset: 0; mix-blend-mode: overlay; opacity: 0.28;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    position: absolute; inset: 0; mix-blend-mode: overlay; opacity: 0.38;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='2' intercept='-0.5'/%3E%3CfeFuncG type='linear' slope='2' intercept='-0.5'/%3E%3CfeFuncB type='linear' slope='2' intercept='-0.5'/%3E%3CfeFuncA type='discrete' tableValues='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   /* Content sits right, matching the page's own composition. */
   .wrap {
