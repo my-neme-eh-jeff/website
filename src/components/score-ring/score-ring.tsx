@@ -93,15 +93,9 @@ const Ring = component$<{ name: string; score: number }>(({ name, score }) => {
 });
 
 /**
- * The sentence a visitor actually reads. Four rings say "100" four times; none
- * of them says what that adds up to, and a reader who does not already know
- * Lighthouse has no way to tell a full ring from a lucky one.
- *
- * Derived from the scores rather than written down. A hardcoded "all 100"
- * would keep congratulating itself straight through a regression, and the only
- * thing that makes publishing these numbers mean anything is that they are
- * free to go down. The sub-100 branch is phrased as a floor so it stays true
- * whatever the spread is.
+ * Derived from the scores, never hardcoded: an "all 100" constant would keep
+ * congratulating itself through a regression. The sub-100 branch is phrased as
+ * a floor so it stays a true sentence at any spread.
  */
 const headline = (scores: number[]) => {
   const worst = Math.min(...scores);
@@ -112,9 +106,8 @@ const headline = (scores: number[]) => {
 };
 
 /**
- * Written out rather than passed to `Intl`: SSG bakes this string into the HTML
- * at build time, so a locale-aware formatter would let the builder's machine
- * decide what the page says. Same reasoning as the seeded geometry rule.
+ * Not `Intl`: SSG bakes this string into the HTML, so a locale-aware formatter
+ * would let whichever machine ran the build decide what the page says.
  */
 const MONTHS = [
   "Jan",
@@ -138,25 +131,10 @@ const humanDate = (iso: string) => {
 };
 
 /**
- * Rings left, claim right. One layout, not two: this used to carry a `compact`
- * prop that stacked the block for the footer, but the footer is the only caller
- * and it wanted the side-by-side form anyway, so the variants had converged
- * into near-duplicates with one of them dead.
- *
- * What is NOT rendered, and why:
- *
- * - The commit hash. "496fc87" is provenance only to someone holding this repo.
- *   It stays in audit.json, where verify-build.mjs asserts it and diffs it
- *   against HEAD — catching scores that describe a build which no longer
- *   exists is a machine's job, not a footer's.
- * - The Lighthouse version. Reproducibility detail, and the reader is not
- *   reproducing. Still in audit.json for whoever is.
- *
- * What survives is the pair a reader can actually weigh: the form factor and
- * the date. Provenance is shortened, never removed — an unlabelled score
- * implies live telemetry, and these are lab runs from one machine on one
- * deploy. The form factor earns its place by making the claim stronger, not
- * merely more honest: mobile is the harder test.
+ * The commit hash and Lighthouse version are deliberately not rendered: they
+ * are provenance for someone holding this repo, not for a reader. Both stay in
+ * audit.json. The form factor and date do render — an unlabelled score implies
+ * live telemetry, and these are lab runs from one machine on one deploy.
  */
 export const ScoreRow = component$(() => {
   const entries = Object.entries(audit.scores);
@@ -170,7 +148,6 @@ export const ScoreRow = component$(() => {
         ))}
       </div>
 
-      {/* Wraps below the rings rather than beside them once the column narrows. */}
       <div class="max-w-80">
         <p class="text-text mb-0 text-xs">{line}</p>
         <p class="text-muted mt-1 mb-0 font-mono text-[0.625rem]">
