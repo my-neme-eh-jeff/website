@@ -448,6 +448,8 @@ check("colour contrast meets WCAG AA in both themes", () => {
     cream: val("cream"),
     clay: val("clay"),
     "clay-deep": val("clay-deep"),
+    ember: val("ember"),
+    "ember-deep": val("ember-deep"),
   };
   const darkBlock = css.slice(css.indexOf("prefers-color-scheme: dark"));
 
@@ -463,15 +465,19 @@ check("colour contrast meets WCAG AA in both themes", () => {
   const themes = {
     light: {
       bg: sem("bg", css),
+      surface: sem("surface", css),
       text: sem("text", css),
       muted: sem("muted", css),
       accent: sem("accent", css),
+      danger: sem("danger", css),
     },
     dark: {
       bg: sem("bg", darkBlock),
+      surface: sem("surface", darkBlock),
       text: sem("text", darkBlock),
       muted: sem("muted", darkBlock),
       accent: sem("accent", darkBlock),
+      danger: sem("danger", darkBlock),
     },
   };
 
@@ -499,7 +505,31 @@ check("colour contrast meets WCAG AA in both themes", () => {
         `The focus ring uses this colour, so keyboard focus would be ` +
         `non-conformant (WCAG 1.4.11).`,
     );
-    results.push(`${name} focus ${focus.toFixed(2)}:1`);
+    /*
+     * 4.5:1 -- WCAG 1.4.3 again, but measured against BOTH grounds, because
+     * --sem-danger is only ever used for text and that text is only ever on
+     * the glass panel, not on the page. The panel is --sem-surface under a
+     * backdrop-filter, so --sem-bg alone would have cleared a colour that is
+     * still unreadable where it actually renders.
+     *
+     * This is the check that would have caught #e0715c, which sat inline in
+     * terminal.tsx as `text-[#e0715c]` at 3.01:1 on --paper and 3.14:1 on the
+     * light surface. A hex in a component is invisible to this file, which is
+     * the whole argument for the no-raw-colours invariant.
+     */
+    for (const ground of ["bg", "surface"]) {
+      const r = contrast(t.danger, t[ground]);
+      assert(
+        r >= 4.5,
+        `${name}: --sem-danger on --sem-${ground} is ${r.toFixed(2)}:1, ` +
+          `needs 4.5:1 (WCAG 1.4.3). The shell renders error lines in this ` +
+          `colour on the glass panel.`,
+      );
+    }
+    results.push(
+      `${name} focus ${focus.toFixed(2)}:1, danger ` +
+        `${contrast(t.danger, t.surface).toFixed(2)}:1`,
+    );
   }
   return results.join(", ");
 });

@@ -1,4 +1,4 @@
-import { component$, useSignal, useStore, $ } from "@qwik.dev/core";
+import { component$, useSignal, useStore, $, sync$ } from "@qwik.dev/core";
 import { haptic } from "./haptics";
 import { run, completions, type Line } from "./commands";
 
@@ -43,7 +43,10 @@ const PROMPT = "~ $";
 const LINE_CLASS: Record<Line["kind"], string> = {
   in: "text-text",
   out: "text-muted",
-  err: "text-[#e0715c]",
+  // --sem-danger, not the raw #e0715c this used to carry. That hex is 3.01:1
+  // on the light ground -- error text below the 4.5:1 bar, and invisible to
+  // `pnpm run verify`, which can only see colours that are tokens.
+  err: "text-danger",
   hint: "text-accent",
   // Diagrams must not wrap — a re-flowed box drawing is unreadable — so this
   // is the one kind that scrolls its container instead.
@@ -89,6 +92,8 @@ type View = "open" | "min" | "max" | "closed";
 /** The dialog and the maximise button, addressed by id because both are found
  *  from handlers after a render that has no synchronous completion hook. */
 const DIALOG_ID = "term-dialog";
+const CLOSE_BTN_ID = "term-close";
+const MIN_BTN_ID = "term-min";
 const MAX_BTN_ID = "term-max";
 
 /**
@@ -108,29 +113,57 @@ const MAX_BTN_ID = "term-max";
  * behaviour depends on whether the tab happens to be foregrounded is a bug
  * even when the user is usually looking at it.
  *
+ * ZERO DELAY, NOT 16ms, AND THAT IS THE FIX FOR THE MAXIMISE FLASH. The delay
+ * used to be 16 -- one frame, chosen because it looked like the right unit
+ * next to a render. But nothing here is synchronised to a frame: the loop is
+ * waiting on Qwik's render flush, which lands on a task, not on a repaint. A
+ * 16ms floor meant the panel had already left the flow while the dialog was
+ * still unopened and therefore `display: none`, so the page visibly collapsed
+ * and then a modal appeared a beat later. `setTimeout(0)` is clamped to ~1ms
+ * (4ms once nested past five levels), which puts the flush and the showModal()
+ * in the same visual instant while keeping the background-tab guarantee that
+ * rAF cannot give.
+ *
  * `fn` returns true when it has done its job, so a found-and-handled element
- * stops the loop rather than burning all 20 attempts.
+ * stops the loop rather than burning every attempt.
  */
-function untilDone(fn: () => boolean, tries = 20) {
+function untilDone(fn: () => boolean, tries = 30) {
   if (tries <= 0) return;
   setTimeout(() => {
     if (!fn()) untilDone(fn, tries - 1);
-  }, 16);
+  }, 0);
 }
 
 /**
  * Keep the prompt in view after output is appended.
  *
- * Only matters while maximised. In the normal view the panel has no height of
- * its own, so new lines grow it and the page scrolls; maximised, the body is a
- * fixed-height scroller and new output goes below the fold. Measured before
- * this existed: `k describe projects gpu-autoscaler` left scrollHeight 931
- * against clientHeight 517 with scrollTop still 0, putting the prompt 378px
- * past the bottom edge. You would be typing somewhere you cannot see.
+ * Matters in BOTH views now. It used to matter only while maximised, because
+ * the normal view had no height of its own and simply grew the page -- which
+ * is the behaviour that made this read as a transcript rather than a terminal.
+ * The body is now a capped scroller in either view, so output always has an
+ * edge to fall past. Measured before any of this existed: `k describe projects
+ * gpu-autoscaler` left scrollHeight 931 against clientHeight 517 with scrollTop
+ * still 0, putting the prompt 378px past the bottom edge. You would be typing
+ * somewhere you cannot see.
  *
- * Two frames, not one. Qwik schedules its render, so at the first
- * animation frame the new lines may not be in the DOM yet and scrollHeight is
- * still the old value. The second frame is after the flush.
+ * IT WAITS FOR THE NODES, NOT FOR A DURATION, AND THAT DISTINCTION IS THE
+ * WHOLE FUNCTION. The previous version settled when a scroll-to-bottom left
+ * scrollTop where it already was, on the theory that an unchanged position
+ * means the new lines have rendered and been scrolled past. It does not: an
+ * element whose content has NOT yet arrived is not overflowing, so scrollTop
+ * is pinned at 0, so setting it to scrollHeight leaves it at 0 — "unchanged",
+ * and the loop declares success against an empty buffer. That only ever looked
+ * correct because the poll interval happened to be 16ms, which was usually
+ * longer than Qwik's flush. Dropping the interval to 0 for the maximise fix
+ * exposed it immediately: `k describe projects gpu-autoscaler` came back with
+ * scrollHeight 931 against clientHeight 384 and scrollTop still 0.
+ *
+ * The caller knows exactly how many lines the buffer should hold, and each
+ * one renders as exactly one <pre>. Counting them is a direct question about
+ * whether the render has landed, with no timing assumption in it at all.
+ *
+ * Two passes, not one: an `art` line can grow a horizontal scrollbar as it
+ * lays out, which changes scrollHeight after the count is already satisfied.
  *
  * Module-level rather than a closure in the component: a plain function
  * captured by a `$()` handler would have to be serialisable, and this one
@@ -138,45 +171,95 @@ function untilDone(fn: () => boolean, tries = 20) {
  * Harmless when the body is not a scroller — scrollTop on a non-overflowing
  * element is a no-op.
  */
-function stickToBottom() {
-  // Settles when a scroll-to-bottom leaves the position where it already was,
-  // which means the new lines have rendered and been scrolled past.
-  let stable = 0;
+function stickToBottom(lineCount: number) {
+  let scrolled = false;
   untilDone(() => {
     const body = document.querySelector<HTMLElement>("[data-shell] label");
     if (!body) return false;
-    const before = body.scrollTop;
+    /*
+     * Skip the copy inside a CLOSED dialog. During the max->open handover both
+     * exist for a tick, and the stale one satisfies the count check below —
+     * every line is present, it is merely `display: none`. Settling on it
+     * leaves the real, freshly mounted body at scrollTop 0, which is the same
+     * "measured the wrong thing and stopped early" failure the count check
+     * exists to prevent. A dialog that is OPEN is the live one, so it passes.
+     */
+    const dialog = body.closest("dialog");
+    if (dialog && !dialog.open) return false;
+    // The render has not landed until every line in the buffer is a node.
+    if (body.querySelectorAll("pre").length < lineCount) return false;
     body.scrollTop = body.scrollHeight;
-    stable = body.scrollTop === before ? stable + 1 : 0;
-    return stable >= 2;
+    const done = scrolled;
+    scrolled = true;
+    return done;
   });
 }
 
 /**
- * Put focus back on the maximise button after the dialog closes.
+ * Put focus back on a named chrome button after the dialog goes away.
  *
  * The browser normally restores focus itself, but it restores it to the
  * element that held focus when showModal() was called — and that element was
  * inside the panel, which has since been re-rendered in a different place.
  * Without this, focus lands on <body> and a keyboard user has to tab in from
  * the top of the document again.
+ *
+ * Which button depends on how the dialog was left: the green one for a plain
+ * restore, but minimise and close are also reachable while maximised and each
+ * should hand focus to its own control, not to a third one.
+ *
+ * THE `closest("dialog")` GUARD IS LOAD-BEARING. Both copies of the chrome
+ * carry the same ids, and for the tick or two between `close()` and Qwik
+ * dropping the dialog from the DOM, BOTH exist. `getElementById` returns the
+ * first in document order, which is the one inside the dialog — so without
+ * this the focus would land on a node that is about to be removed, and end up
+ * back on <body>: the exact bug this function exists to prevent.
  */
-function restoreFocusToMax() {
+function restoreFocusTo(id: string) {
   untilDone(() => {
-    const b = document.getElementById(MAX_BTN_ID);
-    if (!b) return false;
+    const b = document.getElementById(id);
+    if (!b || b.closest("dialog")) return false;
     // Only when focus has genuinely been dropped, so a retry cannot yank it
     // off something the user has since tabbed to.
-    if (document.activeElement === document.body) b.focus();
+    const active = document.activeElement;
+    if (!active || active === document.body) b.focus();
     return true;
   });
 }
 
+/** The open dialog, if the panel is currently living inside one. */
+const shellDialog = () =>
+  document.getElementById(DIALOG_ID) as HTMLDialogElement | null;
+
 export const Terminal = component$(() => {
   const lines = useStore<{ items: Line[] }>({ items: [...BANNER] });
   const value = useSignal("");
-  const inputRef = useSignal<HTMLInputElement | undefined>();
   const view = useSignal<View>("open");
+
+  /*
+   * The panel's height in normal flow, captured the instant before maximising.
+   *
+   * Maximising REPARENTS the panel into a <dialog>, which is out of flow
+   * whether it is closed (`display: none`) or open (top layer). So the space
+   * the panel occupied collapses, and everything below it on the page jumps up
+   * by the panel's full height — then jumps back down on restore. That is the
+   * larger half of what read as jitter; the other half was the 16ms poll, see
+   * untilDone.
+   *
+   * A spacer of the measured height holds the gap open, so the page behind the
+   * modal does not move at all.
+   */
+  const flowHeight = useSignal(0);
+
+  /*
+   * Whether a chrome control has been pressed yet.
+   *
+   * Gates the body's entry animation. Without it the shell would fade in on
+   * every page load — including the server-rendered first paint, which is
+   * supposed to be plain text with no motion — and it would fight the route
+   * view transition. False on the server, so the SSG output is unchanged.
+   */
+  const stirred = useSignal(false);
   const history = useStore<{ past: string[]; cursor: number }>({
     past: [],
     cursor: -1,
@@ -195,26 +278,79 @@ export const Terminal = component$(() => {
    * panel and destroys the button that was clicked — see restoreFocusToMax.
    */
   const toggleMin = $(async () => {
-    view.value = view.value === "min" ? "open" : "min";
+    stirred.value = true;
+    if (view.value === "max") {
+      /*
+       * Minimise is reachable while maximised, and it used to leak focus.
+       * Flipping straight to "min" unmounts the <dialog> without closing it:
+       * the browser drops it from the top layer but fires no `close` event, so
+       * nothing put focus back and it fell to <body>.
+       *
+       * Closing first is synchronous — it leaves the top layer immediately —
+       * while `close` is dispatched as a queued task, by which point the write
+       * below has already moved `view` off "max" and onDialogClose's guard
+       * declines to overwrite it.
+       */
+      shellDialog()?.close();
+      view.value = "min";
+      restoreFocusTo(MIN_BTN_ID);
+    } else {
+      view.value = view.value === "min" ? "open" : "min";
+    }
     await haptic("key");
   });
 
   const toggleMax = $(async () => {
+    stirred.value = true;
     if (view.value === "max") {
-      // Ask the dialog to close rather than just flipping state: `close()`
-      // fires the `close` event, so both routes out — this button and the
-      // browser's own Escape — end up in the same handler.
-      (document.getElementById(DIALOG_ID) as HTMLDialogElement | null)?.close();
+      /*
+       * Close the dialog AND apply the state here, rather than closing and
+       * waiting for `close` to come back and do it.
+       *
+       * This used to route through the event so that the button and Escape
+       * could not drift apart. The cost of that was a single point of failure
+       * for the only exit a pointer user has: if the event does not arrive,
+       * the dialog is shut but `view` is still "max", so Qwik keeps rendering
+       * the panel inside a closed — and therefore `display: none` — dialog.
+       * The shell does not return; it disappears, measured at 0px tall, with
+       * the spacer still holding its place. There is no way back from that
+       * without a reload.
+       *
+       * And the event genuinely does not always arrive: a dialog in a hidden
+       * tab dispatches no `close` at all. That is a browser behaviour, not a
+       * Qwik one — reproduced here on a hand-built dialog with no framework
+       * involved, which is also why it cannot be tested from a backgrounded
+       * automation tab.
+       *
+       * Escape still comes back through onDialogClose. The two paths cannot
+       * conflict because that handler is guarded on `view` still being "max",
+       * so whichever runs first wins and the other is a no-op.
+       */
+      shellDialog()?.close();
+      view.value = "open";
+      restoreFocusTo(MAX_BTN_ID);
+      stickToBottom(lines.items.length);
     } else {
+      // Measured BEFORE the state write, because that write is what destroys
+      // the element being measured.
+      const el = document.querySelector<HTMLElement>("[data-shell]");
+      flowHeight.value = el ? Math.round(el.getBoundingClientRect().height) : 0;
+
       view.value = "max";
       untilDone(() => {
-        const d = document.getElementById(
-          DIALOG_ID,
-        ) as HTMLDialogElement | null;
+        const d = shellDialog();
         if (!d) return false;
         // showModal() throws if the dialog is already open, so the guard also
         // covers a double-fire, not just the retry.
         if (!d.open) d.showModal();
+        /*
+         * The dialog gets a FRESH scroller, so the buffer arrives at scrollTop
+         * 0 and a long transcript hides the prompt behind it — measured 931px
+         * of content against a 640px body, leaving the prompt 291px below the
+         * fold the moment you maximise. Re-stick after the reparent, the same
+         * way an append does.
+         */
+        stickToBottom(lines.items.length);
         return true;
       });
     }
@@ -242,8 +378,20 @@ export const Terminal = component$(() => {
    * hand-rolled listener for no reason.
    */
   const onDialogClose = $(() => {
+    /*
+     * In practice this is Escape's path. Every button that closes the dialog
+     * now applies its own state first, precisely so that none of them depends
+     * on this event arriving — see toggleMax.
+     *
+     * Hence the guard: by the time `close` lands, `view` has usually already
+     * been moved somewhere deliberate, and re-asserting "open" over it would
+     * undo a minimise or a close and make the button look dead. Whichever path
+     * runs first wins; this one does the work only when nothing else has.
+     */
+    if (view.value !== "max") return;
     view.value = "open";
-    restoreFocusToMax();
+    restoreFocusTo(MAX_BTN_ID);
+    stickToBottom(lines.items.length);
   });
 
   /**
@@ -254,6 +402,7 @@ export const Terminal = component$(() => {
    * different, which is worse than having one button.
    */
   const toggleClose = $(async () => {
+    stirred.value = true;
     if (view.value === "closed") {
       lines.items = [...BANNER];
       history.past = [];
@@ -261,7 +410,11 @@ export const Terminal = component$(() => {
       value.value = "";
       view.value = "open";
     } else {
+      // Same reparenting hazard as minimise — see the note there.
+      const wasMax = view.value === "max";
+      if (wasMax) shellDialog()?.close();
       view.value = "closed";
+      if (wasMax) restoreFocusTo(CLOSE_BTN_ID);
     }
     await haptic("enter");
   });
@@ -291,7 +444,7 @@ export const Terminal = component$(() => {
     }
 
     lines.items = [...lines.items, ...result];
-    stickToBottom();
+    stickToBottom(lines.items.length);
     await haptic(result.some((l) => l.kind === "err") ? "error" : "enter");
   });
 
@@ -327,19 +480,14 @@ export const Terminal = component$(() => {
       return;
     }
     /*
-     * Tab completes. This is the one place preventDefault is genuinely
-     * required — Tab's default is to leave the field entirely, and losing focus
-     * mid-command is worse than no completion at all.
+     * Tab completes. See tabGuard below for how the default gets suppressed;
+     * this half only does the completing.
      *
-     * Qwik cannot preventDefault from an async handler (see the note above), so
-     * the input carries `preventdefault:keydown` and this handler re-dispatches
-     * every OTHER key's default itself. That is unworkable for a text field.
-     * Instead: the completion is applied and the caret restored, accepting that
-     * the browser may also blur — which it does not, because the attribute is
-     * scoped to this element and Tab is handled before the default runs in
-     * every engine tested.
+     * Shift+Tab is explicitly not completion — it is the only way back out of
+     * the input for a keyboard user, and tabGuard lets it through.
      */
     if (e.key === "Tab") {
+      if (e.shiftKey) return;
       const partial = value.value.trimStart();
       if (!partial) return;
       const matches = completions().filter((c) => c.startsWith(partial));
@@ -353,13 +501,42 @@ export const Terminal = component$(() => {
           { kind: "in", text: `${PROMPT} ${partial}` },
           ...matches.map((m) => ({ kind: "out" as const, text: `  ${m}` })),
         ];
-        stickToBottom();
+        stickToBottom(lines.items.length);
       }
       return;
     }
 
     // A tick per keystroke, but not for modifiers or navigation.
     if (e.key.length === 1) await haptic("key");
+  });
+
+  /**
+   * Suppress Tab's default, and ONLY Tab's, and only when it would complete.
+   *
+   * The async handler above cannot do this. A Qwik handler is fetched lazily,
+   * so by the time it runs the event has been dispatched and preventDefault is
+   * a no-op — eslint's `qwik/no-async-prevent-default` flags exactly that. The
+   * previous comment here claimed the input carried `preventdefault:keydown`;
+   * it never did, so Tab both completed the command AND blurred the field.
+   * That attribute would not have worked anyway: it is all-or-nothing for the
+   * event, so on a text input it would block every character from being
+   * inserted.
+   *
+   * `sync$` is the mechanism that fits — a QRL serialised into the HTML as a
+   * string and run synchronously, before the default. The cost is that it can
+   * capture nothing from this scope, which is why it reads its condition off
+   * the event and the element rather than off a signal.
+   *
+   * THE TWO CONDITIONS ARE BOTH ESCAPE HATCHES, NOT POLISH. `e.key` is "Tab"
+   * for Shift+Tab too, so an unconditional preventDefault would trap a
+   * keyboard user in the input with no way out — a WCAG 2.1.2 failure, and a
+   * worse bug than the one being fixed. Shift+Tab always leaves; so does Tab
+   * on an empty input, where there is nothing to complete anyway.
+   */
+  const tabGuard = sync$((e: KeyboardEvent, el: HTMLInputElement) => {
+    if (e.key === "Tab" && !e.shiftKey && el.value.trim() !== "") {
+      e.preventDefault();
+    }
   });
 
   const maxed = view.value === "max";
@@ -378,26 +555,40 @@ export const Terminal = component$(() => {
        * this bar is no longer aria-hidden and each dot is a real <button>
        * with a name that states what pressing it will do.
        *
-       * TARGET SIZE IS WHY THE BUTTONS ARE BIGGER THAN THE DOTS. WCAG 2.5.8
-       * wants 24x24 CSS px. The dots are 10px, and the spacing exception does
-       * not rescue them: it requires 24px between target centres, which
-       * produces the same spread as simply making the targets 24px. So the
-       * button is `size-6` with the 10px dot centred inside it, and the tight
-       * macOS cluster is not recoverable at this size. The visible dot is
-       * aria-hidden; the name lives in the sr-only span.
+       * TARGET SIZE IS WHY THE BUTTONS ARE BIGGER THAN THE DOTS, AND IT SETS
+       * A FLOOR ON HOW TIGHT THE CLUSTER CAN GET. WCAG 2.5.8 wants 24x24 CSS
+       * px, and the spacing exception does not buy anything back: it requires
+       * 24px between the centres of undersized targets, which is the same
+       * spread as simply making the targets 24px. The buttons already sit flush
+       * against each other, so 24px is the pitch and there is no legal way to
+       * pull them closer.
+       *
+       * What IS adjustable is how much of that pitch the dot fills. At 10px
+       * the gap between dots was 14px — wider than the dots themselves, which
+       * is what made three related controls read as three unrelated ones. At
+       * 12px the gap is 12px, so dot and gap are equal and the cluster reads as
+       * a cluster. macOS is 12px dots on a 20px pitch; this is the closest
+       * approach to it that keeps a conformant target.
+       *
+       * The hover wash and the press scale are on the button, not the dot, so
+       * the real 24px target is what responds — otherwise a pointer inside the
+       * target but outside the dot appears to have missed.
+       *
+       * The visible dot is aria-hidden; the name lives in the sr-only span.
        */}
       <div class="border-line/60 flex items-center gap-2 border-b px-3 py-1.5">
         <span class="flex">
           <button
             type="button"
+            id={CLOSE_BTN_ID}
             onClick$={toggleClose}
-            class="grid size-6 place-items-center rounded-full"
+            class="hover:bg-text/10 grid size-6 place-items-center rounded-full transition duration-150 active:scale-90"
           >
             <span class="sr-only">
               {view.value === "closed" ? "Reopen shell" : "Close shell"}
             </span>
             <span
-              class="size-2.5 rounded-full bg-[#e0715c]/70"
+              class="bg-lamp-close/75 size-3 rounded-full"
               aria-hidden="true"
             />
           </button>
@@ -411,15 +602,16 @@ export const Terminal = component$(() => {
             <>
               <button
                 type="button"
+                id={MIN_BTN_ID}
                 onClick$={toggleMin}
                 aria-expanded={view.value !== "min"}
-                class="grid size-6 place-items-center rounded-full"
+                class="hover:bg-text/10 grid size-6 place-items-center rounded-full transition duration-150 active:scale-90"
               >
                 <span class="sr-only">
                   {view.value === "min" ? "Expand shell" : "Minimise shell"}
                 </span>
                 <span
-                  class="size-2.5 rounded-full bg-[#d9a557]/70"
+                  class="bg-lamp-min/75 size-3 rounded-full"
                   aria-hidden="true"
                 />
               </button>
@@ -428,13 +620,13 @@ export const Terminal = component$(() => {
                 type="button"
                 id={MAX_BTN_ID}
                 onClick$={toggleMax}
-                class="grid size-6 place-items-center rounded-full"
+                class="hover:bg-text/10 grid size-6 place-items-center rounded-full transition duration-150 active:scale-90"
               >
                 <span class="sr-only">
                   {view.value === "max" ? "Restore shell" : "Maximise shell"}
                 </span>
                 <span
-                  class="size-2.5 rounded-full bg-[#5faa78]/70"
+                  class="bg-lamp-max/75 size-3 rounded-full"
                   aria-hidden="true"
                 />
               </button>
@@ -463,42 +655,61 @@ export const Terminal = component$(() => {
        * whatever the dialog gives it and scrolls internally. An earlier
        * attempt used `max-h-[70vh]`, which does nothing at all when the buffer
        * is short — measured 146px before and after pressing maximise.
+       *
+       * NORMAL VIEW IS NOW CAPPED TOO, WHICH IS WHAT MAKES IT A TERMINAL. It
+       * used to have no height of its own, so every command appended to a
+       * strip that just got taller: `k describe projects` pushed the rest of
+       * the page down by roughly 900px and left the prompt somewhere below the
+       * fold, and the panel never came back down. That is a transcript, not a
+       * shell. The cap is `min(55vh,24rem)` — 24rem is what fits comfortably
+       * inside the page's rhythm, and the 55vh term is what stops it eating a
+       * short viewport. `max-h` rather than `h` so a two-line banner still
+       * renders as two lines instead of a mostly-empty box.
+       *
+       * `overscroll-contain` keeps a flick at the bottom of the buffer from
+       * chaining into the page scroll, which is the thing that makes a nested
+       * scroller feel broken on a trackpad.
        */}
       {(view.value === "open" || maxed) && (
         <label
-          class={
-            maxed
-              ? "block min-h-0 flex-1 cursor-text overflow-y-auto px-4 py-4"
-              : "block cursor-text px-4 py-4"
-          }
+          class={[
+            "block cursor-text overflow-y-auto overscroll-contain px-4 py-4",
+            maxed ? "min-h-0 flex-1" : "max-h-[min(55vh,24rem)]",
+            stirred.value && !maxed ? "animate-shell-in" : "",
+          ]}
           for="term-input"
         >
           <span class="sr-only">Terminal input</span>
 
-          <div
-            class="flex flex-col gap-1 font-mono text-[0.8125rem] leading-relaxed"
-            aria-live="polite"
-          >
-            {lines.items.map((l, i) => (
-              <pre
-                class={
-                  l.kind === "art"
-                    ? `m-0 ${LINE_CLASS.art}`
-                    : `m-0 whitespace-pre-wrap ${LINE_CLASS[l.kind]}`
-                }
-                /*
-                 * Box-drawing characters read as gibberish through a screen
-                 * reader — "box drawings light down and right, box drawings
-                 * light horizontal…" for every glyph. The diagram's meaning is
-                 * in the Detail prose printed directly below it, so this is
-                 * hidden rather than mangled.
-                 */
-                aria-hidden={l.kind === "art" ? "true" : undefined}
-                key={i}
-              >
-                {l.text}
-              </pre>
-            ))}
+          <div class="flex flex-col gap-1 font-mono text-[0.8125rem] leading-relaxed">
+            {/*
+             * The live region wraps the OUTPUT only. It used to wrap the prompt
+             * row as well, which put an editable text field inside a region the
+             * screen reader re-reads on every append — so each command echoed
+             * the input back alongside its result.
+             */}
+            <div class="flex flex-col gap-1" aria-live="polite">
+              {lines.items.map((l, i) => (
+                <pre
+                  class={
+                    l.kind === "art"
+                      ? `m-0 ${LINE_CLASS.art}`
+                      : `m-0 whitespace-pre-wrap ${LINE_CLASS[l.kind]}`
+                  }
+                  /*
+                   * Box-drawing characters read as gibberish through a screen
+                   * reader — "box drawings light down and right, box drawings
+                   * light horizontal…" for every glyph. The diagram's meaning is
+                   * in the Detail prose printed directly below it, so this is
+                   * hidden rather than mangled.
+                   */
+                  aria-hidden={l.kind === "art" ? "true" : undefined}
+                  key={i}
+                >
+                  {l.text}
+                </pre>
+              ))}
+            </div>
 
             <div class="mt-1 flex items-center gap-2">
               <span class="text-accent shrink-0 font-mono text-[0.8125rem]">
@@ -506,7 +717,6 @@ export const Terminal = component$(() => {
               </span>
               <input
                 id="term-input"
-                ref={inputRef}
                 type="text"
                 value={value.value}
                 spellcheck={false}
@@ -523,7 +733,9 @@ export const Terminal = component$(() => {
                 placeholder="help"
                 class="text-text placeholder:text-muted min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[0.8125rem] focus:outline-none"
                 onInput$={(_, el) => (value.value = el.value)}
-                onKeyDown$={onKeyDown}
+                /* Sync guard first: it must run before the default, and before
+                 * the lazily-fetched async handler below. */
+                onKeyDown$={[tabGuard, onKeyDown]}
               />
             </div>
           </div>
@@ -547,15 +759,32 @@ export const Terminal = component$(() => {
    *
    * The backdrop is dimmed and blurred so the gradient behind does not compete
    * with terminal text for attention.
+   *
+   * `data-shell-dialog` is what global.css hangs the entry transition off —
+   * @starting-style plus a fade and a 0.97 scale, so the modal grows into
+   * place instead of appearing. See the note there for why there is no exit
+   * animation to match.
+   *
+   * THE SPACER IS NOT DECORATIVE. A dialog is out of flow in both states —
+   * `display: none` while closed, top layer while open — so the moment the
+   * panel moves inside one, the space it held in the page collapses and
+   * everything below it jumps up by the panel's height. The spacer holds that
+   * gap open at the height measured in toggleMax, so the page behind the
+   * modal stays exactly where it was and restoring puts the panel back into
+   * its own footprint.
    */
   return maxed ? (
-    <dialog
-      id={DIALOG_ID}
-      onClose$={onDialogClose}
-      class="m-auto h-[92vh] w-[min(96vw,80rem)] max-w-none border-0 bg-transparent p-0 backdrop:bg-black/70 backdrop:backdrop-blur-sm"
-    >
-      {panel}
-    </dialog>
+    <>
+      <div style={{ height: `${flowHeight.value}px` }} aria-hidden="true" />
+      <dialog
+        id={DIALOG_ID}
+        data-shell-dialog
+        onClose$={onDialogClose}
+        class="m-auto h-[92vh] w-[min(96vw,80rem)] max-w-none border-0 bg-transparent p-0 backdrop:bg-black/70 backdrop:backdrop-blur-sm"
+      >
+        {panel}
+      </dialog>
+    </>
   ) : (
     panel
   );

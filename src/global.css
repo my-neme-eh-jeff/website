@@ -136,6 +136,29 @@
   --clay: #d97757;
   --clay-deep: #bd5334;
 
+  /*
+   * Error red, and it needed exactly the same two-value treatment as clay,
+   * for exactly the same reason.
+   *
+   * --ember (#e0715c) shipped hardcoded in the shell as BOTH the error-line
+   * colour and the close lamp. It is 6.01:1 on the dark ground and fine there,
+   * but 3.01:1 on --paper and 3.14:1 on the light --sem-surface -- so light
+   * mode was rendering error text at well under the 4.5:1 body-text bar. The
+   * hex being inline in the component is what kept it out of `verify`'s reach.
+   *
+   * --ember-deep (#c4472c) is 4.70:1 on --paper and 4.90:1 on #ffffff, so it
+   * clears both light grounds. It also sits a hair hotter than --clay-deep,
+   * which is what keeps an error line distinguishable from the accent.
+   *
+   * Recompute after any change: pnpm run verify
+   */
+  --ember: #e0715c;
+  --ember-deep: #c4472c;
+
+  /* Lamp hues for the shell's traffic lights. Decorative -- see --sem-lamp-*. */
+  --amber: #d9a557;
+  --moss: #5faa78;
+
   /* Light is the base. */
   --sem-bg: var(--paper);
   --sem-surface: #ffffff;
@@ -143,8 +166,19 @@
   --sem-muted: #5f5d55;
   --sem-line: rgb(0 0 0 / 0.1);
   --sem-accent: var(--clay-deep);
+  --sem-danger: var(--ember-deep);
   /* Dots sit below --sem-line: a grid at border strength reads as a table. */
   --sem-dot: rgb(0 0 0 / 0.09);
+
+  /*
+   * The shell's traffic lights. These are aria-hidden decoration carrying no
+   * text, so they have no contrast requirement, and they deliberately do NOT
+   * theme-swap -- a window's lights are the same lights in either theme. They
+   * exist as tokens only so that no component has to name a hex.
+   */
+  --sem-lamp-close: var(--ember);
+  --sem-lamp-min: var(--amber);
+  --sem-lamp-max: var(--moss);
 
   /* Tells the UA to render form controls and scrollbars for both themes. */
   color-scheme: light dark;
@@ -160,6 +194,8 @@
     --sem-dot: rgb(255 255 255 / 0.07);
     /* Dark can use the brighter clay: #d97757 is 6.05:1 on #12110d. */
     --sem-accent: var(--clay);
+    /* Likewise the brighter ember: 6.01:1 on #12110d, 5.55:1 on the surface. */
+    --sem-danger: var(--ember);
   }
 }
 
@@ -171,6 +207,10 @@
   --color-line: var(--sem-line);
   --color-dot: var(--sem-dot);
   --color-accent: var(--sem-accent);
+  --color-danger: var(--sem-danger);
+  --color-lamp-close: var(--sem-lamp-close);
+  --color-lamp-min: var(--sem-lamp-min);
+  --color-lamp-max: var(--sem-lamp-max);
 }
 
 @theme {
@@ -722,6 +762,85 @@
   border-radius: var(--radius-xl);
   padding: --spacing(5);
   color: var(--sem-muted);
+}
+
+/*
+ * The shell's maximise, animated.
+ *
+ * ---------------------------------------------------------------------------
+ * ENTRY ONLY, AND THAT IS A DELIBERATE STOPPING POINT
+ *
+ * `showModal()` flips the dialog from `display: none` to `display: block`.
+ * Display is a discrete property, so there is nothing to interpolate unless
+ * the browser is given starting values for the first style change after the
+ * element becomes rendered -- which is what `@starting-style` is. The dialog
+ * therefore fades and scales up from 0.97 instead of snapping into place.
+ *
+ * The EXIT is not animated, and that is not laziness. Animating a dialog out
+ * means keeping it displayed while the transition runs, which needs
+ * `transition-behavior: allow-discrete` plus the `overlay` property to hold it
+ * in the top layer. `overlay` is Chromium-only, so the same markup would fade
+ * out in Chrome and vanish in Safari and Firefox -- two different products.
+ * A native window closes instantly; matching that everywhere is the honest
+ * choice, and it also keeps Escape feeling immediate.
+ *
+ * The reduced-motion block below already clamps both durations to 0.01ms, so
+ * this needs no `motion-reduce:` variant: it degrades to an instant appear,
+ * which is exactly the desired behaviour.
+ * ---------------------------------------------------------------------------
+ */
+dialog[data-shell-dialog] {
+  transition:
+    opacity 180ms cubic-bezier(0.2, 0, 0, 1),
+    transform 180ms cubic-bezier(0.2, 0, 0, 1);
+  opacity: 1;
+  transform: scale(1);
+}
+
+@starting-style {
+  dialog[data-shell-dialog][open] {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+dialog[data-shell-dialog]::backdrop {
+  transition: opacity 180ms ease-out;
+  opacity: 1;
+}
+
+@starting-style {
+  dialog[data-shell-dialog][open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/*
+ * The shell body, on expand.
+ *
+ * Minimise UNMOUNTS the body rather than collapsing it -- that is what keeps
+ * the collapsed shell out of the tab order without any inert bookkeeping -- so
+ * there is no height to interpolate on the way back. What is animated instead
+ * is the arrival: a short fade and a 4px rise, which is enough for the eye to
+ * read it as the panel opening rather than as content teleporting in.
+ *
+ * The class is applied only after a control has been pressed, never on first
+ * paint, so server-rendered HTML is byte-identical and nothing animates on
+ * load. See the `stirred` signal in terminal.tsx.
+ */
+@keyframes shell-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@theme {
+  --animate-shell-in: shell-in 180ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
