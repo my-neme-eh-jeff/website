@@ -2,6 +2,7 @@ import { component$ } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
 import { CircledChoice } from "~/components/circled-choice/circled-choice";
 import { Terminal } from "~/components/terminal/terminal";
+import { CopyEmail } from "~/components/copy-email";
 import { profile, projects, roles } from "~/content/profile";
 import { homeGraph, ld, seoMeta } from "~/content/seo";
 
@@ -30,9 +31,12 @@ export default component$(() => {
           {profile.tagline}
         </p>
         <div class="mt-7 flex flex-wrap items-center gap-3">
-          <a class="pill hover:border-accent" href={`mailto:${profile.email}`}>
-            Email
-          </a>
+          {/*
+           * The address itself, not the word "Email" — a mailto: link is a
+           * no-op on any machine with no mail handler registered, and this
+           * used to be the only place the address appeared. See CopyEmail.
+           */}
+          <CopyEmail email={profile.email} />
           <CircledChoice label="say hi" />
         </div>
       </section>

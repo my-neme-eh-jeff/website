@@ -538,6 +538,26 @@ check("colour contrast meets WCAG AA in both themes", () => {
           `colour on the glass panel.`,
       );
     }
+
+    /*
+     * --sem-accent has to clear the TEXT bar too, not just the 3:1 focus bar
+     * checked above, because it is no longer only a ring. The shell renders
+     * hint lines, the prompt, and now every linkified URL and email address in
+     * it -- on the panel, so --sem-surface is the ground that matters as much
+     * as --sem-bg. It passes today (light 4.72, dark 5.58); the point of
+     * asserting it is that the accent is the colour most likely to be changed
+     * for aesthetic reasons, and it now carries a text requirement it did not
+     * carry when it was chosen.
+     */
+    for (const ground of ["bg", "surface"]) {
+      const r = contrast(t.accent, t[ground]);
+      assert(
+        r >= 4.5,
+        `${name}: --sem-accent on --sem-${ground} is ${r.toFixed(2)}:1, ` +
+          `needs 4.5:1 (WCAG 1.4.3). The shell renders links and hint text ` +
+          `in this colour, so it is body text and not just the focus ring.`,
+      );
+    }
     results.push(
       `${name} focus ${focus.toFixed(2)}:1, danger ` +
         `${contrast(t.danger, t.surface).toFixed(2)}:1`,

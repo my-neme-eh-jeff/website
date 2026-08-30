@@ -1,6 +1,7 @@
 import { component$, useSignal, useStore, $, sync$ } from "@qwik.dev/core";
 import { haptic } from "./haptics";
 import { sound, isMuted, setMuted, type Tone } from "./sounds";
+import { load as loadHistory, save as saveHistory } from "./history";
 import { run, completions, type Line } from "./commands";
 
 /**
@@ -97,6 +98,92 @@ const CLOSE_BTN_ID = "term-close";
 const MIN_BTN_ID = "term-min";
 const MAX_BTN_ID = "term-max";
 const MUTE_BTN_ID = "term-mute";
+
+/**
+ * What actually gets rendered, after consecutive diagram lines are merged.
+ *
+ * ---------------------------------------------------------------------------
+ * ONE SOURCE OF TRUTH, BECAUSE stickToBottom COUNTS THESE
+ *
+ * stickToBottom waits until the DOM holds as many <pre> elements as it was
+ * told to expect, which is how it knows Qwik's render has landed. The instant
+ * a run of `art` lines collapses into a single <pre>, "one line, one <pre>"
+ * stops being true and any output containing a diagram would never reach the
+ * expected count — the loop would burn every attempt and give up, silently
+ * un-sticking exactly the command that most needs it.
+ *
+ * So the grouping is a pure function and BOTH the render and the callers of
+ * stickToBottom go through it. They cannot drift.
+ * ---------------------------------------------------------------------------
+ */
+export type Group = { kind: Line["kind"]; text: string };
+
+export function renderGroups(items: Line[]): Group[] {
+  const groups: Group[] = [];
+  for (const l of items) {
+    const prev = groups[groups.length - 1];
+    // A diagram is one picture, not N independent lines — see the render.
+    if (l.kind === "art" && prev?.kind === "art") {
+      prev.text += `\n${l.text}`;
+    } else {
+      groups.push({ kind: l.kind, text: l.text });
+    }
+  }
+  return groups;
+}
+
+/**
+ * Split a line into plain text and links.
+ *
+ * The shell prints an email address and a repo URL and, until now, printed
+ * them as inert text — the one place the whole thing asks you to make contact
+ * and it could not be clicked.
+ *
+ * Only `https?://` and bare email addresses match, so there is no shape of
+ * input that produces a `javascript:` href. Content is Qwik JSX rather than
+ * innerHTML, so the text is escaped regardless; the narrow pattern is about
+ * not manufacturing a dangerous URL in the first place.
+ *
+ * Trailing punctuation is pushed back into the text: `wrap()` sets prose, and
+ * prose ends sentences with a full stop hard against the URL it just quoted.
+ */
+const LINK =
+  /(?:https?:\/\/[^\s<>"']+|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
+
+/** The longest string every candidate starts with — what Tab extends to. */
+export function commonPrefix(all: string[]): string {
+  if (all.length === 0) return "";
+  let out = all[0]!;
+  for (const c of all.slice(1)) {
+    let i = 0;
+    while (i < out.length && i < c.length && out[i] === c[i]) i++;
+    out = out.slice(0, i);
+    if (!out) break;
+  }
+  return out;
+}
+
+export type Segment = { text: string; href?: string };
+
+export function linkify(text: string): Segment[] {
+  const out: Segment[] = [];
+  let last = 0;
+  for (const m of text.matchAll(LINK)) {
+    const start = m.index;
+    let hit = m[0];
+    const trailing = /[.,;:!?)\]]+$/.exec(hit)?.[0];
+    if (trailing) hit = hit.slice(0, -trailing.length);
+    if (!hit) continue;
+    if (start > last) out.push({ text: text.slice(last, start) });
+    out.push({
+      text: hit,
+      href: hit.startsWith("http") ? hit : `mailto:${hit}`,
+    });
+    last = start + hit.length;
+  }
+  if (last < text.length) out.push({ text: text.slice(last) });
+  return out;
+}
 
 /**
  * The glyph inside a lamp, as macOS draws it.
@@ -215,9 +302,11 @@ function untilDone(fn: () => boolean, tries = 30) {
  * exposed it immediately: `k describe projects gpu-autoscaler` came back with
  * scrollHeight 931 against clientHeight 384 and scrollTop still 0.
  *
- * The caller knows exactly how many lines the buffer should hold, and each
- * one renders as exactly one <pre>. Counting them is a direct question about
- * whether the render has landed, with no timing assumption in it at all.
+ * The caller knows exactly how many elements the buffer should render as, via
+ * renderGroups — which is NOT the same as the number of lines, because a run
+ * of diagram lines collapses into one <pre>. Counting them is a direct
+ * question about whether the render has landed, with no timing assumption in
+ * it at all. Every call site goes through renderGroups for that reason.
  *
  * Two passes, not one: an `art` line can grow a horizontal scrollbar as it
  * lays out, which changes scrollHeight after the count is already satisfied.
@@ -329,6 +418,80 @@ export const Terminal = component$(() => {
    */
   const muted = useSignal(false);
 
+  /*
+   * Completion-cycling state. `last` is what the input held after the previous
+   * Tab: if the value still matches, the user has pressed Tab again without
+   * typing, and the run continues from `base` rather than restarting from
+   * whatever the cycling itself just wrote into the field.
+   */
+  const tab = useStore({ base: "", last: "", i: -1, armed: false });
+
+  /*
+   * DECLARED BEFORE ensureHistory, AND THE ORDER IS LOAD-BEARING.
+   *
+   * A `$()` body is extracted into its own module with its captured scope
+   * passed in, and the optimizer works out what to capture from the bindings
+   * that exist ABOVE it. This store used to sit below ensureHistory, so the
+   * capture silently missed it and the emitted QRL read:
+   *
+   *   const t=await de(); t.length&&(history.past=[...t,...history.past])
+   *
+   * `recalled`, declared above, became `c[0]`. `history` stayed a free
+   * identifier — and since it was then named `history`, it resolved to
+   * `window.history` rather than throwing, so the merge wrote into the
+   * History API and read `undefined` back. Nothing surfaced it; the stored
+   * history was simply overwritten by the first command after a reload.
+   *
+   * Two rules came out of that, both cheap to keep: declare state above any
+   * QRL that touches it, and never name captured state after a browser global
+   * (history, location, name, status, origin, top, closed), because that is
+   * what turns a missed capture from a loud ReferenceError into silence.
+   */
+  const cmdHistory = useStore<{ past: string[]; cursor: number }>({
+    past: [],
+    cursor: -1,
+  });
+
+  /** Whether stored history has been merged in yet. See ensureHistory. */
+  const recalled = useSignal(false);
+
+  /**
+   * Pull history out of storage, once, before it is read from or written to.
+   *
+   * The ordering is the whole point: `submit` pushes onto `cmdHistory.past` and
+   * saves it, so if that ran before the load, the first command of a reloaded
+   * session would save a one-item array over everything that came before.
+   */
+  /*
+   * NAMED cmdHistory, NOT history, AND THAT IS NOT A STYLE PREFERENCE.
+   *
+   * This store was called `history`. In-session recall worked, so it looked
+   * fine — but `history` is a browser global, and the Qwik optimizer, which
+   * rewrites every `$()` body into a standalone module with its captured
+   * scope passed in as an array, silently declined to capture it. The emitted
+   * ensureHistory read:
+   *
+   *   const e=c[0]; if(e.value)return; e.value=!0;
+   *   const t=await de(); t.length&&(history.past=[...t,...history.past])
+   *
+   * `recalled` became `c[0]`; `history` stayed a bare identifier and resolved
+   * to `window.history`. So the merge wrote to the History API, read
+   * `undefined`, and threw inside a handler where nothing surfaced it — the
+   * stored history was then overwritten by the first command of the new page.
+   * The capture happened to succeed in the older handlers, which is why this
+   * only appeared when a new QRL touched the same store.
+   *
+   * Anything sharing a name with a global — history, location, name, status,
+   * origin, top, closed — is a candidate for the same silent failure. Do not
+   * name captured state after one.
+   */
+  const ensureHistory = $(async () => {
+    if (recalled.value) return;
+    recalled.value = true;
+    const stored = await loadHistory();
+    if (stored.length) cmdHistory.past = [...stored, ...cmdHistory.past];
+  });
+
   /**
    * One tick of feedback: audible, tactile, and self-correcting.
    *
@@ -342,10 +505,6 @@ export const Terminal = component$(() => {
   const feedback = $(async (tone: Tone) => {
     muted.value = await sound(tone);
     await haptic(tone === "chrome" ? "key" : tone);
-  });
-  const history = useStore<{ past: string[]; cursor: number }>({
-    past: [],
-    cursor: -1,
   });
 
   /*
@@ -412,7 +571,7 @@ export const Terminal = component$(() => {
       shellDialog()?.close();
       view.value = "open";
       restoreFocusTo(MAX_BTN_ID);
-      stickToBottom(lines.items.length);
+      stickToBottom(renderGroups(lines.items).length);
     } else {
       // Measured BEFORE the state write, because that write is what destroys
       // the element being measured.
@@ -433,7 +592,7 @@ export const Terminal = component$(() => {
          * fold the moment you maximise. Re-stick after the reparent, the same
          * way an append does.
          */
-        stickToBottom(lines.items.length);
+        stickToBottom(renderGroups(lines.items).length);
         return true;
       });
     }
@@ -474,7 +633,7 @@ export const Terminal = component$(() => {
     if (view.value !== "max") return;
     view.value = "open";
     restoreFocusTo(MAX_BTN_ID);
-    stickToBottom(lines.items.length);
+    stickToBottom(renderGroups(lines.items).length);
   });
 
   /**
@@ -488,10 +647,14 @@ export const Terminal = component$(() => {
     stirred.value = true;
     if (view.value === "closed") {
       lines.items = [...BANNER];
-      history.past = [];
-      history.cursor = -1;
+      cmdHistory.past = [];
+      cmdHistory.cursor = -1;
       value.value = "";
       view.value = "open";
+      // Close ends the session, and that has to include what it remembered —
+      // otherwise the next ArrowUp resurrects the buffer that was just reset.
+      recalled.value = true;
+      await saveHistory([]);
     } else {
       // Same reparenting hazard as minimise — see the note there.
       const wasMax = view.value === "max";
@@ -514,8 +677,11 @@ export const Terminal = component$(() => {
 
     lines.items = [...lines.items, { kind: "in", text: `${PROMPT} ${raw}` }];
     if (raw.trim()) {
-      history.past = [...history.past, raw];
-      history.cursor = -1;
+      // Before the push, never after — see ensureHistory.
+      await ensureHistory();
+      cmdHistory.past = [...cmdHistory.past, raw];
+      cmdHistory.cursor = -1;
+      await saveHistory(cmdHistory.past);
     }
 
     const result = run(raw);
@@ -527,7 +693,7 @@ export const Terminal = component$(() => {
     }
 
     lines.items = [...lines.items, ...result];
-    stickToBottom(lines.items.length);
+    stickToBottom(renderGroups(lines.items).length);
     await feedback(result.some((l) => l.kind === "err") ? "error" : "enter");
   });
 
@@ -548,49 +714,137 @@ export const Terminal = component$(() => {
    * keystroke.
    */
   const onKeyDown = $(async (e: KeyboardEvent) => {
+    /*
+     * Any key that is not Tab ends a completion run. Done unconditionally at
+     * the top rather than in each branch, so a new exit path cannot forget it
+     * and leave the next Tab cycling a stale candidate list.
+     */
+    if (e.key !== "Tab") tab.armed = false;
+
     if (e.key === "Enter") {
       await submit();
       return;
     }
+
+    /*
+     * Ctrl+L clears, Ctrl+C abandons the line. Both are pure muscle memory for
+     * anyone who has used a shell, and both were previously handled by the
+     * browser instead: Ctrl+L focuses the address bar, which is a spectacular
+     * thing to happen when you meant to tidy your screen. tabGuard suppresses
+     * them; this half does the work.
+     */
+    if (e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+      const k = e.key.toLowerCase();
+      if (k === "l") {
+        lines.items = [];
+        await feedback("enter");
+        return;
+      }
+      if (k === "c") {
+        /*
+         * Ctrl+C is COPY when there is a selection, and nothing this shell
+         * does is worth breaking that. Only when nothing is selected does it
+         * mean what it means in a terminal.
+         */
+        if (window.getSelection()?.toString()) return;
+        lines.items = [
+          ...lines.items,
+          { kind: "in", text: `${PROMPT} ${value.value}^C` },
+        ];
+        value.value = "";
+        cmdHistory.cursor = -1;
+        stickToBottom(renderGroups(lines.items).length);
+        await feedback("error");
+        return;
+      }
+    }
+
     if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-      if (history.past.length === 0) return;
+      // Recall may still be on disk. Load before the first read, not after.
+      await ensureHistory();
+      if (cmdHistory.past.length === 0) return;
       const next =
         e.key === "ArrowUp"
-          ? Math.min(history.cursor + 1, history.past.length - 1)
-          : Math.max(history.cursor - 1, -1);
-      history.cursor = next;
-      value.value = next === -1 ? "" : (history.past.at(-1 - next) ?? "");
+          ? Math.min(cmdHistory.cursor + 1, cmdHistory.past.length - 1)
+          : Math.max(cmdHistory.cursor - 1, -1);
+      cmdHistory.cursor = next;
+      value.value = next === -1 ? "" : (cmdHistory.past.at(-1 - next) ?? "");
       return;
     }
+
     /*
      * Tab completes. See tabGuard below for how the default gets suppressed;
      * this half only does the completing.
      *
      * Shift+Tab is explicitly not completion — it is the only way back out of
      * the input for a keyboard user, and tabGuard lets it through.
+     *
+     * THREE BEHAVIOURS, WHICH IS WHAT A REAL SHELL DOES. It used to have one:
+     * print the candidates and stop, leaving you to type the rest by hand.
+     *
+     *   1. One match — complete it.
+     *   2. Many matches that share more prefix than you typed — extend to that
+     *      common prefix. `k des` becomes `k describe` without a list, because
+     *      there was never a choice to make.
+     *   3. Many matches, nothing more in common — print them, then cycle
+     *      through them on each further Tab.
      */
     if (e.key === "Tab") {
       if (e.shiftKey) return;
-      const partial = value.value.trimStart();
-      if (!partial) return;
-      const matches = completions().filter((c) => c.startsWith(partial));
+
+      const continuing = tab.armed && value.value === tab.last;
+      const base = continuing ? tab.base : value.value.trimStart();
+      if (!base) return;
+
+      const matches = completions().filter((c) => c.startsWith(base));
+      if (matches.length === 0) return;
+
       if (matches.length === 1) {
         value.value = matches[0]!;
+        tab.armed = false;
         await feedback("key");
-      } else if (matches.length > 1) {
-        // Bash prints the candidates rather than guessing.
-        lines.items = [
-          ...lines.items,
-          { kind: "in", text: `${PROMPT} ${partial}` },
-          ...matches.map((m) => ({ kind: "out" as const, text: `  ${m}` })),
-        ];
-        stickToBottom(lines.items.length);
+        return;
       }
+
+      if (continuing) {
+        tab.i = (tab.i + 1) % matches.length;
+        value.value = matches[tab.i]!;
+        tab.last = value.value;
+        await feedback("key");
+        return;
+      }
+
+      const common = commonPrefix(matches);
+      if (common.length > base.length) {
+        value.value = common;
+        tab.armed = false;
+        await feedback("key");
+        return;
+      }
+
+      // Bash prints the candidates rather than guessing. Then it lets you
+      // walk them.
+      lines.items = [
+        ...lines.items,
+        { kind: "in", text: `${PROMPT} ${base}` },
+        ...matches.map((m) => ({ kind: "out" as const, text: `  ${m}` })),
+      ];
+      stickToBottom(renderGroups(lines.items).length);
+      tab.base = base;
+      tab.i = -1;
+      tab.last = value.value;
+      tab.armed = true;
       return;
     }
 
-    // A tick per keystroke, but not for modifiers or navigation.
-    if (e.key.length === 1) await feedback("key");
+    /*
+     * A tick per keystroke, but not for modifiers or navigation — and not for
+     * chords. Ctrl+A and friends have `key.length === 1` too, and a shortcut
+     * that clicks at you is a bug you only notice once sound is on.
+     */
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      await feedback("key");
+    }
   });
 
   /**
@@ -634,9 +888,27 @@ export const Terminal = component$(() => {
    * keyboard user in the input with no way out — a WCAG 2.1.2 failure, and a
    * worse bug than the one being fixed. Shift+Tab always leaves; so does Tab
    * on an empty input, where there is nothing to complete anyway.
+   *
+   * It also claims Ctrl+L and Ctrl+C, which the shell now implements. Each is
+   * conditional for the same reason: Ctrl+C must remain copy when text is
+   * selected, and neither may fire with Shift held, because Ctrl+Shift+C is
+   * how a developer opens devtools on this page.
    */
-  const tabGuard = sync$((e: KeyboardEvent, el: HTMLInputElement) => {
+  const keyGuard = sync$((e: KeyboardEvent, el: HTMLInputElement) => {
     if (e.key === "Tab" && !e.shiftKey && el.value.trim() !== "") {
+      e.preventDefault();
+      return;
+    }
+    if (!e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    const k = e.key.toLowerCase();
+    // Ctrl+L is the browser's address bar. The shiftKey bail above is not
+    // optional: Ctrl+Shift+C opens devtools on this very page.
+    if (k === "l") {
+      e.preventDefault();
+      return;
+    }
+    // Ctrl+C stays copy whenever there is something to copy.
+    if (k === "c" && !window.getSelection()?.toString()) {
       e.preventDefault();
     }
   });
@@ -809,10 +1081,17 @@ export const Terminal = component$(() => {
        * strip that just got taller: `k describe projects` pushed the rest of
        * the page down by roughly 900px and left the prompt somewhere below the
        * fold, and the panel never came back down. That is a transcript, not a
-       * shell. The cap is `min(55vh,24rem)` — 24rem is what fits comfortably
-       * inside the page's rhythm, and the 55vh term is what stops it eating a
-       * short viewport. `max-h` rather than `h` so a two-line banner still
+       * shell. The cap is `min(55svh,24rem)` — 24rem is what fits comfortably
+       * inside the page's rhythm, and the viewport term stops it eating a
+       * short screen. `max-h` rather than `h` so a two-line banner still
        * renders as two lines instead of a mostly-empty box.
+       *
+       * `svh`, NOT `vh` OR `dvh`. On a phone `vh` is the layout viewport and
+       * ignores browser chrome, so 55vh can exceed what is actually on screen;
+       * `dvh` tracks the URL bar and therefore RESIZES THE PANEL WHILE YOU
+       * SCROLL, which is precisely the jitter this component spent a day
+       * removing. `svh` is the small viewport — the conservative, stable one —
+       * so the panel always fits and never moves on its own.
        *
        * `overscroll-contain` keeps a flick at the bottom of the buffer from
        * chaining into the page scroll, which is the thing that makes a nested
@@ -822,7 +1101,7 @@ export const Terminal = component$(() => {
         <label
           class={[
             "block cursor-text overflow-y-auto overscroll-contain px-4 py-4",
-            maxed ? "min-h-0 flex-1" : "max-h-[min(55vh,24rem)]",
+            maxed ? "min-h-0 flex-1" : "max-h-[min(55svh,24rem)]",
             stirred.value && !maxed ? "animate-shell-in" : "",
           ]}
           for="term-input"
@@ -837,26 +1116,90 @@ export const Terminal = component$(() => {
              * the input back alongside its result.
              */}
             <div class="flex flex-col gap-1" aria-live="polite">
-              {lines.items.map((l, i) => (
-                <pre
-                  class={
-                    l.kind === "art"
-                      ? `m-0 ${LINE_CLASS.art}`
-                      : `m-0 whitespace-pre-wrap ${LINE_CLASS[l.kind]}`
-                  }
+              {renderGroups(lines.items).map((g, i) =>
+                g.kind === "art" ? (
                   /*
-                   * Box-drawing characters read as gibberish through a screen
-                   * reader — "box drawings light down and right, box drawings
-                   * light horizontal…" for every glyph. The diagram's meaning is
-                   * in the Detail prose printed directly below it, so this is
-                   * hidden rather than mangled.
+                   * A diagram, as ONE element rather than one per line.
+                   *
+                   * Two bugs died with that change. Visually, each line used to
+                   * be its own `overflow-x-auto` box, so scrolling a wide
+                   * diagram sideways moved a single row and sheared the picture
+                   * apart. And a scroll container that is `aria-hidden` cannot
+                   * be given a tabindex without lying, so the only way to reach
+                   * it was a pointer — a WCAG 2.1.1 failure, once per line.
+                   *
+                   * `role="img"` is what resolves it. Box-drawing characters
+                   * read as gibberish spelled out glyph by glyph ("box drawings
+                   * light down and right…"), so the contents must not be
+                   * announced; but the region still has to be focusable to be
+                   * scrollable by keyboard. An img with a label is exactly
+                   * that: named, reachable, and announced as one thing rather
+                   * than mangled. The meaning itself is in the Detail prose
+                   * printed directly below.
                    */
-                  aria-hidden={l.kind === "art" ? "true" : undefined}
-                  key={i}
-                >
-                  {l.text}
-                </pre>
-              ))}
+                  <pre
+                    class={`m-0 ${LINE_CLASS.art}`}
+                    role="img"
+                    aria-label="Architecture diagram, drawn in text. It is described in the detail below."
+                    tabIndex={0}
+                    key={i}
+                  >
+                    {g.text}
+                  </pre>
+                ) : (
+                  <pre
+                    class={`m-0 whitespace-pre-wrap ${LINE_CLASS[g.kind]}`}
+                    key={i}
+                  >
+                    {/*
+                     * Only output is linkified. `in` lines echo what was typed
+                     * and `err` lines quote it back, so neither should turn a
+                     * visitor's own text into a link.
+                     */}
+                    {g.kind === "out" || g.kind === "hint"
+                      ? linkify(g.text).map((seg, j) =>
+                          seg.href ? (
+                            <a
+                              href={seg.href}
+                              /*
+                               * A new tab, which the rest of the site does not
+                               * do — every other external link here navigates
+                               * in place. The shell is the exception because it
+                               * is the only stateful thing on the site: leaving
+                               * the page destroys the buffer, so following a
+                               * repo link would silently throw away the session
+                               * that produced it.
+                               *
+                               * No `↗` marker, unlike the nav. This sits inside
+                               * monospace output where an extra glyph shifts
+                               * every column after it; the note is sr-only
+                               * instead, which costs no width at all.
+                               */
+                              target={
+                                seg.href.startsWith("http")
+                                  ? "_blank"
+                                  : undefined
+                              }
+                              rel="noopener noreferrer"
+                              class="text-accent underline decoration-dotted underline-offset-2 hover:decoration-solid"
+                              key={j}
+                            >
+                              {seg.text}
+                              {seg.href.startsWith("http") && (
+                                <span class="sr-only">
+                                  {" "}
+                                  (opens in a new tab)
+                                </span>
+                              )}
+                            </a>
+                          ) : (
+                            <span key={j}>{seg.text}</span>
+                          ),
+                        )
+                      : g.text}
+                  </pre>
+                ),
+              )}
             </div>
 
             <div class="mt-1 flex items-center gap-2">
@@ -879,11 +1222,24 @@ export const Terminal = component$(() => {
                  * it compares --sem-* against --sem-bg only.
                  */
                 placeholder="help"
-                class="text-text placeholder:text-muted min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[0.8125rem] focus:outline-none"
+                /*
+                 * 16px on phones, 13px from `sm` up, and that is not a taste
+                 * call. iOS Safari zooms the page whenever a focused input is
+                 * under 16px, so tapping the prompt would scale the whole site
+                 * and leave the visitor pinching their way back out. The other
+                 * fix — capping maximum-scale in the viewport meta — disables
+                 * pinch-zoom outright, which is a WCAG 1.4.4 failure and not
+                 * on the table.
+                 *
+                 * The cost is that the input reads a shade larger than the
+                 * output above it on a phone. It sits on its own row after the
+                 * prompt, so nothing misaligns.
+                 */
+                class="text-text placeholder:text-muted min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-base focus:outline-none sm:text-[0.8125rem]"
                 onInput$={(_, el) => (value.value = el.value)}
                 /* Sync guard first: it must run before the default, and before
                  * the lazily-fetched async handler below. */
-                onKeyDown$={[tabGuard, onKeyDown]}
+                onKeyDown$={[keyGuard, onKeyDown]}
               />
             </div>
           </div>
@@ -896,7 +1252,7 @@ export const Terminal = component$(() => {
    * Maximised, the same panel is rendered inside a <dialog> instead of in
    * flow, and toggleMax calls showModal() on it once it exists.
    *
-   * Sizing: `w-[min(96vw,80rem)] h-[92vh]` rather than a literal inset-0.
+   * Sizing: `w-[min(96vw,80rem)] h-[92svh]` rather than a literal inset-0.
    * Edge-to-edge would put the shell's own rounded corners flush against the
    * viewport corners and lose the sense that this is a window that popped out;
    * a small margin keeps the backdrop visible around it, which is what makes
@@ -928,7 +1284,7 @@ export const Terminal = component$(() => {
         id={DIALOG_ID}
         data-shell-dialog
         onClose$={onDialogClose}
-        class="m-auto h-[92vh] w-[min(96vw,80rem)] max-w-none border-0 bg-transparent p-0 backdrop:bg-black/70 backdrop:backdrop-blur-sm"
+        class="m-auto h-[92svh] w-[min(96vw,80rem)] max-w-none border-0 bg-transparent p-0 backdrop:bg-black/70 backdrop:backdrop-blur-sm"
       >
         {panel}
       </dialog>
