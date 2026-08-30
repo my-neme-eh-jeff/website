@@ -93,12 +93,41 @@ const Ring = component$<{ name: string; score: number }>(({ name, score }) => {
 });
 
 /**
- * `compact` drops the provenance paragraph to a single line and tightens the
- * gaps, so the row fits a 13rem rail. The provenance is shortened, never
- * removed — an unlabelled score implies live telemetry, which these are not.
+ * The sentence a visitor actually reads. Four rings say "100" four times; none
+ * of them says what that adds up to, and a reader who does not already know
+ * Lighthouse has no way to tell a full ring from a lucky one.
+ *
+ * Derived from the scores rather than written down. A hardcoded "all 100"
+ * would keep congratulating itself straight through a regression, and the only
+ * thing that makes publishing these numbers mean anything is that they are
+ * free to go down.
+ */
+const headline = (scores: number[]) => {
+  const worst = Math.min(...scores);
+  return worst === 100
+    ? `A straight 100 in all ${scores.length} Lighthouse categories.`
+    : `${scores.filter((s) => s >= 90).length} of ${scores.length} Lighthouse ` +
+        `categories at 90 or above, lowest ${worst}.`;
+};
+
+/**
+ * `compact` stacks the block and tightens the gaps. Its only caller is the page
+ * footer (`src/routes/layout.tsx`), which is a full-width column, NOT the 13rem
+ * left rail an older version of this comment described — that rail was deleted,
+ * see the header of layout.tsx. Compact is about not letting four gauges
+ * outweigh a copyright line, not about fitting a narrow container.
+ *
+ * The commit hash is deliberately NOT rendered in either variant. Provenance is
+ * shortened, never removed — an unlabelled score implies live telemetry, which
+ * these are not — but "496fc87" is provenance only to someone holding this
+ * repo. The version, form factor and date are the parts a visitor can weigh.
+ * Staleness is a machine's job anyway: `audit.commit` stays in audit.json and
+ * verify-build.mjs diffs it against HEAD to catch scores describing a build
+ * that no longer exists.
  */
 export const ScoreRow = component$<{ compact?: boolean }>(({ compact }) => {
   const entries = Object.entries(audit.scores);
+  const line = headline(entries.map(([, score]) => score as number));
 
   if (compact) {
     return (
@@ -108,10 +137,9 @@ export const ScoreRow = component$<{ compact?: boolean }>(({ compact }) => {
             <Ring key={name} name={name} score={score as number} />
           ))}
         </div>
-        <p class="text-muted mt-3 mb-0 font-mono text-[0.625rem] leading-relaxed">
-          Lighthouse {audit.lighthouseVersion}
-          <br />
-          {audit.commit} · {audit.measuredAt}
+        <p class="text-text mt-3 mb-0 text-xs">{line}</p>
+        <p class="text-muted mt-1 mb-0 font-mono text-[0.625rem] leading-relaxed">
+          Lighthouse {audit.lighthouseVersion} · {audit.measuredAt}
         </p>
       </div>
     );
@@ -124,15 +152,18 @@ export const ScoreRow = component$<{ compact?: boolean }>(({ compact }) => {
       ))}
 
       {/*
-         Provenance sits next to the numbers on purpose. These are lab scores
-         from one machine at one commit, not live field data, and saying so is
-         what makes publishing them honest.
+         The claim and its provenance sit next to the numbers on purpose. These
+         are lab scores from one machine on one deploy, not live field data, and
+         saying so is what makes publishing them honest.
       */}
-      <p class="text-muted mb-0 max-w-56 self-center font-mono text-[0.625rem] leading-relaxed">
-        Lighthouse {audit.lighthouseVersion} · {audit.formFactor}
-        <br />
-        {audit.commit} · {audit.measuredAt}
-      </p>
+      <div class="max-w-56 self-center">
+        <p class="text-text mb-1 text-xs">{line}</p>
+        <p class="text-muted mb-0 font-mono text-[0.625rem] leading-relaxed">
+          Lighthouse {audit.lighthouseVersion} · {audit.formFactor}
+          <br />
+          {audit.measuredAt}
+        </p>
+      </div>
     </div>
   );
 });
