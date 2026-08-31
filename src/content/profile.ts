@@ -308,8 +308,8 @@ export const projects: Project[] = [
   },
   {
     slug: "ride-booking",
-    title: "Ride Booking Backend",
-    summary: "Go modular monolith with event-driven matching.",
+    title: "Go Modular Monolith for Ride Dispatch",
+    summary: "Matches on S2 cells; a Redis lock prevents double-booking.",
     detail: [
       "A Go modular monolith split by domain — booking, matching, pricing — communicating over Kafka, with asynchronous booking processing and real-time ride tracking.",
       "Redis provides a distributed lock so a rider cannot be double-booked, and Google's S2 library handles spatial indexing for proximity search in the driver-matching service.",
