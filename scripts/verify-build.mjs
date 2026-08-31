@@ -829,6 +829,58 @@ check("field's static fallback matches the 0% keyframe", () => {
   return `${names.length} declarations identical`;
 });
 
+/*
+ * A blended layer must never carry a view-transition-name.
+ *
+ * `grain-page` did. A named element is captured into the view transition's own
+ * layer, where it has no backdrop to blend against, so `mix-blend-mode:
+ * overlay` degraded to normal compositing and the grain painted as raw grey
+ * noise at opacity 0.38 over the whole viewport. Measured over resume -> blog:
+ * a one-frame +34.5 mean luma spike against a 38.3 steady state, with the
+ * darkest histogram bucket going from 56% of pixels to 3%.
+ *
+ * Written as a general rule rather than a grain-specific one, because the trap
+ * belongs to the combination, not to that element.
+ */
+check("no blended element carries a view-transition-name", () => {
+  const css = readdirSync(p("dist", "assets"))
+    .filter((f) => f.endsWith(".css"))
+    .map((f) => read("dist", "assets", f))
+    .join("\n");
+
+  /* Classes whose rule sets a blend mode, e.g. `.grain-page{…mix-blend-mode:overlay…}` */
+  const blended = new Set();
+  for (const m of css.matchAll(/\.([a-zA-Z0-9_-]+)\{([^}]*)\}/g)) {
+    if (/mix-blend-mode:\s*(?!normal)/.test(m[2])) blended.add(m[1]);
+  }
+  assert(blended.size > 0, "found no blended classes -- did the selector shape change?");
+
+  let named = 0;
+  for (const page of ["index.html", "resume/index.html", "blog/index.html"]) {
+    const html = read("dist", page);
+    /*
+     * Match the whole tag first and pull `class` out of it. Anchoring on
+     * `<div class="…"` instead silently matches nothing the moment the
+     * serialiser reorders attributes, and a check that matches nothing passes
+     * for ever.
+     */
+    for (const tag of html.match(/<[^>]*view-transition-name[^>]*>/g) ?? []) {
+      named++;
+      const classes = (tag.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
+      const clash = classes.filter((c) => blended.has(c));
+      assert(
+        clash.length === 0,
+        `${page}: .${clash.join(", .")} sets mix-blend-mode AND a ` +
+          `view-transition-name. During a transition the element is snapshotted ` +
+          `into its own layer with no backdrop, so the blend silently stops ` +
+          `applying and the layer composites raw over the page.`,
+      );
+    }
+  }
+  assert(named > 0, "parsed no view-transition-name attributes -- check the extraction");
+  return `${named} named elements, ${blended.size} blended classes, no overlap`;
+});
+
 // --- Report ---------------------------------------------------------------
 
 for (const ok of passes) console.log(`  ok    ${ok}`);

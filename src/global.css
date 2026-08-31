@@ -690,15 +690,28 @@
  * Qwik drives these — `useQwikRouter({ viewTransition: true })` in root.tsx —
  * so navigation is still SPA and this is purely the animation layer.
  *
- * The trick that makes it feel like one continuous surface rather than two
- * pages swapping: the atmosphere layer gets its own `view-transition-name`, so
- * the browser treats it as the SAME element across the navigation and leaves it
- * alone. Only the content cross-fades over it. Without this the gradient field
- * fades out and back in, which reads as a flicker.
+ * `field` carries its own `view-transition-name` so the gradient is captured
+ * as its own group instead of cross-fading with the content. Measured over a
+ * resume -> blog navigation, mean-frame luma against a 38.3 steady state:
+ * named peaks +0.1, unnamed +1.5.
  *
- * Wrapped in `no-preference` rather than relying on the global reduced-motion
- * block: that block only shortens durations, and a transition that still runs
- * at 0.01ms can still cause discomfort. Here it must not run at all.
+ * `grain` must NOT be named, and that is asserted rather than written down.
+ * A named element is snapshotted into the transition layer, where
+ * mix-blend-mode has no backdrop to blend against; the grain then composited
+ * as raw grey noise at opacity 0.38 over the whole viewport for one frame,
+ * a +34.5 luma spike. See the check in scripts/verify-build.mjs.
+ *
+ * The `no-preference` wrapper below only gates these two CUSTOM animations. It
+ * does not stop the transition: under `reduce` the browser still runs its own
+ * 250ms cross-fade on root, field and page. Measured by polling
+ * `document.getAnimations()` across a navigation — 15 UA animations under
+ * `reduce`, with `page-in`/`page-out` correctly absent and everything else
+ * running. Suppressing them needs the explicit `animation: none` block below.
+ *
+ * Re-check by polling this during a navigation — under `reduce` it must stay
+ * empty:
+ *   getAnimations().filter(a =>
+ *     a.effect?.pseudoElement?.includes("view-transition"))
  */
 @media (prefers-reduced-motion: no-preference) {
   ::view-transition-old(page) {
@@ -706,6 +719,15 @@
   }
   ::view-transition-new(page) {
     animation: page-in 320ms cubic-bezier(0, 0, 0.2, 1) both;
+  }
+}
+
+/* Someone who asked for less motion should not get a full-viewport cross-fade. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
 

@@ -40,11 +40,13 @@ export default component$(() => {
         aria-hidden="true"
         style={{ viewTransitionName: "field" }}
       />
-      <div
-        class="grain-page"
-        aria-hidden="true"
-        style={{ viewTransitionName: "grain" }}
-      />
+      {/*
+       * No view-transition-name here, deliberately — `pnpm run verify` asserts
+       * it. A named element is snapshotted into the transition's own layer,
+       * where mix-blend-mode has no backdrop to blend against, so the grain
+       * painted as raw grey noise over the whole page for one frame.
+       */}
+      <div class="grain-page" aria-hidden="true" />
 
       <a
         href="#main"
