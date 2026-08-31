@@ -106,35 +106,10 @@ const headline = (scores: number[]) => {
 };
 
 /**
- * Not `Intl`: SSG bakes this string into the HTML, so a locale-aware formatter
- * would let whichever machine ran the build decide what the page says.
- */
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-const humanDate = (iso: string) => {
-  const [y, m, d] = iso.split("-");
-  const month = MONTHS[Number(m) - 1];
-  return month ? `${Number(d)} ${month} ${y}` : iso;
-};
-
-/**
- * The commit hash and Lighthouse version are deliberately not rendered: they
- * are provenance for someone holding this repo, not for a reader. Both stay in
- * audit.json. The form factor and date do render — an unlabelled score implies
- * live telemetry, and these are lab runs from one machine on one deploy.
+ * Nothing but the sentence renders. The commit hash and Lighthouse version are
+ * provenance for someone holding this repo, not for a reader. The measurement
+ * date is out on purpose: once releases slow down, a visibly old date reads as
+ * neglect, which is the opposite of what dating it was for.
  */
 export const ScoreRow = component$(() => {
   const entries = Object.entries(audit.scores);
@@ -148,12 +123,7 @@ export const ScoreRow = component$(() => {
         ))}
       </div>
 
-      <div class="max-w-80">
-        <p class="text-text mb-0 text-xs">{line}</p>
-        <p class="text-muted mt-1 mb-0 font-mono text-[0.625rem]">
-          Measured on {audit.formFactor}, {humanDate(audit.measuredAt)}
-        </p>
-      </div>
+      <p class="text-text mb-0 max-w-80 text-xs">{line}</p>
     </div>
   );
 });
