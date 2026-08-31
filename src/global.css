@@ -893,6 +893,60 @@ dialog[data-shell-dialog]::backdrop {
   filter: brightness(0.82);
 }
 
+/*
+ * The shell's busy spinner.
+ *
+ * `[data-busy]` is set by a sync$ handler on keydown rather than by a signal,
+ * because the wait it covers is the one before any Qwik handler has been
+ * fetched. See keyGuard in terminal.tsx.
+ *
+ * ASCII frames, not the braille spinner every CLI uses. Braille lives at
+ * U+2800-28FF, and the @font-face blocks above declare Fira Mono only for
+ * latin and latin-ext — so every frame would fall out to whatever system mono
+ * the visitor has, at a different weight and width, jittering on every tick.
+ *
+ * Animating `content` is a discrete animation and degrades to the static "|"
+ * where it is unsupported, which still reads as a cursor sitting there.
+ */
+.term-spinner {
+  display: none;
+}
+
+[data-shell][data-busy] .term-spinner {
+  display: inline-block;
+}
+
+.term-spinner::after {
+  content: "|";
+  animation: term-spin 320ms steps(1, end) infinite;
+}
+
+@keyframes term-spin {
+  0% {
+    content: "|";
+  }
+  25% {
+    content: "/";
+  }
+  50% {
+    content: "-";
+  }
+  75% {
+    content: "\\";
+  }
+}
+
+/*
+ * The global reduce block only shortens durations, which would spin this at
+ * 0.01ms per frame -- strobing, i.e. worse than the thing it is mitigating.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .term-spinner::after {
+    content: "\2026";
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

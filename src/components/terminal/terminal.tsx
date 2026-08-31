@@ -353,6 +353,16 @@ function stickToBottom(lineCount: number) {
  * this the focus would land on a node that is about to be removed, and end up
  * back on <body>: the exact bug this function exists to prevent.
  */
+/**
+ * Clear the busy flag that keyGuard set synchronously on Enter.
+ *
+ * Plain DOM rather than a signal, because the thing that SET it could not use
+ * a signal — see keyGuard.
+ */
+function clearBusy() {
+  document.querySelector("[data-shell]")?.removeAttribute("data-busy");
+}
+
 function restoreFocusTo(id: string) {
   untilDone(() => {
     const b = document.getElementById(id);
@@ -664,29 +674,35 @@ export const Terminal = component$(() => {
    */
 
   const submit = $(async () => {
-    const raw = value.value;
-    value.value = "";
+    // finally, not a tail call: every early return has to clear the spinner,
+    // and a throw must not leave it spinning forever.
+    try {
+      const raw = value.value;
+      value.value = "";
 
-    lines.items = [...lines.items, { kind: "in", text: `${PROMPT} ${raw}` }];
-    if (raw.trim()) {
-      // Before the push, never after — see ensureHistory.
-      await ensureHistory();
-      cmdHistory.past = [...cmdHistory.past, raw];
-      cmdHistory.cursor = -1;
-      await saveHistory(cmdHistory.past);
+      lines.items = [...lines.items, { kind: "in", text: `${PROMPT} ${raw}` }];
+      if (raw.trim()) {
+        // Before the push, never after — see ensureHistory.
+        await ensureHistory();
+        cmdHistory.past = [...cmdHistory.past, raw];
+        cmdHistory.cursor = -1;
+        await saveHistory(cmdHistory.past);
+      }
+
+      const result = run(raw);
+      if (result === null) {
+        // `clear` — the buffer belongs to the shell, so it is handled here.
+        lines.items = [];
+        await feedback("enter");
+        return;
+      }
+
+      lines.items = [...lines.items, ...result];
+      stickToBottom(renderGroups(lines.items).length);
+      await feedback(result.some((l) => l.kind === "err") ? "error" : "enter");
+    } finally {
+      clearBusy();
     }
-
-    const result = run(raw);
-    if (result === null) {
-      // `clear` — the buffer belongs to the shell, so it is handled here.
-      lines.items = [];
-      await feedback("enter");
-      return;
-    }
-
-    lines.items = [...lines.items, ...result];
-    stickToBottom(renderGroups(lines.items).length);
-    await feedback(result.some((l) => l.kind === "err") ? "error" : "enter");
   });
 
   /**
@@ -887,6 +903,30 @@ export const Terminal = component$(() => {
    * how a developer opens devtools on this page.
    */
   const keyGuard = sync$((e: KeyboardEvent, el: HTMLInputElement) => {
+    /*
+     * Mark the shell busy the instant Enter is pressed.
+     *
+     * THIS CANNOT BE DONE FROM THE ASYNC HANDLER, and that is the entire
+     * reason it lives in a sync$. The gap being covered IS the gap before the
+     * async handler exists: on the first command of a page, pressing Enter
+     * starts Qwik resuming the container, fetching handler bundles, and
+     * rendering, and nothing on screen moves until all of that finishes. Any
+     * indicator set inside that handler would appear only once the wait was
+     * already over.
+     *
+     * A sync$ body is serialised into the HTML and run straight from
+     * qwikloader with no fetch and no resume, so it paints in the same tick as
+     * the keypress. It cannot touch signals, hence a DOM attribute; submit()
+     * clears it in a finally.
+     *
+     * Preloading the bundles would not have fixed this. Measured on the built
+     * output, the first command pulls 8 files totalling 32 kB — the bytes are
+     * not the wait.
+     */
+    if (e.key === "Enter" && el.value.trim() !== "") {
+      el.closest("[data-shell]")?.setAttribute("data-busy", "");
+      return;
+    }
     if (e.key === "Tab" && !e.shiftKey && el.value.trim() !== "") {
       e.preventDefault();
       return;
@@ -1232,6 +1272,15 @@ export const Terminal = component$(() => {
                 /* Sync guard first: it must run before the default, and before
                  * the lazily-fetched async handler below. */
                 onKeyDown$={[keyGuard, onKeyDown]}
+              />
+              {/*
+               * After the input, not before. It is a flex item, so appearing
+               * before the input would shove the text the visitor just typed
+               * sideways at the exact moment they are waiting on it.
+               */}
+              <span
+                class="term-spinner text-accent shrink-0 font-mono text-[0.8125rem]"
+                aria-hidden="true"
               />
             </div>
           </div>
