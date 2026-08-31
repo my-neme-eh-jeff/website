@@ -315,6 +315,13 @@ export const projects: Project[] = [
       "Redis provides a distributed lock so a rider cannot be double-booked, and Google's S2 library handles spatial indexing for proximity search in the driver-matching service.",
     ],
     stack: ["Go", "Kafka", "Redis", "S2"],
+    repo: "https://github.com/my-neme-eh-jeff/highly-scalable-goods-transport-app",
+    links: [
+      {
+        label: "Architecture",
+        href: "https://excalidraw.com/#json=AAdmRY_7GbA_Niqt3iuET,HN-Y0n9DxFeS7x2KpTAzIg",
+      },
+    ],
     updated: "2024-10-24",
   },
 ];
