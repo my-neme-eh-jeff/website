@@ -853,7 +853,10 @@ check("no blended element carries a view-transition-name", () => {
   for (const m of css.matchAll(/\.([a-zA-Z0-9_-]+)\{([^}]*)\}/g)) {
     if (/mix-blend-mode:\s*(?!normal)/.test(m[2])) blended.add(m[1]);
   }
-  assert(blended.size > 0, "found no blended classes -- did the selector shape change?");
+  assert(
+    blended.size > 0,
+    "found no blended classes -- did the selector shape change?",
+  );
 
   let named = 0;
   for (const page of ["index.html", "resume/index.html", "blog/index.html"]) {
@@ -877,7 +880,10 @@ check("no blended element carries a view-transition-name", () => {
       );
     }
   }
-  assert(named > 0, "parsed no view-transition-name attributes -- check the extraction");
+  assert(
+    named > 0,
+    "parsed no view-transition-name attributes -- check the extraction",
+  );
   return `${named} named elements, ${blended.size} blended classes, no overlap`;
 });
 
