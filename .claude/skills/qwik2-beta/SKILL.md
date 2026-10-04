@@ -5,7 +5,7 @@ description: Use when touching Qwik 2 APIs, imports, adapters, SSG/build config,
 
 # Qwik 2 (beta) in this repo
 
-Qwik 2 is in beta and its published docs have been wrong or version-mismatched
+Qwik 2 is a prerelease (beta, now rc) and its published docs have been wrong or version-mismatched
 more often than the package. **Verify first, then read the snapshot below.**
 
 ## Verify first — these stay true after the next beta
@@ -27,12 +27,13 @@ done
 # Is the API I'm about to use deprecated?
 grep -rn "deprecated" node_modules/@qwik.dev/router/lib --include="*.d.ts"
 
-# Rollup or rolldown? Decides rollupOptions vs rolldownOptions.
-node -p "require('./node_modules/rollup/package.json').version"
+# Rollup or rolldown? Vite 8+ is rolldown -> rolldownOptions (rollupOptions is
+# only a deprecated alias). Vite 7 is rollup -> rollupOptions.
 node -p "require('./node_modules/vite/package.json').version"
+grep -rn -E 'rollupOptions|rolldownOptions' node_modules/@qwik.dev/core/dist/starters/adapters/ssg
 ```
 
-## Snapshot — verified against `2.0.0-beta.38`, 2026-08-22
+## Snapshot — verified against `2.0.0-rc.0` + vite 8.3.1, 2026-10-04
 
 | Thing                           | v1 name (wrong here)                  | v2 name               |
 | ------------------------------- | ------------------------------------- | --------------------- |
@@ -49,14 +50,15 @@ Details that cost time to establish:
   `staticAdapter` import resolves fine and gives no runtime error — it is marked
   `/** @public @deprecated Use ssgAdapter instead. */` in
   `lib/adapters/ssg/vite/index.d.ts`. Deprecation is only visible in the types.
-- **`rollupOptions`, not `rolldownOptions`.** beta.38 ships vite 7.3.1 on rollup
-  4.62.5. Qwik's `main`-branch template uses `rolldownOptions`, which targets a
-  newer rolldown-vite and silently does nothing here. Re-check on every bump.
+- **`rolldownOptions`, since Vite 8.** From beta.40, Qwik peers on `vite >=8 <9`,
+  and its own SSG starter uses `rolldownOptions`. Vite 8 types mark
+  `rollupOptions` `@deprecated` (an alias). beta.38's peer range claimed Vite 8
+  too, but its client build failed there — trust a build, not the peer range.
 - **`@qwik-router-plan` does not exist.** It is a plausible-sounding invention;
   the grep above returns 0 files for it.
 - **404 must be a file route** (`src/routes/404.tsx`, not `src/routes/404/`).
   The sitemap exclusion is `result.pathname.endsWith("/404.html")` in
-  `lib/chunks/system.mjs`, so a directory route emitting `/404/` leaks into
+  `lib/chunks/routes.mjs`, so a directory route emitting `/404/` leaks into
   `sitemap.xml` _and_ fails to produce the `dist/404.html` that Cloudflare's
   `not_found_handling: "404-page"` serves.
 
@@ -100,7 +102,7 @@ ls node_modules/@qwik.dev/core/dist/starters/features/
 cat node_modules/@qwik.dev/core/dist/starters/features/tailwind/package.json
 ```
 
-At beta.38 the styling-relevant ones are `tailwind` (v4), `tailwind-v3`,
+At rc.0 the styling-relevant ones are `tailwind` (v4), `tailwind-v3`,
 `pandacss`, `styled-vanilla-extract`, `postcss`, `bootstrap`, plus `storybook`.
 Each manifest's `__qwik__.viteConfig` block is the canonical wiring — e.g.
 Tailwind v4 is `@tailwindcss/vite`'s `tailwindcss()` plugin and nothing else, no

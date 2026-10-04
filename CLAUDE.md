@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Static portfolio site. Qwik 2 (beta) → SSG → Cloudflare Workers static assets.
+Static portfolio site. Qwik 2 (prerelease) → SSG → Cloudflare Workers static assets.
 Package manager is **pnpm** — `npm` commands will fight the lockfile.
 Styling is Tailwind v4. No server code; `dist/` is uploaded as-is.
 
@@ -57,7 +57,7 @@ them against the real build output. Add new ones there, not here.
 - **Cloudflare dashboard build command stays empty** — build config is versioned
   in `wrangler.jsonc` `build.command`, and wrangler runs it even with no `main`.
   Setting the dashboard field too would build twice.
-  Verified 2026-08-23 — prints `[custom build]`:
+  Verified 2026-10-04 on wrangler 4.147.0 — prints `[custom build]`:
   `pnpm exec wrangler deploy --dry-run`
 - **`src/routes/404.tsx` stays a file route**, not a directory route. Qwik's
   sitemap guard tests `endsWith("/404.html")`; Cloudflare's `not_found_handling`

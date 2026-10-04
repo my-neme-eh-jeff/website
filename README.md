@@ -45,9 +45,10 @@ The 7-day release-age cooldown is still enforced by hand. pnpm gained a
 only in **10.34.0**; this repo develops on 10.12.1, and Cloudflare's build image
 ships 10.11.1. Worth revisiting on a pnpm upgrade.
 
-Qwik is pinned to **`2.0.0-beta.38`** (published 2026-07-16) rather than the
-newest beta, to satisfy the 7-day release-age cooldown. `beta.39` was 3 days
-old and `beta.40` was 1 day old at the time of writing.
+Qwik is pinned to **`2.0.0-rc.0`** (published 2026-10-02), adopted 2 days
+after release by explicit owner decision — an exception to the 7-day cooldown,
+not the rule. `wrangler 4.147.0` came in the same way, as the only release
+carrying the patched undici.
 
 ## Architecture
 
@@ -171,7 +172,7 @@ Audited against <https://next.qwik.dev/docs/guides/best-practices/>:
 - [x] **Workers Builds build command** — leave it **empty**. An earlier note
       here said it had to be set to `pnpm run build`; that was wrong. The build
       is versioned in `wrangler.jsonc` as `build.command`, and wrangler runs it
-      itself. Verified 2026-08-23:
+      itself. Verified 2026-10-04 on wrangler 4.147.0:
 
           pnpm exec wrangler deploy --dry-run   # prints "[custom build]" then builds
 
@@ -202,15 +203,11 @@ outage. Flush with
 
 ## Open items
 
-- **Rolldown migration is coming.** `adapters/ssg/vite.config.ts` uses
-  `build.rollupOptions`, because beta.38 ships vite 7.3.1 on rollup ^4.43.0.
-  Qwik's `main` template already uses `rolldownOptions`, and the lead
-  maintainer's active repos are rolldown deploy experiments. Expect to rename
-  that key when upgrading past beta.38.
 - **`staticAdapter` is deprecated** in favour of `ssgAdapter`. The v1 docs at
   `qwik.dev` still show the old name; v2 docs live at `next.qwik.dev`.
-- **Qwik 2 is a beta with no ship date.** Prerelease since alpha.10
-  (2025-05-19). Pin exact, upgrade deliberately, read changelogs.
+- **Qwik 2 is a release candidate, not stable.** Prerelease since alpha.10
+  (2025-05-19); `rc.0` landed 2026-10-02. Pin exact, upgrade deliberately,
+  read changelogs.
 - **AI / generative UI endpoints are not built.** Inference provider and cost
   controls are undecided. Whatever lands needs a server-side key as a Worker
   secret, per-IP rate limiting, and a spend ceiling before it goes public.
