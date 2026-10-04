@@ -1,12 +1,12 @@
 {
-  "measuredAt": "2026-08-25",
-  "commit": "496fc87",
+  "measuredAt": "2026-10-04",
+  "commit": "ec2aa20",
   "target": "production",
-  "lighthouseVersion": "13.4.1",
+  "lighthouseVersion": "13.5.0",
   "formFactor": "mobile",
   "runs": 3,
   "scores": {
-    "performance": 100,
+    "performance": 98,
     "accessibility": 100,
     "best-practices": 100,
     "seo": 100
