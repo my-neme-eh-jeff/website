@@ -2,14 +2,12 @@
   // Cloudflare Workers static assets.
   // Docs: https://developers.cloudflare.com/workers/static-assets/
   //
-  // Assets-only Worker: no "main" entrypoint, because there is no
-  // server-side code yet.
+  // One Worker script (src/worker/), and it runs ONLY on /api/*.
   //
-  // Deliberately assets-only: requests served straight from ./dist are free
-  // and unlimited. A script plus run_worker_first would turn every request
-  // into a billable Worker invocation against the 100k/day free tier. When
-  // the AI endpoints land, scope them as run_worker_first: ["/api/*"] so page
-  // views stay on the free asset path.
+  // Requests served straight from ./dist are free and unlimited; a Worker
+  // invocation counts against the 100k/day free tier. run_worker_first is
+  // therefore a list scoped to /api/*, never `true` -- that would route every
+  // page view through the script. scripts/verify-build.mjs enforces this.
   // Custom build step. `wrangler deploy` runs this before deploying, and
   // Workers Builds' default deploy command is already `npx wrangler deploy` --
   // so the build lives here in the repo instead of in dashboard-only config
@@ -31,6 +29,7 @@
     "command": "pnpm install --frozen-lockfile && pnpm run build",
   },
   "name": "amannambisan",
+  "main": "src/worker/index.ts",
   "compatibility_date": "2026-08-22",
   "assets": {
     // Qwik SSG output, produced by `npm run build`. Not ./public any more:
@@ -47,7 +46,27 @@
     // one canonical. Naming it here means a change to Cloudflare's default
     // cannot silently split them.
     "html_handling": "auto-trailing-slash",
+    "run_worker_first": ["/api/*"],
   },
+  // Ollama on Aman's desk, reached privately through a Cloudflare Tunnel:
+  // the desk has no public hostname. Workers VPC is in beta and free on all
+  // plans while in beta (developers.cloudflare.com/workers-vpc, read
+  // 2026-10-13). Created 2026-10-13 on wrangler 4.147.0 with
+  // `wrangler vpc service create portfolio-desk --type http --tunnel-id <id>
+  // --ipv4 127.0.0.1 --http-port 11434`; check it with `wrangler vpc service list`.
+  "vpc_services": [
+    { "binding": "DESK", "service_id": "01a13600-e2dd-7483-83a1-5560fe691686" },
+  ],
+  // Per-IP and per-location, so approximate by design. A human cannot ask
+  // faster than the model answers; this is for scripts.
+  "ratelimits": [
+    {
+      "name": "CHAT_LIMIT",
+      "namespace_id": "1001",
+      "simple": { "limit": 8, "period": 60 },
+    },
+  ],
+  "vars": { "DESK_MODEL": "gpt-oss-16k:20b" },
   "routes": [
     {
       "pattern": "amannambisan.com",

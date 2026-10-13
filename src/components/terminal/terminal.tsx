@@ -2,7 +2,9 @@ import { component$, useSignal, useStore, $, sync$ } from "@qwik.dev/core";
 import { haptic } from "./haptics";
 import { sound, isMuted, setMuted, type Tone } from "./sounds";
 import { load as loadHistory, save as saveHistory } from "./history";
-import { run, completions, type Line } from "./commands";
+import { run, completions, CHAT, type Line } from "./commands";
+import { abortChat, sendChat, type Outcome, type Turn } from "./chat";
+import { KNOWN_HREFS } from "~/content/chat";
 
 /**
  * An interactive shell. The command registry lives in `commands.ts`.
@@ -40,6 +42,69 @@ const BANNER: Line[] = [
 
 const PROMPT = "~ $";
 
+/** `ollama run`'s prompt, because `chat` is that client's grammar. */
+const CHAT_PROMPT = ">>>";
+
+const CHAT_BANNER: Line[] = [
+  {
+    kind: "out",
+    text: "Talking to a model running on a GPU on Aman's desk, at home.",
+  },
+  {
+    kind: "out",
+    text: "It answers from his CV and can be wrong. /bye to leave, /? for help.",
+  },
+];
+
+const CHAT_HELP: Line[] = [
+  { kind: "out", text: "Available Commands:" },
+  { kind: "out", text: "  /clear   Clear session context" },
+  { kind: "out", text: "  /bye     Exit" },
+  { kind: "out", text: "  /?       Help for a command" },
+  { kind: "out", text: "" },
+  { kind: "out", text: "Ctrl+C stops an answer." },
+];
+
+/** Matches the Worker's cap, so the visitor hears it here first. */
+const MAX_CHAT_CHARS = 800;
+
+function chatError(code: string): Line[] {
+  if (code === "rate_limited") {
+    return [
+      {
+        kind: "err",
+        text: "Too many questions from your network. Try again in a minute.",
+      },
+    ];
+  }
+  if (code === "offline") {
+    return [
+      { kind: "err", text: "The model on Aman's desk is offline right now." },
+      {
+        kind: "hint",
+        text: "The rest of the shell still works: `/bye`, then `k get projects`.",
+      },
+    ];
+  }
+  return [{ kind: "err", text: "The model could not answer that. Try again." }];
+}
+
+/** One dim line of provenance under an answer: where it ran, how fast. */
+function statsLine(o: Extract<Outcome, { ok: true }>): string {
+  const parts: string[] = [];
+  if (o.stats && o.stats.genMs > 0) {
+    parts.push(`${(o.stats.tokens / (o.stats.genMs / 1000)).toFixed(1)} tok/s`);
+  }
+  if (o.firstTokenMs >= 0) {
+    parts.push(`first word in ${(o.firstTokenMs / 1000).toFixed(1)}s`);
+  }
+  if (o.stats && o.stats.loadMs > 1000) {
+    parts.push(`cold start ${(o.stats.loadMs / 1000).toFixed(1)}s`);
+  }
+  parts.push(`${o.model || "model"} on Aman's desk`);
+  return `— ${parts.join(" · ")}`;
+}
+
 /** Styling per line kind, so the render stays a lookup rather than a branch. */
 const LINE_CLASS: Record<Line["kind"], string> = {
   in: "text-text",
@@ -52,6 +117,7 @@ const LINE_CLASS: Record<Line["kind"], string> = {
   // Diagrams must not wrap — a re-flowed box drawing is unreadable — so this
   // is the one kind that scrolls its container instead.
   art: "text-muted/85 whitespace-pre overflow-x-auto",
+  ai: "text-text",
 };
 
 /**
@@ -163,7 +229,8 @@ export function commonPrefix(all: string[]): string {
 
 export type Segment = { text: string; href?: string };
 
-export function linkify(text: string): Segment[] {
+/** With `allow`, only hrefs in it become links; the rest stay text. */
+export function linkify(text: string, allow?: ReadonlySet<string>): Segment[] {
   const out: Segment[] = [];
   let last = 0;
   for (const m of text.matchAll(LINK)) {
@@ -172,11 +239,10 @@ export function linkify(text: string): Segment[] {
     const trailing = /[.,;:!?)\]]+$/.exec(hit)?.[0];
     if (trailing) hit = hit.slice(0, -trailing.length);
     if (!hit) continue;
+    const href = hit.startsWith("http") ? hit : `mailto:${hit}`;
+    if (allow && !allow.has(href)) continue;
     if (start > last) out.push({ text: text.slice(last, start) });
-    out.push({
-      text: hit,
-      href: hit.startsWith("http") ? hit : `mailto:${hit}`,
-    });
+    out.push({ text: hit, href });
     last = start + hit.length;
   }
   if (last < text.length) out.push({ text: text.slice(last) });
@@ -334,6 +400,23 @@ function stickToBottom(lineCount: number) {
 }
 
 /**
+ * Follow a streaming answer down, but only if the reader is already at the
+ * bottom. stickToBottom cannot do this: it waits for a <pre> count, and a
+ * streaming answer grows one <pre> without adding any.
+ */
+function followIfPinned() {
+  for (const body of document.querySelectorAll<HTMLElement>(
+    "[data-shell] label",
+  )) {
+    const dialog = body.closest("dialog");
+    if (dialog && !dialog.open) continue;
+    if (body.scrollHeight - body.scrollTop - body.clientHeight > 32) return;
+    setTimeout(() => (body.scrollTop = body.scrollHeight), 0);
+    return;
+  }
+}
+
+/**
  * Put focus back on a named chrome button after the dialog goes away.
  *
  * The browser normally restores focus itself, but it restores it to the
@@ -427,6 +510,17 @@ export const Terminal = component$(() => {
    * whatever the cycling itself just wrote into the field.
    */
   const tab = useStore({ base: "", last: "", i: -1, armed: false });
+
+  /**
+   * Chat mode. `turns` is the conversation sent with each question; the
+   * server keeps nothing. Declared above every QRL that reads it — see the
+   * note on cmdHistory for why the order matters.
+   */
+  const convo = useStore<{ on: boolean; streaming: boolean; turns: Turn[] }>({
+    on: false,
+    streaming: false,
+    turns: [],
+  });
 
   /*
    * DECLARED BEFORE ensureHistory, AND THE ORDER IS LOAD-BEARING.
@@ -648,6 +742,8 @@ export const Terminal = component$(() => {
   const toggleClose = $(async () => {
     stirred.value = true;
     if (view.value === "closed") {
+      convo.on = false;
+      convo.turns = [];
       lines.items = [...BANNER];
       cmdHistory.past = [];
       cmdHistory.cursor = -1;
@@ -658,6 +754,7 @@ export const Terminal = component$(() => {
       recalled.value = true;
       await saveHistory([]);
     } else {
+      abortChat();
       // Same reparenting hazard as minimise — see the note there.
       const wasMax = view.value === "max";
       if (wasMax) shellDialog()?.close();
@@ -673,20 +770,117 @@ export const Terminal = component$(() => {
    * would mean two things racing to own the same key.
    */
 
+  /** One chat turn: slash commands, or a question streamed into an `ai` line. */
+  const converseInner = $(async (raw: string) => {
+    const text = raw.trim();
+    if (!text) return;
+    const say = (more: Line[]) => {
+      lines.items = [...lines.items, ...more];
+      stickToBottom(renderGroups(lines.items).length);
+    };
+
+    if (text === "/bye") {
+      convo.on = false;
+      convo.turns = [];
+      await feedback("chrome");
+      return;
+    }
+    if (text === "/?" || text === "/help") return say(CHAT_HELP);
+    if (text === "/clear") {
+      convo.turns = [];
+      return say([{ kind: "out", text: "Cleared session context" }]);
+    }
+    if (text.startsWith("/")) {
+      return say([
+        {
+          kind: "err",
+          text: `Unknown command '${text.split(/\s/)[0]}'. Type /? for help`,
+        },
+      ]);
+    }
+    if (text.length > MAX_CHAT_CHARS) {
+      return say([
+        {
+          kind: "err",
+          text: `Keep it under ${MAX_CHAT_CHARS} characters, please.`,
+        },
+      ]);
+    }
+
+    const turns: Turn[] = [
+      ...convo.turns,
+      { role: "user" as const, content: text },
+    ].slice(-8);
+    convo.streaming = true;
+    say([{ kind: "ai", text: "" }]);
+    const answer = lines.items[lines.items.length - 1]!;
+    await feedback("enter");
+
+    let got = "";
+    let outcome: Outcome;
+    try {
+      outcome = await sendChat(turns, (t) => {
+        clearBusy();
+        followIfPinned();
+        got = (got + t).trimStart();
+        // The prompt asks for plain text and gpt-oss bolds anyway.
+        answer.text = got.replace(/\*\*/g, "");
+      });
+    } finally {
+      convo.streaming = false;
+    }
+
+    if (!got) lines.items = lines.items.filter((l) => l !== answer);
+    if (outcome.ok) {
+      convo.turns = [...turns, { role: "assistant" as const, content: got }];
+      say([{ kind: "out", text: statsLine(outcome) }]);
+    } else if (outcome.code !== "aborted") {
+      say(chatError(outcome.code));
+      await feedback("error");
+    } else {
+      stickToBottom(renderGroups(lines.items).length);
+    }
+  });
+
+  const converse = $(async (raw: string) => {
+    try {
+      await converseInner(raw);
+    } finally {
+      // Every path out, including /bye and the other early returns.
+      clearBusy();
+    }
+  });
+
   const submit = $(async () => {
+    // One answer at a time. What they typed stays in the field.
+    if (convo.streaming) return;
     // finally, not a tail call: every early return has to clear the spinner,
     // and a throw must not leave it spinning forever.
+    let handedOff = false;
     try {
       const raw = value.value;
       value.value = "";
 
-      lines.items = [...lines.items, { kind: "in", text: `${PROMPT} ${raw}` }];
+      const shown = convo.on ? CHAT_PROMPT : PROMPT;
+      lines.items = [...lines.items, { kind: "in", text: `${shown} ${raw}` }];
       if (raw.trim()) {
         // Before the push, never after — see ensureHistory.
         await ensureHistory();
         cmdHistory.past = [...cmdHistory.past, raw];
         cmdHistory.cursor = -1;
         await saveHistory(cmdHistory.past);
+      }
+
+      if (convo.on) {
+        /*
+         * NOT awaited. Qwik runs an element's handlers one at a time, so
+         * awaiting the stream here held every later keydown — Ctrl+C
+         * included — until the answer had finished. converse clears the
+         * spinner itself.
+         */
+        handedOff = true;
+        void converse(raw);
+        return;
       }
 
       const result = run(raw);
@@ -696,12 +890,20 @@ export const Terminal = component$(() => {
         await feedback("enter");
         return;
       }
+      if (result === CHAT) {
+        convo.on = true;
+        convo.turns = [];
+        lines.items = [...lines.items, ...CHAT_BANNER];
+        stickToBottom(renderGroups(lines.items).length);
+        await feedback("enter");
+        return;
+      }
 
       lines.items = [...lines.items, ...result];
       stickToBottom(renderGroups(lines.items).length);
       await feedback(result.some((l) => l.kind === "err") ? "error" : "enter");
     } finally {
-      clearBusy();
+      if (!handedOff) clearBusy();
     }
   });
 
@@ -755,9 +957,17 @@ export const Terminal = component$(() => {
          * mean what it means in a terminal.
          */
         if (window.getSelection()?.toString()) return;
+        // Mid-answer, ^C stops the model, as it does in `ollama run`.
+        if (abortChat()) {
+          await feedback("error");
+          return;
+        }
         lines.items = [
           ...lines.items,
-          { kind: "in", text: `${PROMPT} ${value.value}^C` },
+          {
+            kind: "in",
+            text: `${convo.on ? CHAT_PROMPT : PROMPT} ${value.value}^C`,
+          },
         ];
         value.value = "";
         cmdHistory.cursor = -1;
@@ -798,7 +1008,8 @@ export const Terminal = component$(() => {
      *      through them on each further Tab.
      */
     if (e.key === "Tab") {
-      if (e.shiftKey) return;
+      // Completions are shell commands; in chat they would be noise.
+      if (e.shiftKey || convo.on) return;
 
       const continuing = tab.armed && value.value === tab.last;
       const base = continuing ? tab.base : value.value.trimStart();
@@ -1147,7 +1358,15 @@ export const Terminal = component$(() => {
              * screen reader re-reads on every append — so each command echoed
              * the input back alongside its result.
              */}
-            <div class="flex flex-col gap-1" aria-live="polite">
+            {/*
+             * aria-busy while an answer streams, so a screen reader announces
+             * the finished answer once instead of every fragment of it.
+             */}
+            <div
+              class="flex flex-col gap-1"
+              aria-live="polite"
+              aria-busy={convo.streaming}
+            >
               {renderGroups(lines.items).map((g, i) =>
                 g.kind === "art" ? (
                   /*
@@ -1188,8 +1407,11 @@ export const Terminal = component$(() => {
                      * and `err` lines quote it back, so neither should turn a
                      * visitor's own text into a link.
                      */}
-                    {g.kind === "out" || g.kind === "hint"
-                      ? linkify(g.text).map((seg, j) =>
+                    {g.kind === "out" || g.kind === "hint" || g.kind === "ai"
+                      ? linkify(
+                          g.text,
+                          g.kind === "ai" ? KNOWN_HREFS : undefined,
+                        ).map((seg, j) =>
                           seg.href ? (
                             <a
                               href={seg.href}
@@ -1236,7 +1458,7 @@ export const Terminal = component$(() => {
 
             <div class="mt-1 flex items-center gap-2">
               <span class="text-accent shrink-0 font-mono text-[0.8125rem]">
-                {PROMPT}
+                {convo.on ? CHAT_PROMPT : PROMPT}
               </span>
               <input
                 id="term-input"
@@ -1253,7 +1475,7 @@ export const Terminal = component$(() => {
                  * measurement `pnpm run verify` structurally cannot make, since
                  * it compares --sem-* against --sem-bg only.
                  */
-                placeholder="help"
+                placeholder={convo.on ? "Send a message (/? for help)" : "help"}
                 /*
                  * 16px on phones, 13px from `sm` up, and that is not a taste
                  * call. iOS Safari zooms the page whenever a focused input is

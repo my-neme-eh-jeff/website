@@ -29,12 +29,13 @@ import {
 
 export type Line = {
   /**
-   * `art` is ASCII diagram content. It renders monospaced and un-wrapped, and
-   * the shell marks it aria-hidden: a screen reader announcing box-drawing
-   * characters produces noise, not information. Every diagram's meaning is
-   * carried in the `detail` prose that accompanies it.
+   * `art` is ASCII diagram content. It renders monospaced and un-wrapped, as
+   * one labelled `role="img"`: box-drawing characters read aloud are noise, so
+   * the meaning is carried in the `detail` prose that accompanies it.
+   *
+   * `ai` is a model's answer. It differs from `out` in what may become a link.
    */
-  kind: "in" | "out" | "err" | "hint" | "art";
+  kind: "in" | "out" | "err" | "hint" | "art" | "ai";
   text: string;
 };
 
@@ -344,6 +345,13 @@ function registry(): Command[] {
         ]),
     },
     {
+      name: "chat",
+      usage: "chat",
+      summary: "Ask a model about Aman. It runs on his desk.",
+      // Handled by the shell, like clear. Listed so `help` shows it.
+      run: () => [],
+    },
+    {
       name: "clear",
       usage: "clear",
       summary: "Clear the screen.",
@@ -354,13 +362,16 @@ function registry(): Command[] {
   ];
 }
 
+/** Returned by `run` for `chat`: the shell switches into chat mode. */
+export const CHAT = "chat";
+
 /**
  * Resolve a raw input line to output.
  *
- * Returns `null` for `clear`, which the shell handles — the registry has no
- * access to the buffer and should not pretend otherwise.
+ * Returns `null` for `clear` and `CHAT` for `chat`, which the shell handles —
+ * the registry has no access to the buffer and should not pretend otherwise.
  */
-export function run(input: string): Line[] | null {
+export function run(input: string): Line[] | null | typeof CHAT {
   const trimmed = input.trim();
   if (!trimmed) return [];
 
@@ -368,6 +379,12 @@ export function run(input: string): Line[] | null {
   const name = (head ?? "").toLowerCase();
 
   if (name === "clear") return null;
+  if (name === "chat") return CHAT;
+  if (name === "ollama") {
+    if (rest[0] === "run" && rest[1]?.toLowerCase() === "aman") return CHAT;
+    // What the real client says for a model it has never pulled.
+    return [err("Error: pull model manifest: file does not exist")];
+  }
   if (KUBECTL.has(name)) return kubectl(rest);
 
   // `kgp foo` expands to `k get projects foo`.
@@ -377,7 +394,13 @@ export function run(input: string): Line[] | null {
   const cmd = registry().find((c) => c.name === name);
   if (cmd) return cmd.run(rest);
 
-  return [err(`${name}: command not found`), out("Type `help` for the list.")];
+  const question = trimmed.endsWith("?") || rest.length >= 2;
+  return [
+    err(`${name}: command not found`),
+    question
+      ? hint("Asking a question? Type `chat` to ask the model.")
+      : out("Type `help` for the list."),
+  ];
 }
 
 /** Every command word, for the shell's Tab completion. */
@@ -385,6 +408,8 @@ export function completions(): string[] {
   return [
     ...Object.keys(ALIASES),
     "help",
+    "chat",
+    "ollama run aman",
     "clear",
     "whoami",
     "k get",

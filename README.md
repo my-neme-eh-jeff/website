@@ -52,15 +52,17 @@ carrying the patched undici.
 
 ## Architecture
 
-### Why static, and why that is load-bearing
+### Static, except `/api/*`
 
-`wrangler.jsonc` has no `main` and no `assets.binding`. Requests served
-directly from `dist/` are free and unlimited on Workers. Adding a script plus
-`run_worker_first: true` would route every request through the Worker and make
-each one a billable invocation against the 100,000/day free tier.
+Requests served directly from `dist/` are free and unlimited on Workers. The
+one Worker script, `src/worker/index.ts`, runs only for `/api/*` via
+`run_worker_first: ["/api/*"]`; `true` would route every page view through it
+and bill each against the 100,000/day free tier. `pnpm run verify` fails the
+build if that scoping is lost.
 
-When the AI endpoints land, scope them as `run_worker_first: ["/api/*"]` so
-page views stay on the free asset path. Do not use `true`.
+`POST /api/chat` relays the shell's `chat` mode to Ollama on Aman's desk,
+reached through a Cloudflare Tunnel and a Workers VPC binding, so the desk
+has no public hostname. When the desk is off, the shell says so.
 
 ### Styling: Tailwind v4, and why not a component library
 

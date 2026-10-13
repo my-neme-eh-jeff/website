@@ -79,20 +79,35 @@ check("sitemap.xml excludes the 404 page", () => {
   return `${locs.length} URLs`;
 });
 
-check("wrangler.jsonc stays assets-only (no `main`)", () => {
-  // Comments make this not-quite-JSON, so match on the key rather than parse.
-  const w = read("wrangler.jsonc");
-  const uncommented = w
+check("wrangler.jsonc runs the Worker on /api/* only", () => {
+  // JSONC: full-line comments and trailing commas are the only extensions
+  // this file uses. Strip both and parse it properly.
+  const w = read("wrangler.jsonc")
     .split("\n")
     .filter((l) => !l.trim().startsWith("//"))
-    .join("\n");
+    .join("\n")
+    .replace(/,(\s*[}\]])/g, "$1");
+  const config = JSON.parse(w);
+  if (!config.main) return "assets-only";
+  const first = config.assets?.run_worker_first;
   assert(
-    !/^\s*"main"\s*:/m.test(uncommented),
-    "wrangler.jsonc declares `main`. Static asset requests are free and " +
-      "unlimited; adding a Worker script bills every page view against the " +
-      "100k/day free tier. Server code belongs behind " +
-      'run_worker_first: ["/api/*"], never a bare `main`.',
+    Array.isArray(first) &&
+      first.length > 0 &&
+      first.every((r) => typeof r === "string" && r.startsWith("/api/")),
+    "wrangler.jsonc declares `main` without scoping it. Static asset requests " +
+      "are free and unlimited; a Worker invocation counts against the 100k/day " +
+      "free tier. Server code belongs behind " +
+      'run_worker_first: ["/api/*"], never `true` and never unscoped.',
   );
+  const pending = (config.vpc_services ?? []).filter(
+    (v) => !v.service_id || v.service_id === "PENDING",
+  );
+  assert(
+    pending.length === 0,
+    `vpc_services has a placeholder service_id (${pending.map((v) => v.binding).join(", ")}). ` +
+      "Create it with `wrangler vpc service create` and paste the real ID.",
+  );
+  return `Worker on ${first.join(", ")}`;
 });
 
 check("_headers ships in dist", () => {

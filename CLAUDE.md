@@ -2,7 +2,8 @@
 
 Static portfolio site. Qwik 2 (prerelease) → SSG → Cloudflare Workers static assets.
 Package manager is **pnpm** — `npm` commands will fight the lockfile.
-Styling is Tailwind v4. No server code; `dist/` is uploaded as-is.
+Styling is Tailwind v4. `dist/` is uploaded as-is; the only server code is
+one Worker (`src/worker/`) that answers `/api/*` and nothing else.
 
 ## The anti-rot rule
 
@@ -25,21 +26,22 @@ That rule covers facts, which carry numbers. Two things it kept missing:
 
 ## Where things live
 
-| Looking for                                          | Go to                                              |
-| ---------------------------------------------------- | -------------------------------------------------- |
-| Commands, local dev, deploy flow                     | `README.md`                                        |
-| Qwik 2 API names, adapters, build config             | `.claude/skills/qwik2-beta/`                       |
-| Why Qwik UI / any Qwik 1 component lib can't be used | `.claude/skills/qwik2-beta/`                       |
-| SEO, structured data, AI-crawler policy              | `.claude/skills/seo-geo/`                          |
-| Design tokens, theme swap, shared patterns           | `src/global.css` (read the header)                 |
-| **Accessibility bar for any UI work**                | `.claude/skills/a11y-ui/`                          |
-| Visual design direction for NEW surfaces             | `.claude/skills/frontend-design/` (upstream)       |
-| Favicon / og:image generation                        | `scripts/make-icons.mjs` (run it, don't hand-edit) |
-| Every fact the pages render                          | `src/content/profile.ts` (and its comments)        |
-| Meta tags + JSON-LD generation                       | `src/content/seo.ts`                               |
-| Hosting + free-tier config, with rationale           | `wrangler.jsonc` comments                          |
-| Cache + security headers, with rationale             | `public/_headers` comments                         |
-| Crawler allow/deny, with rationale                   | `public/robots.txt` comments                       |
+| Looking for                                             | Go to                                              |
+| ------------------------------------------------------- | -------------------------------------------------- |
+| Commands, local dev, deploy flow                        | `README.md`                                        |
+| Qwik 2 API names, adapters, build config                | `.claude/skills/qwik2-beta/`                       |
+| Why Qwik UI / any Qwik 1 component lib can't be used    | `.claude/skills/qwik2-beta/`                       |
+| SEO, structured data, AI-crawler policy                 | `.claude/skills/seo-geo/`                          |
+| Design tokens, theme swap, shared patterns              | `src/global.css` (read the header)                 |
+| **Accessibility bar for any UI work**                   | `.claude/skills/a11y-ui/`                          |
+| Visual design direction for NEW surfaces                | `.claude/skills/frontend-design/` (upstream)       |
+| Favicon / og:image generation                           | `scripts/make-icons.mjs` (run it, don't hand-edit) |
+| Every fact the pages render                             | `src/content/profile.ts` (and its comments)        |
+| What the `chat` model is told, which links it may print | `src/content/chat.ts`                              |
+| Meta tags + JSON-LD generation                          | `src/content/seo.ts`                               |
+| Hosting + free-tier config, with rationale              | `wrangler.jsonc` comments                          |
+| Cache + security headers, with rationale                | `public/_headers` comments                         |
+| Crawler allow/deny, with rationale                      | `public/robots.txt` comments                       |
 
 ## Invariants
 
@@ -51,9 +53,9 @@ them against the real build output. Add new ones there, not here.
   `grep -c '\^' package.json` returns 1, not 0 — `engines.node` legitimately
   uses carets, which is why the check parses the dependency blocks instead).
 - **Qwik 2 docs are `next.qwik.dev`.** `qwik.dev` is v1; its APIs aren't here.
-- **`wrangler.jsonc` stays assets-only — no `main`.** Asset requests are free and
-  unlimited; a Worker script bills every request against 100k/day. For server
-  endpoints use `run_worker_first: ["/api/*"]`, never `true`.
+- **The Worker runs on `/api/*` only.** Asset requests are free and unlimited;
+  a Worker invocation counts against 100k/day. `run_worker_first` is a list of
+  `/api/*` paths, never `true`. Verify: `pnpm run verify`.
 - **Cloudflare dashboard build command stays empty** — build config is versioned
   in `wrangler.jsonc` `build.command`, and wrangler runs it even with no `main`.
   Setting the dashboard field too would build twice.
