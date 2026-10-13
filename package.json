@@ -31,23 +31,23 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "@qwik.dev/core": "2.0.0-rc.0",
-    "@qwik.dev/router": "2.0.0-rc.0",
+    "@qwik.dev/core": "2.0.0-rc.2",
+    "@qwik.dev/router": "2.0.0-rc.2",
     "@tailwindcss/vite": "4.3.3",
-    "@types/node": "24.19.0",
-    "chrome-launcher": "1.2.1",
-    "eslint": "10.11.0",
-    "eslint-plugin-qwik": "2.0.0-rc.0",
-    "globals": "17.12.0",
+    "@types/node": "24.19.1",
+    "chrome-launcher": "1.2.2",
+    "eslint": "10.12.0",
+    "eslint-plugin-qwik": "2.0.0-rc.2",
+    "globals": "17.13.0",
     "lighthouse": "13.5.0",
     "prettier": "3.9.9",
     "prettier-plugin-tailwindcss": "0.8.1",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.70.1",
+    "typescript-eslint": "8.71.1",
     "typescript-plugin-css-modules": "5.2.0",
-    "vite": "8.3.1",
-    "wrangler": "4.147.0"
+    "vite": "8.3.3",
+    "wrangler": "4.148.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": []
