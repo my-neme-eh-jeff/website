@@ -63,8 +63,8 @@ them against the real build output. Add new ones there, not here.
   sitemap guard tests `endsWith("/404.html")`; Cloudflare's `not_found_handling`
   wants `dist/404.html` exactly there.
 - **Generated geometry must be seeded, never `Math.random()`** — SSG runs at
-  build time, so random rewrites the HTML every deploy. See
-  `src/components/generative-mesh/`.
+  build time, so random rewrites the HTML every deploy. (None exists today;
+  `grep -rn 'Math.random' src` should print nothing.)
 - **Colours come from `--sem-*` via Tailwind utilities**, never a raw hex in a
   component. The `@theme inline` block in `src/global.css` is what makes one
   media query retint the whole site; a hardcoded colour opts out of it.

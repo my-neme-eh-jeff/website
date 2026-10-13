@@ -134,7 +134,7 @@ request, which is exactly what the point above avoids.
     src/
       global.css                design tokens, theme swap, shared patterns
       content/profile.ts        ALL site content lives here
-      components/               stream-text, generative-mesh
+      components/               terminal, score-ring, circled-choice, copy-email
       routes/                   layout + index + resume + blog + 404
 
 ### Content

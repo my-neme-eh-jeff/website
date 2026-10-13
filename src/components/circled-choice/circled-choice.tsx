@@ -31,6 +31,7 @@ export const CircledChoice = component$<{ label?: string }>(
       $((e: Event) => {
         if ((e as KeyboardEvent).key === "Escape") open.value = false;
       }),
+      { passive: true },
     );
 
     // Clicking anywhere outside dismisses it.
@@ -42,6 +43,7 @@ export const CircledChoice = component$<{ label?: string }>(
         );
         if (!root) open.value = false;
       }),
+      { passive: true },
     );
 
     const choices = profile.links.filter((l) =>

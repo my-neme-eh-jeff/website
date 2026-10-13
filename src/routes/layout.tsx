@@ -31,7 +31,6 @@ const pages = [
  */
 export default component$(() => {
   const loc = useLocation();
-  const path = loc.url.pathname;
 
   return (
     <div class="min-h-dvh">
@@ -62,7 +61,7 @@ export default component$(() => {
          */}
         <header class="flex flex-wrap items-baseline gap-x-5 gap-y-2 pt-8 lg:pt-14">
           {pages.map((p) => {
-            const active = path === p.href;
+            const active = loc.url.pathname === p.href;
             return (
               <Link
                 key={p.href}

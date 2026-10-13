@@ -33,14 +33,14 @@ node -p "require('./node_modules/vite/package.json').version"
 grep -rn -E 'rollupOptions|rolldownOptions' node_modules/@qwik.dev/core/dist/starters/adapters/ssg
 ```
 
-## Snapshot — verified against `2.0.0-rc.0` + vite 8.3.1, 2026-10-04
+## Snapshot — verified against `2.0.0-rc.2` + vite 8.3.3, 2026-10-13
 
 | Thing                           | v1 name (wrong here)                  | v2 name               |
 | ------------------------------- | ------------------------------------- | --------------------- |
 | Core package                    | `@builder.io/qwik`                    | `@qwik.dev/core`      |
 | Router package                  | `qwik-city` / `@builder.io/qwik-city` | `@qwik.dev/router`    |
 | SSG adapter fn                  | `staticAdapter`                       | `ssgAdapter`          |
-| Virtual config module           | `@qwik-city-plan`                     | `@qwik-router-config` |
+| Virtual config module           | `@qwik-city-plan` (deprecated alias)  | `@qwik-router-config` |
 | Integration name for `qwik add` | `static`                              | `ssg`                 |
 
 Details that cost time to establish:
@@ -50,15 +50,24 @@ Details that cost time to establish:
   `staticAdapter` import resolves fine and gives no runtime error — it is marked
   `/** @public @deprecated Use ssgAdapter instead. */` in
   `lib/adapters/ssg/vite/index.d.ts`. Deprecation is only visible in the types.
-- **`rolldownOptions`, since Vite 8.** From beta.40, Qwik peers on `vite >=8 <9`,
-  and its own SSG starter uses `rolldownOptions`. Vite 8 types mark
+- **`@qwik-city-plan` still resolves** as a deprecated alias (declared in
+  `lib/modules.d.ts`), so the grep above counts it. Runtime code that needs the
+  route config uses `getRouterConfig()` from `@qwik.dev/router`; the SSG build
+  input stays `@qwik-router-config`. Verify:
+  `grep -n "qwik-city-plan\|getRouterConfig" node_modules/@qwik.dev/router/lib/{modules,index}.d.ts`
+- **`rolldownOptions`, since Vite 8.** At rc.0 and rc.2 the router peers on
+  `vite >=8 <9` and an exact `@qwik.dev/core` version, so core, router and
+  `eslint-plugin-qwik` move together. Verify:
+  `node -p "require('./node_modules/@qwik.dev/router/package.json').peerDependencies"`.
+  Qwik's own SSG starter uses `rolldownOptions`. Vite 8 types mark
   `rollupOptions` `@deprecated` (an alias). beta.38's peer range claimed Vite 8
   too, but its client build failed there — trust a build, not the peer range.
 - **`@qwik-router-plan` does not exist.** It is a plausible-sounding invention;
   the grep above returns 0 files for it.
 - **404 must be a file route** (`src/routes/404.tsx`, not `src/routes/404/`).
   The sitemap exclusion is `result.pathname.endsWith("/404.html")` in
-  `lib/chunks/routes.mjs`, so a directory route emitting `/404/` leaks into
+  `lib/chunks/system.mjs` (`routes.mjs` separately forces 404 into the SSG route
+  set — `grep -n '404.html' node_modules/@qwik.dev/router/lib/chunks/*.mjs`), so a directory route emitting `/404/` leaks into
   `sitemap.xml` _and_ fails to produce the `dist/404.html` that Cloudflare's
   `not_found_handling: "404-page"` serves.
 
@@ -108,7 +117,8 @@ Each manifest's `__qwik__.viteConfig` block is the canonical wiring — e.g.
 Tailwind v4 is `@tailwindcss/vite`'s `tailwindcss()` plugin and nothing else, no
 `tailwind.config.js`.
 
-Both `useStyles$` and `useStylesScoped$` exist in Qwik 2 (`public.d.ts`).
+Both `useStyles$` and `useStylesScoped$` exist in Qwik 2 (declared in
+`dist/core-internal.d.ts`; `public.d.ts` only re-exports).
 
 ### Tailwind v4 as wired here (chosen 2026-08-23)
 
@@ -131,9 +141,9 @@ that silently ignores dark mode. Verify:
 pnpm run build && grep -c 'var(--sem-bg)' dist/assets/*.css   # must be > 0
 ```
 
-Ordering also matters: `tailwindcss()` goes **before** `qwikRouter()` in
-`vite.config.ts`, so CSS is transformed before Qwik's optimizer collects styles
-for SSG.
+`tailwindcss()` is listed before `qwikRouter()` in `vite.config.ts`, as in the
+docs snippet — which gives no reason for the order, so don't treat it as
+load-bearing. The check above is what proves the CSS is right.
 
 ## Interactive scaffolding does not work headlessly
 
@@ -150,10 +160,39 @@ gh api repos/QwikDev/qwik/contents/starters/adapters   # list valid integration 
 From <https://next.qwik.dev/docs/guides/best-practices/> — the URL that settled
 how components in this repo are written:
 
-- No `useVisibleTask$` for anything derivable; prefer `useComputed$`.
-- Hoist computation **out of component bodies**; memoise on a deterministic key.
-- Declarative events via `useOn`, not manual listeners.
+- `useVisibleTask$` is a last resort; derive with `useComputed$` instead.
+- Read signals **inside the JSX** rather than into a body variable — the
+  optimizer can then update just that binding instead of re-running the
+  component. (`layout.tsx` reads `loc.url.pathname` in the template for this.)
+- Declarative events via `useOn*`, not manual listeners; pass
+  `{ passive: true }` when the handler never calls `preventDefault()`.
 - No `window.location` — use `useLocation()`.
 
-Worked example of the hoist-and-memoise pattern:
-`src/components/generative-mesh/generative-mesh.tsx`.
+**Repo convention, not from the docs:** static data is computed once at module
+scope, not in a component body — e.g. `grouped` in `src/routes/resume/index.tsx`.
+
+## Qwik 2 APIs to check before hand-rolling — rc.2, 2026-10-13
+
+```bash
+grep -oE '^export declare (const|function) [A-Za-z$]+' node_modules/@qwik.dev/core/dist/core-internal.d.ts
+```
+
+- **Prefetch is the preloader, not a service worker.** Configure it with
+  `preloader` in `renderToStream` options (`PreloaderOptions | false`; this repo
+  passes `false` — see the measured comment in `src/entry.ssr.tsx`).
+  `setupServiceWorker` / `service-worker.ts` are `@deprecated`. Verify:
+  `grep -n -A25 'interface PreloaderOptions' node_modules/@qwik.dev/core/dist/server.d.ts`
+- **`<Link prefetch>` is deprecated** in favour of `prefetchBundles` (default
+  `"visible"`) and `prefetchData` (default `"intent"`). Verify:
+  `grep -n 'prefetch?:\|prefetchBundles?\|prefetchData?' node_modules/@qwik.dev/router/lib/index.d.ts`
+- **`useResource$` is deprecated** — async `useComputed$` replaces it.
+- **The root component must never re-render**: `useQwikRouter` throws "can only
+  run during SSR" if it does. If root ever needs to read state in its body, use
+  `<QwikRouterProvider>` instead. Verify:
+  `grep -c 'can only run during SSR' node_modules/@qwik.dev/router/lib/index.qwik.mjs`
+- New primitives worth knowing: `useConstant`, `createSignal`, `createComputed$`,
+  `useSerializer$`, `Show` / `Each` / `Reveal` / `Pending` / `Catch`, and the
+  `bind:value` / `passive:` / `capture:` JSX attributes.
+- **Docs disagree with themselves on the SSG integration name:**
+  `/docs/guides/static-site-generation/` still says `qwik add static`; the
+  package and `/docs/deployments/static/` say `ssg`. The package wins.
