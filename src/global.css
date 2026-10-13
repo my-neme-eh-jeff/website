@@ -188,6 +188,21 @@
   --lamp-max-rim: #2dac2f;
   --lamp-max-glyph: #2a6218;
 
+  /*
+   * The terminal the blog's status-line figures draw. Like the lamps, it does
+   * not theme-swap: the script's colours were picked for a dark ground, and
+   * the green end of its context gradient is unreadable on paper.
+   *
+   * --term-bg is set by its worst pairing, the gradient's red end (#ff0000)
+   * at 4.65:1. `pnpm run verify` recomputes every pairing, gradient included.
+   */
+  --term-bg: #14130f;
+  --term-bar: #1d1b16;
+  --term-fg: #e6e3da;
+  --term-dim: #8b877c;
+  --term-cyan: #5fb8c4;
+  --term-yellow: #e2b86b;
+
   /* Light is the base. */
   --sem-bg: var(--paper);
   --sem-surface: #ffffff;
@@ -227,6 +242,13 @@
   --color-dot: var(--sem-dot);
   --color-accent: var(--sem-accent);
   --color-danger: var(--sem-danger);
+
+  --color-term: var(--term-bg);
+  --color-term-bar: var(--term-bar);
+  --color-term-fg: var(--term-fg);
+  --color-term-dim: var(--term-dim);
+  --color-term-cyan: var(--term-cyan);
+  --color-term-yellow: var(--term-yellow);
 }
 
 @theme {
@@ -966,6 +988,127 @@ dialog[data-shell-dialog]::backdrop {
   .term-spinner::after {
     content: "\2026";
     animation: none;
+  }
+}
+
+/*
+ * Long-form posts under /blog/. MDX emits bare elements, so prose is styled
+ * from the wrapper rather than with a class on every tag. Direct children
+ * only: a figure's insides are its own business.
+ *
+ * Text holds to the measure; figures take the whole column.
+ */
+@layer components {
+  .post > :where(p, ul, ol, h2, h3) {
+    max-width: var(--container-measure);
+  }
+  .post > :where(p, ul, ol) {
+    margin-block: 1.1em;
+    font-size: 1.0625rem;
+    line-height: 1.75;
+  }
+  .post > h1 + p {
+    margin-top: 0.75rem;
+    color: var(--sem-muted);
+    font-size: 1.25rem;
+    line-height: 1.5;
+  }
+  .post > h2 {
+    margin-top: 3.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .post > ul,
+  .post > ul ul {
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+  .post > ul li {
+    margin-block: 0.4em;
+    padding-left: 0.25rem;
+  }
+  .post > ul li::marker {
+    color: var(--sem-accent);
+  }
+  .post :where(strong) {
+    font-weight: 650;
+  }
+  .post :where(p, li) > a {
+    text-decoration-color: color-mix(
+      in oklab,
+      var(--sem-accent) 55%,
+      transparent
+    );
+  }
+  .post :where(:not(pre) > code) {
+    border: 1px solid var(--sem-line);
+    border-radius: 0.3rem;
+    background: var(--sem-surface);
+    padding: 0.05em 0.35em;
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    white-space: nowrap;
+  }
+  .post > pre {
+    margin-block: 1.5rem;
+    border: 1px solid var(--sem-line);
+    border-radius: var(--radius-xl);
+    background: var(--sem-surface);
+    padding: 1rem 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.65;
+  }
+  /*
+   * Flat selector lists rather than :is(), here and below: verify's class
+   * extractor reads `.operator)` at the end of an :is() list as a different
+   * class, and reports `operator` as unstyled.
+   */
+  .post .language-sh,
+  .post .language-json {
+    tab-size: 2;
+  }
+  /* Qwik's MDX plugin wraps every table in this div, as a scroll container. */
+  .post > .table-wrapper {
+    max-width: var(--container-measure);
+    margin-block: 1.5rem;
+    overflow-x: auto;
+  }
+  .post .table-wrapper > table {
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .post .table-wrapper :where(th, td) {
+    border-bottom: 1px solid var(--sem-line);
+    padding: 0.5rem 1.25rem 0.5rem 0;
+    text-align: left;
+    white-space: nowrap;
+  }
+  .post .table-wrapper th {
+    color: var(--sem-muted);
+    font-weight: 400;
+  }
+
+  /* refractor's token classes, in the four colours the site already has. */
+  .post .token.comment {
+    color: var(--sem-muted);
+    font-style: italic;
+  }
+  .post .token.punctuation,
+  .post .token.operator {
+    color: var(--sem-muted);
+  }
+  .post .token.function,
+  .post .token.property,
+  .post .token.keyword,
+  .post .token.builtin {
+    color: var(--sem-accent);
+  }
+  .post .token.string,
+  .post .token.number,
+  .post .token.boolean,
+  .post .token.parameter,
+  .post .token.variable {
+    color: var(--sem-text);
   }
 }
 

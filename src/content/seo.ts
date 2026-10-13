@@ -5,7 +5,7 @@
  * content the page doesn't render — which is both a correctness property and
  * what keeps it inside Google's structured-data policy.
  */
-import { profile, posts } from "./profile";
+import { profile, posts, type Post } from "./profile";
 
 /**
  * NOTE: also hardcoded as `origin` in adapters/ssg/vite.config.ts. The adapter
@@ -164,13 +164,23 @@ export const resumeGraph = () => ({
   ],
 });
 
+const postUrl = (p: Post) => `${ORIGIN}/blog/${p.slug}/`;
+
+const postingNode = (p: Post) => ({
+  "@type": "BlogPosting",
+  "@id": `${postUrl(p)}#post`,
+  url: postUrl(p),
+  mainEntityOfPage: postUrl(p),
+  headline: p.title,
+  datePublished: p.date,
+  description: p.summary,
+  author: { "@id": `${ORIGIN}/#person` },
+  inLanguage: "en",
+});
+
 /**
  * Blog index. BlogPosting entries are what tie writing to the person entity --
  * the pathway for "engineers who write about X" queries.
- *
- * Per-post `url` points at /blog/<slug>/, which does NOT exist as a route yet.
- * Left out of the markup until those routes land, rather than advertising URLs
- * that 404.
  */
 export const blogGraph = () => ({
   "@context": "https://schema.org",
@@ -183,14 +193,50 @@ export const blogGraph = () => ({
       isPartOf: { "@id": `${ORIGIN}/#website` },
       author: { "@id": `${ORIGIN}/#person` },
       inLanguage: "en",
-      blogPost: posts.map((p) => ({
-        "@type": "BlogPosting",
-        headline: p.title,
-        datePublished: p.date,
-        description: p.summary,
-        author: { "@id": `${ORIGIN}/#person` },
-      })),
+      blogPost: posts.map(postingNode),
     },
     personNode(),
   ],
 });
+
+/**
+ * Everything a post's `head` needs, from its entry in profile.ts. An MDX post
+ * does `export const head = postHead("<slug>")`; an unknown slug fails the
+ * build rather than shipping a page with no title.
+ */
+export function postHead(slug: string) {
+  const p = posts.find((x) => x.slug === slug);
+  if (!p) throw new Error(`No post "${slug}" in profile.ts posts`);
+  const title = `${p.title} — ${profile.name}`;
+  return {
+    title,
+    meta: [
+      ...seoMeta({
+        path: `/blog/${p.slug}/`,
+        title,
+        description: p.summary,
+        ogType: "article",
+      }),
+      { property: "article:published_time", content: p.date },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        key: "ld-post",
+        dangerouslySetInnerHTML: ld({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              ...postingNode(p),
+              isPartOf: { "@id": `${ORIGIN}/blog/#blog` },
+              ...(profile.ogImage
+                ? { image: `${ORIGIN}${profile.ogImage}` }
+                : {}),
+            },
+            personNode(),
+          ],
+        }),
+      },
+    ],
+  };
+}

@@ -14,6 +14,7 @@ import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { grad } from "../src/components/blog/statusline/model.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const p = (...s) => join(ROOT, ...s);
@@ -51,6 +52,25 @@ function warn(name, fn) {
 const assert = (cond, msg) => {
   if (!cond) throw new Error(msg);
 };
+
+/*
+ * The pages every per-page check runs on. Posts are discovered in dist/blog/
+ * rather than listed, so a new post is checked without anyone adding it here.
+ */
+const PAGES = [
+  "index.html",
+  "resume/index.html",
+  "blog/index.html",
+  ...(existsSync(p("dist", "blog"))
+    ? readdirSync(p("dist", "blog"), { withFileTypes: true })
+        .filter(
+          (d) =>
+            d.isDirectory() &&
+            existsSync(p("dist", "blog", d.name, "index.html")),
+        )
+        .map((d) => `blog/${d.name}/index.html`)
+    : []),
+];
 
 // --- Hosting contract ------------------------------------------------------
 
@@ -136,7 +156,7 @@ check("no caret ranges on dependencies", () => {
 // --- SEO output -----------------------------------------------------------
 
 check("exactly one JSON-LD block per page", () => {
-  for (const page of ["index.html", "resume/index.html", "blog/index.html"]) {
+  for (const page of PAGES) {
     const html = read("dist", page);
     /*
      * Count opening TAGS, not occurrences of the string. Qwik serialises the
@@ -160,11 +180,11 @@ check("exactly one JSON-LD block per page", () => {
       `${page} JSON-LD has no @graph entities.`,
     );
   }
-  return "3 pages, all valid @graph";
+  return `${PAGES.length} pages, all valid @graph`;
 });
 
 check("exactly one canonical link per page", () => {
-  for (const page of ["index.html", "resume/index.html", "blog/index.html"]) {
+  for (const page of PAGES) {
     const n = (
       read("dist", page).match(/<link[^>]*rel="canonical"[^>]*>/g) ?? []
     ).length;
@@ -175,7 +195,7 @@ check("exactly one canonical link per page", () => {
         "replacing it, and two conflicting canonicals get both ignored.",
     );
   }
-  return "3 pages";
+  return `${PAGES.length} pages`;
 });
 
 warn("no placeholder text in the homepage's indexable meta tags", () => {
@@ -358,12 +378,7 @@ check("every class in the output has a CSS rule", () => {
   );
 
   const used = new Set();
-  for (const page of [
-    "index.html",
-    "resume/index.html",
-    "blog/index.html",
-    "404.html",
-  ]) {
+  for (const page of [...PAGES, "404.html"]) {
     for (const m of read("dist", page).matchAll(/class="([^"]*)"/g)) {
       m[1]
         .split(/\s+/)
@@ -582,8 +597,45 @@ check("colour contrast meets WCAG AA in both themes", () => {
   return results.join(", ");
 });
 
+check("the blog's terminal palette is readable on its own ground", () => {
+  /*
+   * The status-line figures draw a dark terminal in BOTH themes, so the
+   * --sem-* pairings above never see it. Its text tokens need 4.5:1 on
+   * --term-bg, and so does every colour the context gradient can produce.
+   * That one is computed from a percentage at render time, so the whole
+   * 0-100 range is walked through the same grad() the figures call.
+   */
+  const css = read("src", "global.css");
+  const term = (name) => {
+    const m = css.match(new RegExp(`--term-${name}:\\s*(#[0-9a-f]{6})`, "i"));
+    assert(m, `--term-${name} not found in src/global.css.`);
+    return m[1];
+  };
+  const bg = term("bg");
+  const hex = (rgb) =>
+    "#" + rgb.map((n) => n.toString(16).padStart(2, "0")).join("");
+  const pairs = [
+    ...["fg", "dim", "cyan", "yellow"].map((n) => [`--term-${n}`, term(n)]),
+    ...Array.from({ length: 101 }, (_, i) => [
+      `gradient at ${i}%`,
+      hex(grad(i)),
+    ]),
+  ];
+  let worst = { r: Infinity, name: "" };
+  for (const [name, colour] of pairs) {
+    const r = contrast(colour, bg);
+    if (r < worst.r) worst = { r, name };
+    assert(
+      r >= 4.5,
+      `${name} (${colour}) on --term-bg is ${r.toFixed(2)}:1, needs 4.5:1 ` +
+        `(WCAG 1.4.3). Darken --term-bg or change the colour.`,
+    );
+  }
+  return `worst is ${worst.name}, ${worst.r.toFixed(2)}:1`;
+});
+
 check("skip link is present, first, and points at a real target", () => {
-  for (const page of ["index.html", "resume/index.html", "blog/index.html"]) {
+  for (const page of PAGES) {
     const html = read("dist", page);
     const body = html.slice(html.indexOf("<body"));
     const firstAnchor = body.match(/<a\b[^>]*href="([^"]*)"[^>]*>/);
@@ -607,11 +659,11 @@ check("skip link is present, first, and points at a real target", () => {
       `${page}: #${target} lacks tabindex="-1", so focus does not follow the jump.`,
     );
   }
-  return "3 pages";
+  return `${PAGES.length} pages`;
 });
 
 check("document structure: lang, one h1, no skipped heading levels", () => {
-  for (const page of ["index.html", "resume/index.html", "blog/index.html"]) {
+  for (const page of PAGES) {
     const html = read("dist", page);
     assert(
       /<html[^>]*\slang="[a-z]{2}/i.test(html),
@@ -634,11 +686,11 @@ check("document structure: lang, one h1, no skipped heading levels", () => {
       prev = lvl;
     }
   }
-  return "3 pages";
+  return `${PAGES.length} pages`;
 });
 
 check("every graphic has an accessible name or is hidden", () => {
-  for (const page of ["index.html", "resume/index.html", "blog/index.html"]) {
+  for (const page of PAGES) {
     const html = read("dist", page);
     for (const tag of html.match(/<img\b[^>]*>/g) ?? []) {
       assert(
@@ -659,7 +711,7 @@ check("every graphic has an accessible name or is hidden", () => {
       );
     }
   }
-  return "3 pages";
+  return `${PAGES.length} pages`;
 });
 
 warn("published Lighthouse scores still describe the current build", () => {
@@ -874,7 +926,7 @@ check("no blended element carries a view-transition-name", () => {
   );
 
   let named = 0;
-  for (const page of ["index.html", "resume/index.html", "blog/index.html"]) {
+  for (const page of PAGES) {
     const html = read("dist", page);
     /*
      * Match the whole tag first and pull `class` out of it. Anchoring on

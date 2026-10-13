@@ -412,18 +412,29 @@ export const skills: Array<{ group: string; items: string[] }> = [
 ];
 
 export type Post = {
+  /** Must match the route folder: src/routes/blog/(post)/<slug>/index.mdx */
   slug: string;
   title: string;
+  /** ISO date. Rendered, and sent as datePublished. */
   date: string;
+  /** Becomes the meta description, so 120–160 characters. */
   summary: string;
+  /** Where the code the post is about lives, if anywhere. */
+  repo?: string;
 };
 
 /**
- * Empty until there is something real.
- *
- * A placeholder post used to live here so the index had something to lay out.
- * It was indexed: "Placeholder post — Replace or delete" was live on
- * /blog/ and readable by every crawler and every recruiter. An honest empty
- * state costs nothing; fake content costs credibility.
+ * Real posts only. A placeholder that used to live here was indexed --
+ * "Placeholder post — Replace or delete" was live on /blog/ for every crawler
+ * and recruiter -- so the index renders an empty state rather than filler.
  */
-export const posts: Post[] = [];
+export const posts: Post[] = [
+  {
+    slug: "claude-code-status-line",
+    title: "The Art of the Status Line",
+    date: "2026-10-13",
+    summary:
+      "A Claude Code status line that stays quiet until something can stop you: what it shows, what it refuses to show, and the bugs that decided both.",
+    repo: "https://github.com/my-neme-eh-jeff/ai-experiments/tree/main/claude-statusline",
+  },
+];

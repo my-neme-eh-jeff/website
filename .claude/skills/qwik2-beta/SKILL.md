@@ -71,6 +71,25 @@ Details that cost time to establish:
   `sitemap.xml` _and_ fails to produce the `dist/404.html` that Cloudflare's
   `not_found_handling: "404-page"` serves.
 
+## MDX routes — verified on `2.0.0-rc.2` + vite 8.3.3, 2026-10-13
+
+Blog posts are `src/routes/blog/(post)/<slug>/index.mdx`. What it took:
+
+- **No extra dependency.** `@mdx-js/mdx` ships inside the router:
+  `node -p "require('./node_modules/@qwik.dev/router/package.json').dependencies['@mdx-js/mdx']"`
+- **The `~/` alias does not resolve from an `.mdx` file** — rolldown fails with
+  "failed to resolve import". Import with relative paths.
+- **`export const head = postHead("<slug>")`** applies like a `.tsx` route's
+  head. Don't add frontmatter `title` too; that is a second source.
+- **The router's default rehype plugins emit classes verify will flag.**
+  Autolink puts an empty `aria-hidden` link and an `icon icon-link` span in
+  every heading, so it is off in `vite.config.ts`. Syntax highlighting emits
+  refractor `token …` classes and every table is wrapped in
+  `div.table-wrapper`; both are styled under `.post` in `src/global.css`. A
+  new code language or token type fails verify's class check until styled.
+  Re-check the plugin source:
+  `grep -n 'table-wrapper\|rehypeAutolinkHeadings' node_modules/@qwik.dev/router/lib/vite/index.mjs`
+
 ## Component libraries: Qwik UI is Qwik 1 only
 
 **Checked 2026-08-22 against `@qwik-ui/headless@0.7.7`** (latest; npm

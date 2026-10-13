@@ -1,5 +1,7 @@
 import { component$ } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
+import { Link } from "@qwik.dev/router";
+import { longDate } from "~/components/blog/date";
 import { posts, profile } from "~/content/profile";
 import { blogGraph, ld, seoMeta } from "~/content/seo";
 
@@ -8,25 +10,29 @@ const sorted = [...posts].sort((a, b) => (a.date < b.date ? 1 : -1));
 
 export default component$(() => {
   return (
-    <div class="wrap">
-      <div class="max-w-measure">
-        <h1 class="mb-6">Writing</h1>
-        {sorted.length === 0 ? (
-          <div class="callout">
-            Nothing published yet. When there is, it will be here — the list is
-            empty rather than filled with a placeholder, because a fake post is
-            indexable and a missing one is not.
-          </div>
-        ) : (
-          sorted.map((p) => (
-            <article class="hairline" key={p.slug}>
-              <h2 class="mb-1 text-lg">{p.title}</h2>
-              <div class="text-muted text-sm">{p.date}</div>
-              <p class="text-muted mt-1 mb-0">{p.summary}</p>
-            </article>
-          ))
-        )}
-      </div>
+    <div class="max-w-measure">
+      <h1 class="mb-6">Writing</h1>
+      {sorted.length === 0 ? (
+        <div class="callout">
+          Nothing published yet. When there is, it will be here — the list is
+          empty rather than filled with a placeholder, because a fake post is
+          indexable and a missing one is not.
+        </div>
+      ) : (
+        sorted.map((p) => (
+          <article class="hairline" key={p.slug}>
+            <time dateTime={p.date} class="text-muted text-sm">
+              {longDate(p.date)}
+            </time>
+            <h2 class="mt-1 mb-1 text-lg">
+              <Link href={`/blog/${p.slug}/`} class="no-underline">
+                {p.title}
+              </Link>
+            </h2>
+            <p class="text-muted mt-1 mb-0">{p.summary}</p>
+          </article>
+        ))
+      )}
     </div>
   );
 });

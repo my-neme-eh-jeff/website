@@ -30,7 +30,22 @@ export default defineConfig((): UserConfig => {
      * It runs before qwikRouter so the CSS is already transformed by the time
      * Qwik's optimizer collects styles for SSG.
      */
-    plugins: [tailwindcss(), qwikRouter(), qwikVite()],
+    plugins: [
+      tailwindcss(),
+      qwikRouter({
+        /*
+         * Autolink puts an empty, aria-hidden link and an unstyled
+         * `icon icon-link` span inside every MDX heading. Headings keep their
+         * ids without it.
+         */
+        mdxPlugins: {
+          remarkGfm: true,
+          rehypeSyntaxHighlight: true,
+          rehypeAutolinkHeadings: false,
+        },
+      }),
+      qwikVite(),
+    ],
     resolve: { tsconfigPaths: true },
     // This tells Vite which dependencies to pre-build in dev mode.
     optimizeDeps: {
