@@ -26,8 +26,7 @@ const buildYear = new Date().getFullYear();
 
 const pages = [
   { href: "/", label: "Index" },
-  { href: "/resume/", label: "Resume" },
-  { href: "/blog/", label: "Writing" },
+  { href: "/blog/", label: "Blog" },
 ];
 
 /**
@@ -100,12 +99,16 @@ export default component$(() => {
             style={{ viewTransitionName: "site-nav" }}
           >
             {pages.map((p) => {
-              const active = loc.url.pathname === p.href;
+              const path = loc.url.pathname;
+              const here = path === p.href;
+              // A post is inside the blog, so the blog link stays lit there.
+              const active =
+                here || (p.href !== "/" && path.startsWith(p.href));
               return (
                 <Link
                   key={p.href}
                   href={p.href}
-                  aria-current={active ? "page" : undefined}
+                  aria-current={here ? "page" : active ? "true" : undefined}
                   class={
                     active
                       ? "decoration-accent text-text text-sm underline underline-offset-4"

@@ -1085,9 +1085,14 @@ dialog[data-shell-dialog]::backdrop {
     text-decoration-line: underline;
     text-decoration-color: color-mix(
       in oklab,
-      var(--sem-accent) 55%,
+      var(--sem-accent) 60%,
       transparent
     );
+    text-decoration-thickness: 1px;
+  }
+  .post :where(p, li) > a:hover {
+    text-decoration-color: var(--sem-accent);
+    text-decoration-thickness: 2px;
   }
   .post :where(:not(pre) > code) {
     border: 1px solid var(--sem-line);

@@ -28,6 +28,8 @@ type SeoInput = {
   title: string;
   description: string;
   ogType?: "profile" | "website" | "article";
+  /** Overrides profile.ogImage. Must be a 1200x630 file under public/. */
+  image?: { src: string; alt: string };
 };
 
 /**
@@ -43,6 +45,7 @@ export function seoMeta({
   title,
   description,
   ogType = "website",
+  image,
 }: SeoInput) {
   const url = `${ORIGIN}${path}`;
 
@@ -63,9 +66,12 @@ export function seoMeta({
 
   // Only emit image tags when an image actually exists. A referenced-but-404
   // og:image renders a blank card, which is worse than emitting none at all.
-  if (profile.ogImage) {
-    const img = `${ORIGIN}${profile.ogImage}`;
-    const alt = `${profile.name}${profile.jobTitle ? `, ${profile.jobTitle}` : ""}`;
+  const src = image?.src ?? profile.ogImage;
+  if (src) {
+    const img = `${ORIGIN}${src}`;
+    const alt =
+      image?.alt ??
+      `${profile.name}${profile.jobTitle ? `, ${profile.jobTitle}` : ""}`;
     meta.push(
       { property: "og:image", content: img },
       { property: "og:image:width", content: "1200" },
@@ -204,7 +210,7 @@ export const blogGraph = () => ({
       "@type": "Blog",
       "@id": `${ORIGIN}/blog/#blog`,
       url: `${ORIGIN}/blog/`,
-      name: `Writing — ${profile.name}`,
+      name: `Blog — ${profile.name}`,
       isPartOf: { "@id": `${ORIGIN}/#website` },
       author: { "@id": `${ORIGIN}/#person` },
       inLanguage: "en",
@@ -231,6 +237,7 @@ export function postHead(slug: string) {
         title,
         description: p.summary,
         ogType: "article",
+        ...(p.cover ? { image: p.cover } : {}),
       }),
       { property: "article:published_time", content: p.date },
     ],
@@ -244,8 +251,8 @@ export function postHead(slug: string) {
             {
               ...postingNode(p),
               isPartOf: { "@id": `${ORIGIN}/blog/#blog` },
-              ...(profile.ogImage
-                ? { image: `${ORIGIN}${profile.ogImage}` }
+              ...((p.cover?.src ?? profile.ogImage)
+                ? { image: `${ORIGIN}${p.cover?.src ?? profile.ogImage}` }
                 : {}),
             },
             personNode(),
