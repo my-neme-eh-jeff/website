@@ -156,10 +156,22 @@ check("_headers ships in dist", () => {
 
 /*
  * scripts/csp.mjs gives each page a policy that allows its inline scripts by
- * hash. Hashed again here from the pages, so a page that changed after the
- * policy was written, or a script the generator skipped, fails the build
- * instead of being blocked in the browser.
+ * hash. They are hashed again here from the served pages, so a stale policy
+ * fails the build instead of being blocked in the browser. The parse is
+ * checked as well: every <script> a page opens must be one parsed here, and
+ * nothing may need what a hash cannot allow, an on*= handler or a javascript:
+ * URL.
  */
+const SCRIPT =
+  /<script\b((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]*?)<\/script\s*>/gi;
+const attrsOf = (s) =>
+  new Map(
+    [
+      ...s.matchAll(
+        /([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g,
+      ),
+    ].map((a) => [a[1].toLowerCase(), a[2] ?? a[3] ?? a[4] ?? ""]),
+  );
 check(
   "every page's inline scripts are allowed by its CSP, and only by hash",
   () => {
@@ -192,8 +204,14 @@ check(
         "need to satisfy both, so the per-page hashes would be blocked.",
     );
 
+    // Every page csp.mjs writes a policy for, not only PAGES.
+    const pages = readdirSync(p("dist"), { recursive: true }).filter((f) =>
+      f.endsWith("index.html"),
+    );
+    const rendered = new Map();
     let scripts = 0;
-    for (const page of PAGES) {
+    for (const page of pages) {
+      const html = read("dist", page);
       const path = `/${page.slice(0, -"index.html".length)}`;
       const policy = csp.get(path);
       assert(policy, `${page}: no Content-Security-Policy rule for ${path}`);
@@ -206,22 +224,61 @@ check(
         scriptSrc && !/'unsafe-(inline|eval)'/.test(scriptSrc),
         `${path}: script-src is missing or allows unsafe-inline/unsafe-eval`,
       );
-      for (const [, attrs, body] of read("dist", page).matchAll(
-        /<script\b([^>]*)>([\s\S]*?)<\/script>/g,
+
+      const found = [...html.matchAll(SCRIPT)];
+      const opened = html.match(/<script[\s>]/gi)?.length ?? 0;
+      assert(
+        found.length === opened,
+        `${path}: ${opened} <script> tags, but only ${found.length} parse, ` +
+          "so a script may be missing from the policy.",
+      );
+      const markup = html
+        .replace(SCRIPT, "")
+        .replace(/<style\b[\s\S]*?<\/style\s*>/gi, "");
+      for (const [, raw] of markup.matchAll(
+        /<[a-z][^\s/>]*((?:[^>"']|"[^"]*"|'[^']*')*)>/gi,
       )) {
-        const type = /\stype="([^"]*)"/.exec(attrs)?.[1] ?? "";
-        if (/\ssrc=/.test(attrs) || body === "") continue;
-        if (/^(application\/(ld\+)?json|qwik\/.+)$/.test(type)) continue;
-        const hash = createHash("sha256").update(body).digest("base64");
+        for (const [name, value] of attrsOf(raw)) {
+          assert(
+            !/^on[a-z]/.test(name),
+            `${path}: an ${name}= handler, which no hash can allow`,
+          );
+          assert(
+            !/^\s*javascript:/i.test(value),
+            `${path}: a javascript: URL, which no hash can allow`,
+          );
+        }
+      }
+
+      const own = [];
+      for (const [, raw, body] of found) {
+        const attrs = attrsOf(raw);
+        const type = attrs.get("type") ?? "";
+        if (attrs.has("src") || body === "") continue;
+        if (/^(application\/(ld\+)?json|qwik\/.+)$/i.test(type)) continue;
+        const hash = `'sha256-${createHash("sha256").update(body).digest("base64")}'`;
         assert(
-          scriptSrc.includes(`'sha256-${hash}'`),
-          `${path}: the inline <script${attrs.slice(0, 40)}> (${body.length} B) ` +
+          scriptSrc.includes(hash),
+          `${path}: the inline <script${raw.slice(0, 40)}> (${body.length} B) ` +
             "is not in its CSP, so the browser would refuse to run it.",
         );
+        // Rendered by a component (Qwik marks those with a `:` attribute).
+        if (attrs.has(":")) own.push(hash);
         scripts++;
       }
+      rendered.set(path, own.sort().join(" "));
     }
-    return `${PAGES.length} pages, ${scripts} inline scripts, each allowed by hash`;
+    /*
+     * After a client-side navigation the first page's policy still applies, so
+     * a script a component renders on one page only would be blocked when it
+     * is reached that way. Those must be the same on every page.
+     */
+    assert(
+      new Set(rendered.values()).size <= 1,
+      "Component-rendered inline scripts differ between pages, so one would " +
+        "run under another page's policy after a client-side navigation.",
+    );
+    return `${pages.length} pages, ${scripts} inline scripts, each allowed by hash`;
   },
 );
 

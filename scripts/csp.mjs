@@ -28,7 +28,22 @@ const DIST = join(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 const HEADER = "Content-Security-Policy-Report-Only";
 
 /** Data blocks. The browser never runs them, so CSP never checks them. */
-const DATA = /^(application\/(ld\+)?json|qwik\/.+)$/;
+const DATA = /^(application\/(ld\+)?json|qwik\/.+)$/i;
+
+/*
+ * Quote-aware and case-insensitive, so a ">" or "src=" inside an attribute
+ * value cannot cut a tag short or mistake it for an external script.
+ */
+const SCRIPT =
+  /<script\b((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]*?)<\/script\s*>/gi;
+const attrsOf = (s) =>
+  new Map(
+    [
+      ...s.matchAll(
+        /([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g,
+      ),
+    ].map((a) => [a[1].toLowerCase(), a[2] ?? a[3] ?? a[4] ?? ""]),
+  );
 
 const policy = (hashes) =>
   [
@@ -52,12 +67,11 @@ for (const file of readdirSync(DIST, { recursive: true }).sort()) {
   if (!file.endsWith("index.html")) continue;
   const html = readFileSync(join(DIST, file), "utf8");
   const hashes = new Set();
-  for (const [, attrs, body] of html.matchAll(
-    /<script\b([^>]*)>([\s\S]*?)<\/script>/g,
-  )) {
-    const type = /\stype="([^"]*)"/.exec(attrs)?.[1] ?? "";
+  for (const [, raw, body] of html.matchAll(SCRIPT)) {
+    const attrs = attrsOf(raw);
     // Nor does an empty one. Anything else is hashed, known type or not.
-    if (/\ssrc=/.test(attrs) || DATA.test(type) || body === "") continue;
+    if (attrs.has("src") || DATA.test(attrs.get("type") ?? "") || body === "")
+      continue;
     hashes.add(
       `'sha256-${createHash("sha256").update(body).digest("base64")}'`,
     );
