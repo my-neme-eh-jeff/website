@@ -699,6 +699,24 @@ check("every post's cover reaches /blog/ as a WebP srcset", () => {
   return `${imgs.length} cover(s)`;
 });
 
+/*
+ * Every image a page shows is WebP, from `?jsx` (CLAUDE.md, Invariants). An
+ * og:image is not shown on a page, so it stays the JPEG the og check measures.
+ */
+check("every <img> on every page is a WebP srcset or an SVG", () => {
+  let n = 0;
+  for (const page of PAGES) {
+    for (const [img] of read("dist", page).matchAll(/<img\b[^>]*>/g)) {
+      n++;
+      assert(
+        /srcSet="[^"]*\.webp \d+w/.test(img) || /\ssrc="[^"]+\.svg"/.test(img),
+        `${page}: an <img> that is neither WebP nor SVG: ${img.slice(0, 100)}`,
+      );
+    }
+  }
+  return `${n} image(s) on ${PAGES.length} pages`;
+});
+
 // --- Accessibility -------------------------------------------------------
 //
 // Structural and colour checks only. These catch regressions, they do not

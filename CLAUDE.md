@@ -81,3 +81,8 @@ them against the real build output. Add new ones there, not here.
   scrollbar). Checked 2026-10-14 at 25 widths, 320–3440px. Re-check in device
   mode at 320, 390, 768, 1440 and 1920: `document.documentElement.scrollWidth`
   must equal `clientWidth` on every page.
+- **Images on a page are WebP.** Keep the source in `public/` and import it
+  with `?jsx`, which emits a WebP srcset under `/assets/` (the router's
+  vite-imagetools, through sharp); `src/routes/blog/index.tsx` is the example.
+  The one exception is og:image, which is never shown on a page and stays a
+  1200x630 JPEG, the format the og check measures. Verify: `pnpm run verify`.
