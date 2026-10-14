@@ -5,6 +5,23 @@ import { profile } from "~/content/profile";
 /** What a route tells this layout through `head.frontmatter`. */
 export type Frontmatter = { column?: "reading" };
 
+/**
+ * A view-transition name for the content that is different on every page, so
+ * the old page always leaves from where it is and the new one arrives where it
+ * lands. A shared name made the two morph into each other: from the bottom of
+ * a long page that slid the old content thousands of pixels, because the
+ * router scrolls the new page to the top only after the transition starts.
+ *
+ * Keyed on the title because head is what the router updates before it
+ * captures the new page; the URL is updated after (see the column note below).
+ */
+const pageTransitionName = (title: string) => {
+  let hash = 0;
+  for (const ch of title)
+    hash = (Math.imul(hash, 31) + (ch.codePointAt(0) ?? 0)) >>> 0;
+  return `page-${hash.toString(36)}`;
+};
+
 const buildYear = new Date().getFullYear();
 
 const pages = [
@@ -124,18 +141,13 @@ export default component$(() => {
           </span>
         </header>
 
-        {/*
-         * A different name per column, so moving between columns is one page
-         * leaving and another arriving rather than one box sliding sideways
-         * with both pages showing through it.
-         */}
         <main
           id="main"
           tabIndex={-1}
           class="min-w-0 flex-1 pt-14 pb-16 focus:outline-none"
           style={{
-            viewTransitionName:
-              head.frontmatter.column === "reading" ? "page-reading" : "page",
+            viewTransitionName: pageTransitionName(head.title),
+            viewTransitionClass: "page",
           }}
         >
           <Slot />

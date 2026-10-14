@@ -63,6 +63,11 @@ Each cost real time, and none is stated accurately on the docs site.
   runs in the update callback, the forced `url` effects in `.finally` after
   `ready`:
   `grep -n 'const headUpdated\|forceStoreEffects(routeLocation, "url")' node_modules/@qwik.dev/router/lib/index.qwik.mjs`
+- **A transition name shared by consecutive pages morphs one into the other**,
+  across any scroll offset. Name content per page from head (`layout.tsx` keys
+  it on the title). Renaming in a `qviewtransition` handler's
+  `updateCallbackDone.then` does not work: Chrome has already captured the new
+  page by then.
 - **The cookbook says Qwik un-captures root during navigation; in Chrome it does
   not** — the injected selector is a descendant `& :root`.
   `grep -o 'active-view-transition-type(qwik-navigation){[^}]*}' node_modules/@qwik.dev/router/lib/index.qwik.mjs`

@@ -691,8 +691,12 @@
  * set in src/routes/layout.tsx:
  *
  *   site-nav, site-links   glide when the column moves (index <-> blog, lg+)
- *   page, page-reading     the content: one name per column, so crossing
- *                          columns is an exit and an entry, each in place
+ *   page-<title hash>      the content, named per page and styled through
+ *                          `view-transition-class: page`, so the old page
+ *                          exits where it is and the new one enters where it
+ *                          lands, never one morphing into the other. Without
+ *                          view-transition-class support that degrades to
+ *                          the browser's own cross-fade, still in place.
  *
  * Everything unnamed — field, grain, footer — stays in the root snapshot,
  * whose old and new frames are the same picture, so the background holds
@@ -724,12 +728,10 @@
    * 120ms, so the two are never legible at once — which, when both sit in the
    * same column, reads as overprinted text rather than a transition.
    */
-  ::view-transition-old(page),
-  ::view-transition-old(page-reading) {
+  ::view-transition-old(.page) {
     animation: page-out 150ms cubic-bezier(0.4, 0, 1, 1) both;
   }
-  ::view-transition-new(page),
-  ::view-transition-new(page-reading) {
+  ::view-transition-new(.page) {
     animation: page-in 330ms cubic-bezier(0.2, 0, 0, 1) 120ms both;
   }
   ::view-transition-group(site-nav),
