@@ -1,4 +1,4 @@
-import { $, component$, useSignal, useVisibleTask$ } from "@qwik.dev/core";
+import { $, component$, useOn, useSignal } from "@qwik.dev/core";
 import { OPT_OUT_KEY } from "~/content/analytics";
 
 type State = "nojs" | "signal" | "on" | "off";
@@ -15,19 +15,24 @@ const text: Record<State, string> = {
 export const AnalyticsChoice = component$(() => {
   const state = useSignal<State>("nojs");
 
-  // eslint-disable-next-line qwik/no-use-visible-task -- localStorage and navigator only exist in the browser
-  useVisibleTask$(() => {
-    const n = navigator as Navigator & { globalPrivacyControl?: boolean };
-    if (n.globalPrivacyControl === true || n.doNotTrack === "1") {
-      state.value = "signal";
-      return;
-    }
-    try {
-      state.value = localStorage.getItem(OPT_OUT_KEY) === "1" ? "off" : "on";
-    } catch {
-      state.value = "on";
-    }
-  });
+  // localStorage and navigator only exist in the browser, so this runs once,
+  // when the switch scrolls into view: the event useVisibleTask$ compiles to,
+  // without the task.
+  useOn(
+    "qvisible",
+    $(() => {
+      const n = navigator as Navigator & { globalPrivacyControl?: boolean };
+      if (n.globalPrivacyControl === true || n.doNotTrack === "1") {
+        state.value = "signal";
+        return;
+      }
+      try {
+        state.value = localStorage.getItem(OPT_OUT_KEY) === "1" ? "off" : "on";
+      } catch {
+        state.value = "on";
+      }
+    }),
+  );
 
   const toggle = $(() => {
     const off = state.value !== "off";
