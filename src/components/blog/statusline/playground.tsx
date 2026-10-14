@@ -47,28 +47,33 @@ export const Playground = component$(() => {
   return (
     <div>
       <div class="mb-4 flex flex-wrap gap-2" role="group" aria-label="Presets">
-        {PRESETS.map((p) => (
-          <button
-            key={p.label}
-            type="button"
-            aria-pressed={preset.value === p.label && matches(p.state)}
-            onClick$={() => {
-              const s = p.state;
-              preset.value = p.label;
-              ctx.value = s.context;
-              five.value = s.fiveHour?.used ?? 0;
-              fiveLeft.value = minutes(s.fiveHour?.resetsIn ?? 0);
-              week.value = s.week?.used ?? 0;
-              weekLeft.value = hours(s.week?.resetsIn ?? 0);
-              cold.value = !!s.cacheCold;
-              sso.value = true;
-              repos.value = s.repos ?? [];
-            }}
-            class="pill text-muted hover:text-text aria-pressed:border-accent aria-pressed:text-text cursor-pointer bg-transparent text-sm"
-          >
-            {p.label}
-          </button>
-        ))}
+        {PRESETS.map((p) => {
+          // Only the label in the handler, as in Anatomy: closing over `p`
+          // serialised every preset's whole state into the page.
+          const label = p.label;
+          return (
+            <button
+              key={label}
+              type="button"
+              aria-pressed={preset.value === label && matches(p.state)}
+              onClick$={() => {
+                const s = PRESETS.find((x) => x.label === label)!.state;
+                preset.value = label;
+                ctx.value = s.context;
+                five.value = s.fiveHour?.used ?? 0;
+                fiveLeft.value = minutes(s.fiveHour?.resetsIn ?? 0);
+                week.value = s.week?.used ?? 0;
+                weekLeft.value = hours(s.week?.resetsIn ?? 0);
+                cold.value = !!s.cacheCold;
+                sso.value = true;
+                repos.value = s.repos ?? [];
+              }}
+              class="pill text-muted hover:text-text aria-pressed:border-accent aria-pressed:text-text cursor-pointer bg-transparent text-sm"
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       <Statusline state={state} />

@@ -36,26 +36,31 @@ export const Anatomy = component$(() => {
     <div>
       <Statusline state={heating} highlight={hl.value} />
       <ul class="mt-5 grid gap-1">
-        {ROWS.map((r) => (
-          <li
-            key={r.key}
-            // Pointer, not mouse, events: iOS sends no mouse events to a plain
-            // <li>, so a tap did nothing. A tap's highlight stays until the next.
-            onPointerEnter$={() => (hl.value = r.key)}
-            onPointerLeave$={(e) => {
-              if (e.pointerType === "mouse") hl.value = "";
-            }}
-            class={[
-              "grid gap-x-6 gap-y-0.5 rounded-lg px-2 py-1.5 transition-colors sm:grid-cols-[15rem_1fr]",
-              hl.value === r.key ? "bg-text/5" : "",
-            ]}
-          >
-            <span class="font-mono text-xs leading-6" aria-hidden="true">
-              {r.sample}
-            </span>
-            <span class="text-muted text-sm leading-6">{r.text}</span>
-          </li>
-        ))}
+        {ROWS.map((r) => {
+          // Only the key in the handlers: closing over `r` serialised the whole
+          // row into the page (destructuring the parameter does not help).
+          const key = r.key;
+          return (
+            <li
+              key={key}
+              // Pointer, not mouse, events: iOS sends no mouse events to a plain
+              // <li>, so a tap did nothing. A tap's highlight stays until the next.
+              onPointerEnter$={() => (hl.value = key)}
+              onPointerLeave$={(e) => {
+                if (e.pointerType === "mouse") hl.value = "";
+              }}
+              class={[
+                "grid gap-x-6 gap-y-0.5 rounded-lg px-2 py-1.5 transition-colors sm:grid-cols-[15rem_1fr]",
+                hl.value === key ? "bg-text/5" : "",
+              ]}
+            >
+              <span class="font-mono text-xs leading-6" aria-hidden="true">
+                {r.sample}
+              </span>
+              <span class="text-muted text-sm leading-6">{r.text}</span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
