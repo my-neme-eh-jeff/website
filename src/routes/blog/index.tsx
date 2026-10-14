@@ -1,4 +1,5 @@
 import { component$ } from "@qwik.dev/core";
+import type { FunctionComponent, QwikIntrinsicElements } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
 import { Link } from "@qwik.dev/router";
 import { longDate } from "~/components/blog/date";
@@ -7,6 +8,25 @@ import { blogGraph, ld, seoMeta } from "~/content/seo";
 
 // Sorted once at module scope, not per render — see Qwik best practices.
 const sorted = [...posts].sort((a, b) => (a.date < b.date ? 1 : -1));
+
+/*
+ * Each row's cover through Qwik's `?jsx` image import: WebP at five widths
+ * with a srcset, from the same public/ JPEG that stays the og:image. The
+ * thumbnail is at most 18rem wide, so browsers take a 6 or 11 kB file where
+ * they used to download the 98 kB, 1200px JPEG.
+ */
+type ImgProps = Omit<
+  QwikIntrinsicElements["img"],
+  "src" | "width" | "height" | "srcSet"
+>;
+const covers = import.meta.glob<FunctionComponent<ImgProps>>(
+  "/public/blog/*/cover.jpg",
+  { query: "?jsx", import: "default", eager: true },
+);
+const Cover = ({ src, ...props }: ImgProps & { src: string }) => {
+  const Img = covers[`/public${src}`];
+  return Img ? <Img {...props} /> : null;
+};
 
 export default component$(() => {
   return (
@@ -47,11 +67,11 @@ export default component$(() => {
                 </p>
               </div>
               {p.cover && (
-                <img
+                <Cover
                   src={p.cover.src}
                   alt=""
-                  width={1200}
-                  height={630}
+                  sizes="(min-width: 64rem) 18rem, (min-width: 40rem) 14rem, 11rem"
+                  loading="lazy"
                   decoding="async"
                   class="peek mt-5 w-44 sm:absolute sm:inset-y-0 sm:right-0 sm:my-auto sm:w-56 lg:w-72"
                 />

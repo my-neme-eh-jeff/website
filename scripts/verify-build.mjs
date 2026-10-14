@@ -542,6 +542,30 @@ check("og:image is referenced only if it exists and is a real image", () => {
   return files.size ? [...files].join(", ") : "not emitted (allowed)";
 });
 
+/*
+ * /blog/ draws each cover through `?jsx` (src/routes/blog/index.tsx), found
+ * by its path under public/. One it cannot find renders nothing, silently.
+ */
+check("every post's cover reaches /blog/ as a WebP srcset", () => {
+  const covers = (
+    read("src", "content", "profile.ts").match(/^\s+cover: \{/gm) ?? []
+  ).length;
+  const imgs = [
+    ...read("dist", "blog", "index.html").matchAll(/<img\b[^>]*>/g),
+  ];
+  assert(
+    imgs.length === covers,
+    `profile.ts gives ${covers} post(s) a cover; /blog/ shows ${imgs.length}`,
+  );
+  for (const [img] of imgs) {
+    assert(
+      /srcSet="[^"]*\.webp \d+w/.test(img) && !/\ssrc=/.test(img),
+      `a /blog/ cover is not the ?jsx WebP srcset: ${img.slice(0, 100)}`,
+    );
+  }
+  return `${imgs.length} cover(s)`;
+});
+
 // --- Accessibility -------------------------------------------------------
 //
 // Structural and colour checks only. These catch regressions, they do not
