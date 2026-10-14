@@ -1,0 +1,114 @@
+import { component$ } from "@qwik.dev/core";
+import type { DocumentHead } from "@qwik.dev/router";
+import { AnalyticsChoice } from "~/components/analytics-choice";
+import { profile } from "~/content/profile";
+import { ld, privacyGraph, seoMeta } from "~/content/seo";
+
+/*
+ * Every sentence here is a claim about how the site behaves. If the behaviour
+ * changes — analytics (src/content/analytics.ts), the shell's storage
+ * (src/components/terminal/), the chat Worker or the desk log — this page
+ * changes in the same commit.
+ */
+const UPDATED = "2026-10-14";
+
+export default component$(() => {
+  return (
+    <div class="max-w-measure space-y-4">
+      <h1 class="mb-2">Privacy</h1>
+      <p class="text-muted">
+        This site is run by {profile.name}, an individual in India. Questions or
+        requests about your data:{" "}
+        <a href={`mailto:${profile.email}`} class="underline">
+          {profile.email}
+        </a>
+        .
+      </p>
+
+      <h2 class="pt-6">No cookies</h2>
+      <p>
+        The site sets no cookies. Pages are served by Cloudflare, which, like
+        any host, processes your IP address and request details to deliver pages
+        and keep the site secure.
+      </p>
+
+      <h2 class="pt-6">Analytics</h2>
+      <p>
+        Cloudflare Web Analytics counts page views, which page you came from,
+        your browser type and how fast pages load. It uses no cookies and stores
+        nothing on your device. It never loads if you are in the EU, EEA, UK or
+        Switzerland, if your browser sends Global Privacy Control or Do Not
+        Track, or if you turn it off here:
+      </p>
+      <AnalyticsChoice />
+
+      <h2 class="pt-6">Stored on your device</h2>
+      <ul class="list-disc space-y-2 pl-5">
+        <li>
+          If you use the shell on the home page, what you type is kept in that
+          browser tab so the up arrow can recall it. It never leaves your
+          browser and is cleared when you close the shell or the tab.
+        </li>
+        <li>
+          If you mute the shell, that choice is saved in your browser until you
+          unmute or clear site data.
+        </li>
+        <li>
+          If you turn analytics off above, that choice is saved the same way.
+        </li>
+      </ul>
+
+      <h2 class="pt-6">The chat</h2>
+      <p>
+        Questions typed into the shell are answered by an AI model running on my
+        own computer. It answers from my CV and can be wrong. When you ask one,
+        your question and up to eight earlier turns of the conversation pass
+        through Cloudflare to that computer. Cloudflare uses your IP address
+        only to limit how many questions one network can send per minute; my
+        computer never receives it.
+      </p>
+      <p>
+        My computer keeps a log of each exchange: your question, the earlier
+        turns, the answer and the model's working notes, the time and your
+        country. I read it to see what people ask and to improve the answers.
+        Each log is deleted after 30 days. Please don't type anything sensitive.
+        The chat is optional; the rest of the site works without it.
+      </p>
+
+      <h2 class="pt-6">Why, and who else</h2>
+      <p>
+        I process this to run, protect and improve a working demo of my own
+        work. Cloudflare, Inc. hosts the site, carries the chat traffic and runs
+        the analytics, on my behalf. Nothing is sold, shared for advertising or
+        used to profile you.
+      </p>
+
+      <h2 class="pt-6">Your rights</h2>
+      <p>
+        You can ask me to show, correct or delete chat records about you. Tell
+        me roughly when you chatted and what you asked, because I don't know who
+        you are. You can also complain to your data protection authority.
+      </p>
+
+      <p class="text-muted pt-6 text-sm">
+        Last updated <time dateTime={UPDATED}>14 October 2026</time>.
+      </p>
+    </div>
+  );
+});
+
+export const head: DocumentHead = {
+  title: `Privacy — ${profile.name}`,
+  meta: seoMeta({
+    path: "/privacy/",
+    title: `Privacy — ${profile.name}`,
+    description: `What ${profile.name}'s site collects, why, and how to turn analytics off.`,
+  }),
+  scripts: [
+    {
+      type: "application/ld+json",
+      key: "ld-privacy",
+      dangerouslySetInnerHTML: ld(privacyGraph()),
+    },
+  ],
+};

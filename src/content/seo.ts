@@ -164,6 +164,21 @@ export const resumeGraph = () => ({
   ],
 });
 
+/** Privacy page. A plain WebPage on the site, nothing to disambiguate. */
+export const privacyGraph = () => ({
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": `${ORIGIN}/privacy/#webpage`,
+      url: `${ORIGIN}/privacy/`,
+      name: `Privacy — ${profile.name}`,
+      isPartOf: { "@id": `${ORIGIN}/#website` },
+      inLanguage: "en",
+    },
+  ],
+});
+
 const postUrl = (p: Post) => `${ORIGIN}/blog/${p.slug}/`;
 
 const postingNode = (p: Post) => ({

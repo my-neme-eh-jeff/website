@@ -60,6 +60,7 @@ const PAGES = [
   "index.html",
   "resume/index.html",
   "blog/index.html",
+  "privacy/index.html",
   ...(existsSync(p("dist", "blog"))
     ? readdirSync(p("dist", "blog"), { withFileTypes: true })
         .filter(
@@ -902,6 +903,63 @@ check("no blended element carries a view-transition-name", () => {
 });
 
 // --- Report ---------------------------------------------------------------
+
+// --- Privacy ---------------------------------------------------------------
+
+check("no third-party script is loaded by the built HTML", () => {
+  /*
+   * The one third-party script, Cloudflare's analytics beacon, is created at
+   * runtime by the guarded loader in src/content/analytics.ts, never written
+   * as a tag. A <script src> pointing off-origin would bypass every opt-out.
+   * (Scripts Cloudflare injects at the edge can't be seen here — the site
+   * must be switched to snippet mode in the dashboard for that.)
+   */
+  for (const page of PAGES) {
+    const html = read("dist", page);
+    for (const m of html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)) {
+      assert(m[1].startsWith("/"), `${page}: third-party script ${m[1]}`);
+    }
+  }
+  return `${PAGES.length} pages`;
+});
+
+check("analytics loads only through the guarded loader", () => {
+  const required = [
+    "globalPrivacyControl",
+    "doNotTrack",
+    "analytics:off",
+    "/cdn-cgi/trace",
+    // A sample of the exclusion list: EU, EEA, UK, CH.
+    '"DE"',
+    '"FR"',
+    '"IE"',
+    '"NO"',
+    '"IS"',
+    '"GB"',
+    '"CH"',
+  ];
+  for (const page of PAGES) {
+    const html = read("dist", page);
+    const n = html.split("static.cloudflareinsights.com").length - 1;
+    assert(n === 1, `${page}: beacon URL appears ${n} times, expected 1`);
+    for (const r of required) {
+      assert(html.includes(r), `${page}: loader lacks ${r}`);
+    }
+  }
+  return `${PAGES.length} pages`;
+});
+
+check("every page links the privacy notice from the footer", () => {
+  for (const page of [...PAGES, "404.html"]) {
+    const footer =
+      read("dist", page).match(/<footer[\s\S]*?<\/footer>/)?.[0] ?? "";
+    assert(
+      /href="\/privacy\/"/.test(footer),
+      `${page}: no /privacy/ link in footer`,
+    );
+  }
+  return `${PAGES.length + 1} pages`;
+});
 
 for (const ok of passes) console.log(`  ok    ${ok}`);
 for (const w of warnings) console.warn(`  WARN  ${w}`);

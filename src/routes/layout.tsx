@@ -119,10 +119,10 @@ export default component$(() => {
             <span>
               © {buildYear} {profile.name}
             </span>
-            <a
-              class="ml-auto"
-              href="https://github.com/my-neme-eh-jeff/website"
-            >
+            <Link href="/privacy/" class="ml-auto">
+              Privacy
+            </Link>
+            <a href="https://github.com/my-neme-eh-jeff/website">
               Source
               <span class="text-accent ml-1 font-mono" aria-hidden="true">
                 ↗

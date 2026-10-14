@@ -6,6 +6,7 @@ import {
   useQwikRouter,
 } from "@qwik.dev/router";
 
+import { analyticsLoader } from "~/content/analytics";
 import "./global.css";
 
 export default component$(() => {
@@ -89,6 +90,8 @@ export default component$(() => {
         <DocumentHeadTags />
 
         <link rel="canonical" href={url.href} />
+        {/* Conditions and why it is inline: src/content/analytics.ts. */}
+        <script dangerouslySetInnerHTML={analyticsLoader} />
       </head>
       <body>
         <RouterOutlet />
