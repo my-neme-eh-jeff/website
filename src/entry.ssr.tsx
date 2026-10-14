@@ -7,55 +7,52 @@ export default createRenderer((opts) => {
     options: {
       ...opts,
       /*
-       * Preloader: OFF. Measured, not assumed.
+       * Preloader: ON. Measured, not assumed.
        *
-       * Method: build, serve dist, load / in headless Chrome with no
-       * interaction, and count what the browser actually fetched. Brotli
-       * figures are `brotli -q 11` over the same files, because production
-       * serves compressed and python's http.server does not — measuring the
-       * uncompressed number is how this repo previously talked itself into a
-       * wrong conclusion (see scripts/audit.mjs).
+       * It is what <Link> prefetches through. Visible, hover and click
+       * prefetch all hand bundle names to the preloader, and core only
+       * forwards them once the preloader module has loaded and set
+       * `globalThis.qPreload` — which `preloader: false` stops from ever
+       * happening. With it off, each of those was a silent no-op and a click
+       * pulled the next route's code as a ten-request waterfall before the view
+       * transition could start. Check the hand-off:
+       *   grep -n -A3 'const requestPreload' node_modules/@qwik.dev/core/dist/core.mjs
        *
-       *   preloader config          JS requests   raw      brotli
-       *   ssrPreloads 0 / idle 4         26      183.4 kB  65.1 kB
-       *   ssrPreloads 0 / idle 0         26      183.4 kB  65.1 kB
-       *   false                           8      140.9 kB  48.5 kB
+       * `node scripts/measure-nav.mjs --rtt 40` (and 150): headless Chrome,
+       * cold cache, / -> Writing, median of 3, rc.3, 2026-10-14. Brotli is
+       * computed from the files, since python's http.server does not compress.
        *
-       * THE MIDDLE ROW IS THE POINT. maxIdlePreloads does nothing here at any
-       * value, because of the sentence in its own docs: bundles that reach
-       * 100% probability — the static imports of a bundle already being
-       * loaded — "will always be preloaded immediately, no limit". Once the
-       * core loads, its import graph follows regardless. The previous note in
-       * this file claimed `maxIdlePreloads: 4` "still warms the handful this
-       * page can actually need"; it warmed 25, and setting it to 0 warmed the
-       * same 25. The knob is effectively binary.
+       *   preloader   JS on / before a click     click -> transition ready
+       *                                           40 ms RTT    150 ms RTT
+       *   false        6 req,  44.9 kB brotli       397 ms       1277 ms
+       *   on          48 req,  72.6 kB brotli        88 ms        207 ms
        *
-       * So `false`, which saves 18 requests and 16.6 kB on the wire.
+       * The price is that middle column: +42 requests and +27.7 kB, fetched
+       * after the load event and an idle callback rather than before first
+       * paint (`ssrPreloads: 0`, also Qwik's default, keeps it that way).
+       * It includes the shell's handlers, so the first keystroke there no
+       * longer waits on the network. On /blog/ the same figure is larger,
+       * because the post link it prefetches carries the interactive figures.
+       * To trade some speed back for bytes, `prefetchBundles="intent"` on a
+       * <Link> waits for hover or focus instead of visibility.
        *
-       * What this does NOT save, and cannot: the Qwik core + router bundle,
-       * 109 kB raw / 39 kB gzip at rc.3 (2026-10-14; rc.3 shrank the inline
-       * state on every page by 1-2.5 kB but left this bundle unchanged). It is fetched even with the
-       * preloader off because the container carries eager listeners that name
-       * it — `q-d:qinit`, `q-d:qcinit`, `q-d:qrouterpopstate` — which the
-       * router registers for client-side navigation. That bundle is the floor
-       * for using Qwik Router at all, and it is 75% of the remaining JS.
-       * Verify it is still the floor rather than something we added:
+       * What stays on the click path is one round trip on the FIRST
+       * navigation: the router's own `goto` chunk. It is not an event handler,
+       * so nothing preloads it; later navigations find it loaded.
+       *
+       * Two corrections to the note this replaced, which turned the preloader
+       * off after seeing `maxIdlePreloads` "do nothing": it caps CONCURRENT
+       * preloads, not the total, so no value of it fetches less; and `0` is
+       * ignored outright, because server.mjs only passes it on
+       * `if (options.maxIdlePreloads)`. Check:
+       *   grep -n 'options.maxIdlePreloads' node_modules/@qwik.dev/core/dist/server.mjs
+       *
+       * Unchanged either way: the core + router bundle (109 kB raw) loads on
+       * every page, because the container's eager `q-d:` listeners name it.
+       * That is the floor for using Qwik Router at all:
        *   grep -o 'q-d:q[a-z]*="[^"]*"' dist/index.html
-       *
-       * Cost of turning it off: the first keystroke in the shell fetches its
-       * bundle cold (8.3 kB raw / ~3 kB brotli) instead of finding it warm.
-       * Qwik's loader queues and replays the event, so no input is lost — it
-       * arrives late, not never. That trade is the one the shell was designed
-       * for: "load on interaction only". Speculative preloading was quietly
-       * doing the opposite, shipping the shell to every visitor who never
-       * opens it.
-       *
-       * Re-measure after changing this (expect 8 script requests):
-       *   pnpm run build
-       *   python3 -m http.server 8199 --directory dist &
-       *   # load http://localhost:8199/ and count /build/*.js in devtools
        */
-      preloader: false,
+      preloader: { ssrPreloads: 0 },
       containerAttributes: {
         lang: "en",
         ...opts.containerAttributes,

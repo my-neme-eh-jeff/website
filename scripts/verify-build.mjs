@@ -975,6 +975,25 @@ check(
 );
 
 /*
+ * <Link> prefetches through Qwik's preloader. With `preloader: false` the
+ * preloader module never loads, so every visible, hover and click prefetch is
+ * a silent no-op and a click fetches the next route as a waterfall. Its
+ * bootstrap is a preload of the bundle graph. Numbers in src/entry.ssr.tsx.
+ */
+check("the preloader ships, so <Link> prefetch has something to call", () => {
+  for (const page of PAGES) {
+    assert(
+      /<link\b[^>]*\brel="preload"[^>]*bundle-graph\.json/.test(
+        read("dist", page),
+      ),
+      `${page}: no bundle-graph preload -- is \`preloader: false\` back in ` +
+        `src/entry.ssr.tsx?`,
+    );
+  }
+  return `${PAGES.length} pages`;
+});
+
+/*
  * Client-side navigation is silent to a screen reader unless something
  * announces it; the router does not. The region must start empty, or it reads
  * the title out a second time to anyone browsing the page.
