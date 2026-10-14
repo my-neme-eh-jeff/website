@@ -49,7 +49,7 @@ jobs:
       #
       # No `--ignore-scripts` needed: pnpm blocks dependency postinstall scripts
       # by default, and this project builds with none of them approved. sharp
-      # runs in the build (the blog cards' `?jsx` images) from its prebuilt
+      # runs in the build (the blog's `?jsx` cover images) from its prebuilt
       # @img/* binary, which needs no script. esbuild, workerd and
       # @parcel/watcher are unused here or only needed by tooling this build
       # never runs.

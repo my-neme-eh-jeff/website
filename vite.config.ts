@@ -43,7 +43,7 @@ export default defineConfig((): UserConfig => {
       }),
       /*
        * Inline the stylesheet into every page rather than link it. It is
-       * 43 kB (8.5 kB brotli) against a default limit of 20,000: inlined,
+       * 45 kB (9 kB brotli) against a default limit of 20,000: inlined,
        * first paint on slow 4G came ~290 ms sooner for 8.4 kB more per page
        * (rc.3, 2026-10-14). `pnpm run verify` fails if it outgrows this.
        */
