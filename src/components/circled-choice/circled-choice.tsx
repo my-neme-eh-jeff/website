@@ -1,4 +1,12 @@
-import { component$, useId, useOnDocument, useSignal, $ } from "@qwik.dev/core";
+import {
+  component$,
+  sync$,
+  useId,
+  useOn,
+  useOnDocument,
+  useSignal,
+  $,
+} from "@qwik.dev/core";
 import { profile } from "~/content/profile";
 
 /**
@@ -14,7 +22,7 @@ import { profile } from "~/content/profile";
  *   - a <button> with aria-expanded and aria-controls, so a screen reader
  *     announces the state rather than the popover appearing silently;
  *   - Escape closes and returns focus, which hover-only menus cannot do;
- *   - a document listener closes it on outside click.
+ *   - a click outside closes it.
  *
  * Hover alone would make this unusable by keyboard and invisible to touch,
  * where there is no hover state to enter.
@@ -26,30 +34,42 @@ export const CircledChoice = component$<{ label?: string }>(
     const id = useId();
     const panelId = `choice-${id}`;
 
+    /*
+     * Escape and an outside click can only be heard on the document, where
+     * every keypress and click on the page arrives. A plain handler there woke
+     * this component on the first of them, whatever it was for. This one is a
+     * sync$: it runs inline with no fetch and no resume, and only while the
+     * panel is open does it pass the event on, to the handler below.
+     */
+    const dismiss = sync$((e: Event, el: HTMLElement) => {
+      if (el.querySelector("[data-choice-panel]")?.hasAttribute("hidden"))
+        return;
+      const key = e.type === "keydown";
+      if (
+        key
+          ? (e as KeyboardEvent).key !== "Escape"
+          : el.contains(e.target as Node)
+      )
+        return;
+      el.dispatchEvent(new CustomEvent("choicedismiss", { detail: key }));
+    });
+    useOnDocument("keydown", dismiss, { passive: true });
+    useOnDocument("click", dismiss, { passive: true });
+
     // Escape is the expected way out of any transient overlay. Hiding the
     // panel under a focused link would drop focus on <body>, so hand it back
     // to the button first.
-    useOnDocument(
-      "keydown",
+    useOn(
+      "choicedismiss",
       $((e: Event) => {
-        if ((e as KeyboardEvent).key !== "Escape" || !open.value) return;
-        if (document.getElementById(panelId)?.contains(document.activeElement))
+        const escape = (e as CustomEvent<boolean>).detail;
+        if (
+          escape &&
+          document.getElementById(panelId)?.contains(document.activeElement)
+        )
           button.value?.focus();
         open.value = false;
       }),
-      { passive: true },
-    );
-
-    // Clicking anywhere outside dismisses it.
-    useOnDocument(
-      "click",
-      $((e: Event) => {
-        const root = (e.target as HTMLElement | null)?.closest(
-          "[data-circled-choice]",
-        );
-        if (!root) open.value = false;
-      }),
-      { passive: true },
     );
 
     const choices = profile.links.filter((l) =>
@@ -96,6 +116,7 @@ export const CircledChoice = component$<{ label?: string }>(
          */}
         <div
           id={panelId}
+          data-choice-panel
           hidden={!open.value}
           class="border-line bg-surface absolute top-full left-0 z-20 mt-2 flex min-w-max flex-col gap-1 rounded-xl border p-2 shadow-lg"
         >
