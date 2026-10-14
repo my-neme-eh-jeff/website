@@ -418,8 +418,8 @@ const ABOUT_CHAT: Line[] = [
 export const ASK = "ask";
 
 /**
- * Shell verbs a visitor types to poke at the terminal. As the first word of a
- * line they mean "command not found", not a question for the GPU.
+ * Real shell commands this shell does not have. Typed as a command, they get
+ * the shell's answer, "command not found", rather than a trip to the GPU.
  */
 const SHELL_VERBS = new Set([
   "cat",
@@ -446,8 +446,8 @@ const SHELL_VERBS = new Set([
   "vim",
 ]);
 
-/** One-word lines that are still conversation. */
-const GREETINGS = new Set(["hi", "hello", "hey", "yo", "thanks", "thx"]);
+/** A flag, a path or a file name: words that only appear in command lines. */
+const ARG = /^[-/.~]|\/|\w\.\w/;
 
 /**
  * Resolve a raw input line to output.
@@ -489,15 +489,21 @@ export function run(input: string, width = 80): Line[] | null | typeof ASK {
   const cmd = registry().find((c) => c.name === name);
   if (cmd && (rest.length === 0 || cmd.takesArgs)) return cmd.run(rest);
 
-  const word = name.replace(/[!.,]+$/, "");
-  const question =
-    trimmed.endsWith("?") ||
-    (rest.length === 0 ? GREETINGS.has(word) : !SHELL_VERBS.has(name));
-  if (question) return ASK;
+  /*
+   * Warp's rule: anything that is not a command goes to the model, and a word
+   * is a command only if the shell has it. `ls -la` and `cd ..` are commands;
+   * "top skills he has" starts with one and is not.
+   * https://docs.warp.dev/agents/cli/input-and-shell-commands/ (2026-10-14)
+   */
+  const command =
+    !trimmed.endsWith("?") &&
+    SHELL_VERBS.has(name) &&
+    (rest.length <= 1 || rest.some((a) => ARG.test(a)));
+  if (!command) return ASK;
 
   return [
     err(`${name}: command not found`),
-    hint("To ask about Aman, use a few words: `what is he working on?`"),
+    hint("Type `help` for this shell's commands."),
   ];
 }
 

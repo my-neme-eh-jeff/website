@@ -74,17 +74,14 @@ function chatError(code: string): Line[] {
   return [{ kind: "err", text: "The model could not answer that. Try again." }];
 }
 
-/**
- * The caption under an answer: where it ran, that it can be wrong, how fast.
- * Provenance first, because it is the disclosure; the numbers are garnish.
- */
+/** The caption under an answer: which model, where, how fast. */
 function statsLine(o: Extract<Outcome, { ok: true }>): string {
-  const parts = [`${o.model || "model"} on Aman's desk`, "can be wrong"];
+  const parts = [`${o.model || "model"} on Aman's desk`];
   if (o.stats && o.stats.genMs > 0) {
     parts.push(`${(o.stats.tokens / (o.stats.genMs / 1000)).toFixed(1)} tok/s`);
   }
   if (o.firstTokenMs >= 0) {
-    parts.push(`first word in ${(o.firstTokenMs / 1000).toFixed(1)}s`);
+    parts.push(`ttft ${(o.firstTokenMs / 1000).toFixed(1)}s`);
   }
   if (o.stats && o.stats.loadMs > 1000) {
     parts.push(`cold start ${(o.stats.loadMs / 1000).toFixed(1)}s`);
@@ -831,8 +828,7 @@ export const Terminal = component$(() => {
     let answer: Line | null = null;
     let got = "";
     const slow = setTimeout(() => {
-      convo.note =
-        "Waking the model on Aman's desk. After a quiet spell the first answer takes about 20 seconds.";
+      convo.note = "cold start, ~20s";
     }, SLOW_MS);
     let outcome: Outcome;
     try {
