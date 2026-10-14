@@ -1169,6 +1169,26 @@ check("posts use the reading column, every other page the wide one", () => {
  * a silent no-op and a click fetches the next route as a waterfall. Its
  * bootstrap is a preload of the bundle graph. Numbers in src/entry.ssr.tsx.
  */
+/*
+ * The say-hi choice listens for Escape and outside clicks on the document. As
+ * a sync$ the listener is inline (`#n`); as a plain $() it names a bundle, and
+ * every keypress and click on the page wakes Qwik to run it.
+ */
+check("the say-hi choice's document listeners are inline", () => {
+  const tag =
+    read("dist", "index.html").match(
+      /<div\b[^>]*data-circled-choice[^>]*>/,
+    )?.[0] ?? "";
+  for (const ev of ["keydown", "click"]) {
+    const v = new RegExp(`q-dp:${ev}="([^"]*)"`).exec(tag)?.[1];
+    assert(
+      v?.startsWith("#"),
+      `index.html: the choice's document ${ev} listener is ${v ?? "missing"}, ` +
+        "not an inline sync$.",
+    );
+  }
+});
+
 check("the preloader ships, so <Link> prefetch has something to call", () => {
   for (const page of PAGES) {
     assert(

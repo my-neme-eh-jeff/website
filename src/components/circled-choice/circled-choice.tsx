@@ -42,8 +42,8 @@ export const CircledChoice = component$<{ label?: string }>(
      * panel is open does it pass the event on, to the handler below.
      */
     const dismiss = sync$((e: Event, el: HTMLElement) => {
-      if (el.querySelector("[data-choice-panel]")?.hasAttribute("hidden"))
-        return;
+      const panel = el.querySelector<HTMLElement>("[data-choice-panel]");
+      if (!panel || panel.hidden) return;
       const key = e.type === "keydown";
       if (
         key
