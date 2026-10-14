@@ -102,16 +102,21 @@ export default component$(() => {
                * Demo, write-up, whatever exists off the repo — in the space the
                * date used to occupy. A repo link asks someone to read source
                * before they know if they care; a 3-minute demo shows the thing
-               * working. Where both exist, this is the better first click.
+               * working. Where both exist, this is the better first click, so
+               * Repo comes last. Repo is repeated here even though the title
+               * links to it: an unlabelled title link went unnoticed.
                *
                * The visible label is short so the row stays quiet, so the
                * project title is appended sr-only: a screen reader listing
                * links hears "Demo video, Autonomous ML Deployment System"
                * rather than three identical "Demo video" entries.
                */}
-              {pr.links && pr.links.length > 0 && (
+              {(pr.links?.length || pr.repo) && (
                 <span class="ml-auto flex flex-wrap items-baseline gap-x-3">
-                  {pr.links.map((l) => (
+                  {[
+                    ...(pr.links ?? []),
+                    ...(pr.repo ? [{ label: "Repo", href: pr.repo }] : []),
+                  ].map((l) => (
                     <a
                       key={l.href}
                       href={l.href}

@@ -316,12 +316,6 @@ export const projects: Project[] = [
     ],
     stack: ["Go", "Kafka", "Redis", "S2"],
     repo: "https://github.com/my-neme-eh-jeff/highly-scalable-goods-transport-app",
-    links: [
-      {
-        label: "Architecture",
-        href: "https://excalidraw.com/#json=AAdmRY_7GbA_Niqt3iuET,HN-Y0n9DxFeS7x2KpTAzIg",
-      },
-    ],
     updated: "2024-10-24",
   },
 ];
