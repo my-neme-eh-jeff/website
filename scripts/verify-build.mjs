@@ -1268,6 +1268,32 @@ check("the say-hi choice's document listeners are inline", () => {
   }
 });
 
+/*
+ * The same for the post's checkpoint rail, which follows scrolling. As a plain
+ * $() a desktop post wakes Qwik on load, and a phone on its first scroll,
+ * though the rail is not displayed there.
+ */
+check("the checkpoint rail's listeners are inline", () => {
+  const rails = PAGES.flatMap((page) => {
+    const attrs = read("dist", page).match(
+      /<nav\b([^>]*)>\s*<p\b[^>]*>On this page<\/p>/,
+    )?.[1];
+    return attrs === undefined ? [] : [{ page, attrs }];
+  });
+  assert(rails.length > 0, "No post renders the checkpoint rail.");
+  for (const { page, attrs } of rails) {
+    for (const ev of ["e:qvisible", "wp:scroll"]) {
+      const v = new RegExp(`q-${ev}="([^"]*)"`).exec(attrs)?.[1];
+      assert(
+        v?.startsWith("#"),
+        `${page}: the rail's ${ev} listener is ${v ?? "missing"}, ` +
+          "not an inline sync$.",
+      );
+    }
+  }
+  return `on ${rails.length} of ${PAGES.length} pages`;
+});
+
 check("the preloader ships, so <Link> prefetch has something to call", () => {
   for (const page of PAGES) {
     assert(
