@@ -62,7 +62,8 @@ build if that scoping is lost.
 
 `POST /api/chat` relays questions typed into the shell to Ollama on
 Aman's desk, reached through a Cloudflare Tunnel and a Workers VPC binding, so
-the desk has no public hostname. When the desk is off, the shell says so.
+the desk has no public hostname. When the desk is off, the shell says so. On
+the desk a small proxy logs each exchange before Ollama; see `desk/README.md`.
 
 ### Styling: Tailwind v4, and why not a component library
 

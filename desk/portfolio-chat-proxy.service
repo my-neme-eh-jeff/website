@@ -1,0 +1,14 @@
+[Unit]
+Description=Chat log proxy for the portfolio shell (Workers VPC -> this -> Ollama)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# nvm's Node: a non-login systemd unit has no nvm on its PATH. After a Node
+# upgrade on the desk, this path is the one line to change.
+ExecStart=%h/.config/nvm/versions/node/v24.21.0/bin/node %h/.local/lib/portfolio-desk/chat-log-proxy.mjs
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

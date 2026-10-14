@@ -24,6 +24,17 @@ export type Outcome =
 
 let inflight: AbortController | null = null;
 
+/**
+ * Random per conversation, so the desk's log can group turns. Not stored
+ * anywhere in the browser: a reload is a new conversation.
+ */
+let session = crypto.randomUUID();
+
+/** A cleared or closed shell starts a new conversation. */
+export function resetSession() {
+  session = crypto.randomUUID();
+}
+
 /** Stop the answer being generated, if there is one. */
 export function abortChat(): boolean {
   if (!inflight) return false;
@@ -46,7 +57,7 @@ export async function sendChat(
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ messages: turns }),
+      body: JSON.stringify({ messages: turns, session }),
       signal: controller.signal,
     });
 

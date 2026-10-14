@@ -48,12 +48,13 @@
     "html_handling": "auto-trailing-slash",
     "run_worker_first": ["/api/*"],
   },
-  // Ollama on Aman's desk, reached privately through a Cloudflare Tunnel:
-  // the desk has no public hostname. Workers VPC is in beta and free on all
-  // plans while in beta (developers.cloudflare.com/workers-vpc, read
-  // 2026-10-13). Created 2026-10-13 on wrangler 4.147.0 with
-  // `wrangler vpc service create portfolio-desk --type http --tunnel-id <id>
-  // --ipv4 127.0.0.1 --http-port 11434`; check it with `wrangler vpc service list`.
+  // Aman's desk, reached privately through a Cloudflare Tunnel: the desk has
+  // no public hostname. Workers VPC is in beta and free on all plans while in
+  // beta (developers.cloudflare.com/workers-vpc, read 2026-10-13). Created
+  // 2026-10-13 on wrangler 4.147.0 with `wrangler vpc service create
+  // portfolio-desk --type http --tunnel-id <id> --ipv4 127.0.0.1`, and on
+  // 2026-10-14 pointed at --http-port 11500, the log proxy in desk/, not at
+  // Ollama's 11434. Check it with `wrangler vpc service get <service_id>`.
   "vpc_services": [
     { "binding": "DESK", "service_id": "01a13600-e2dd-7483-83a1-5560fe691686" },
   ],

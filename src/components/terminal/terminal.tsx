@@ -3,7 +3,13 @@ import { haptic } from "./haptics";
 import { sound, isMuted, setMuted, type Tone } from "./sounds";
 import { load as loadHistory, save as saveHistory } from "./history";
 import { run, completions, ASK, type Line } from "./commands";
-import { abortChat, sendChat, type Outcome, type Turn } from "./chat";
+import {
+  abortChat,
+  resetSession,
+  sendChat,
+  type Outcome,
+  type Turn,
+} from "./chat";
 import { KNOWN_HREFS } from "~/content/chat";
 
 /**
@@ -734,6 +740,7 @@ export const Terminal = component$(() => {
     stirred.value = true;
     if (view.value === "closed") {
       convo.turns = [];
+      resetSession();
       lines.items = [...BANNER];
       cmdHistory.past = [];
       cmdHistory.cursor = -1;
@@ -874,6 +881,7 @@ export const Terminal = component$(() => {
         // conversation goes with the buffer.
         lines.items = [];
         convo.turns = [];
+        resetSession();
         await feedback("enter");
         return;
       }
@@ -948,6 +956,7 @@ export const Terminal = component$(() => {
         // Same rule as `clear`: the conversation goes with the screen.
         lines.items = [];
         convo.turns = [];
+        resetSession();
         await feedback("enter");
         return;
       }

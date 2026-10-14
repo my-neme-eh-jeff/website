@@ -38,6 +38,7 @@ That rule covers facts, which carry numbers. Two things it kept missing:
 | Favicon / og:image generation                           | `scripts/make-icons.mjs` (run it, don't hand-edit) |
 | Every fact the pages render                             | `src/content/profile.ts` (and its comments)        |
 | What the shell's model is told, what links it may print | `src/content/chat.ts`                              |
+| What runs on Aman's desk: the chat log proxy            | `desk/README.md`                                   |
 | Meta tags + JSON-LD generation                          | `src/content/seo.ts`                               |
 | Hosting + free-tier config, with rationale              | `wrangler.jsonc` comments                          |
 | Cache + security headers, with rationale                | `public/_headers` comments                         |
