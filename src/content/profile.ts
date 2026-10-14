@@ -8,17 +8,22 @@
  * ---------------------------------------------------------------------------
  * WHAT IS DELIBERATELY NOT HERE
  *
- * Drafted 2026-08-23 from Aman_Nambisan_Resume.pdf. A resume goes to one
- * recipient; this page goes to Google, GPTBot and every scraper. Two classes
- * of thing were dropped in the crossing, and should stay dropped:
+ * Drafted 2026-08-23 from Aman_Nambisan_Resume.pdf, and brought up to date
+ * with a newer copy on 2026-10-14. The shell's model is told all of this too
+ * (src/content/chat.ts), and anything in its prompt is a question away from
+ * public. A resume goes to one recipient; this page goes to Google, GPTBot
+ * and every scraper. Two classes of thing were dropped in the crossing, and
+ * should stay dropped:
  *
  *   1. Phone number. Publishing it cannot be undone — it is cached and
  *      scraped within days. Email is here instead, which is revocable.
  *
  *   2. Employer internals. The resume cites a per-quarter Sev0 count, an
  *      enterprise customer count, a support-ticket automation percentage,
- *      specific Helm and vCluster version numbers, and the kinds of cloud
- *      identifiers a support bot returns. Those describe Atlan's operational
+ *      monthly dollar savings, which model vendors an internal platform uses,
+ *      the internal portal's user count, specific Argo CD, Helm and vCluster
+ *      version numbers, and the kinds of cloud identifiers a support bot
+ *      returns. Those describe Atlan's operational
  *      posture, not Aman's skill, and they read very differently on an
  *      indexed page than in a PDF. The bullets below keep the engineering and
  *      the order of magnitude, and drop the internal figures.
@@ -65,9 +70,9 @@ export const profile = {
   } | null,
 
   /**
-   * Feeds Person.knowsAbout. Specific technologies, not categories, and only
-   * things actually shipped with — every entry below appears in the roles or
-   * projects on this page.
+   * Feeds Person.knowsAbout. Only things actually shipped with: every
+   * technology here is also in `skills` below ("Model Context Protocol" is
+   * its MCP), plus the two fields they add up to.
    */
   knowsAbout: [
     "Kubernetes",
@@ -146,36 +151,35 @@ export const roles: Role[] = [
     company: "Atlan",
     companyUrl: "https://atlan.com",
     title: "Software Engineer II",
-    period: "Jan 2026 — Present",
+    period: "Mar 2026 — Present",
     location: "Bangalore",
     points: [
-      "Scaled ArgoCD to deploy thousands of applications across EKS, GKE and AKS, cutting roughly 20 minutes of rollout latency per application through Helm chart upgrades and controller tuning.",
-      "Built an AI agent that carries out infrastructure upgrades inside customer maintenance windows, halving the human time each one costs.",
-      "Architected release-management tooling that tracks per-tenant deployment state across the fleet, replacing unverified upstream rollouts with auditable ring status.",
-      "Shipped a domain-switch workflow coordinating DNS, secrets and ingress changes, collapsing a multi-hour manual runbook into one operation.",
-      "Built internal MCP servers for Grafana, vCluster and other systems so agentic workflows could read real infrastructure state instead of guessing.",
+      "Migrated an internal agent platform from closed frontier models to open-weight ones, cutting token spend substantially with no measurable drop in task success on internal evals.",
+      "Designed a deep agent that catches anomalous cloud-cost spikes early and works out their root cause.",
+      "Built an AI agent for long-running infrastructure migrations: it chooses deployment rings, tracks progress and works across customer maintenance windows in different time zones with little human intervention, halving the engineering time a migration costs.",
+      "Architected release-management tooling that tracks per-tenant deployment state across the fleet, eliminating a recurring class of top-severity incidents caused by unverified upstream rollouts and unclear ring status.",
+      "Scaled Argo CD to more than a thousand applications across EKS, GKE and AKS, and cut sync time by about 20 minutes per application through tuning and an Argo CD upgrade.",
     ],
   },
   {
     company: "Atlan",
     title: "Software Engineer I",
-    period: "Jan 2025 — Dec 2025",
+    period: "Jun 2025 — Feb 2026",
     location: "Bangalore",
     points: [
-      "Took on-demand infrastructure provisioning from roughly a 50% success rate to consistently above 90% month over month, by fixing Terraform modules and making bootstrap jobs idempotent; moving the flow to Crossplane took it to 100%.",
       "Owned development and review for Atlan's internal developer portal (Vue.js and Go), used across engineering, sales and customer teams, and established it as the source of truth for tenant metadata.",
-      "Raised that service's test coverage to 75%, taking recurring regressions to zero.",
-      "Wrote a Temporal workflow tracking cloud resource quota with Prometheus metrics and Grafana alerting, catching provisioning and scale-up failures before exhaustion.",
+      "Took on-demand infrastructure provisioning from roughly a 50% success rate to above 90% every month for more than six months, by fixing Terraform modules and making bootstrap jobs idempotent; moving the flow to Crossplane took it to 100%.",
+      "Extended the AI support chatbot to resolve most weekly support tickets on its own, generating PrivateLink setups and looking up tenant details.",
     ],
   },
   {
     company: "Atlan",
     title: "Associate Software Engineer I",
-    period: "Nov 2024 — Dec 2024",
+    period: "Nov 2024 — May 2025",
     location: "Mumbai",
     points: [
-      "Coordinated Loft and vCluster platform upgrades with minimal downtime to running workflows.",
-      "Integrated an OpenTelemetry agent shipping logs into ClickHouse.",
+      "Integrated an OpenTelemetry agent shipping the developer portal's logs into ClickHouse.",
+      "Wrote a Temporal workflow that monitors resource quota across clouds with Prometheus metrics and Grafana alerting, catching every provisioning and scale-up failure before quota ran out.",
     ],
   },
   {
@@ -183,10 +187,10 @@ export const roles: Role[] = [
     companyUrl: "https://simppl.org",
     title: "Frontend Intern",
     period: "May 2023 — Aug 2023",
-    location: "Remote",
+    location: "Remote, USA",
     points: [
       "Built D3.js visualisations over million-row misinformation datasets drawn from X, Facebook and Telegram.",
-      "Built a Discord-triggered content pipeline that scraped articles, summarised them with an LLM and delivered them as a newsletter to a few hundred subscribers.",
+      "Built a Discord-triggered content pipeline that scraped articles, summarised them with an LLM and delivered them as a newsletter to more than 300 subscribers.",
     ],
   },
 ];
@@ -278,7 +282,7 @@ export const projects: Project[] = [
     title: "Autonomous ML Deployment System",
     summary: "An LLM proposes model changes; winners ship themselves.",
     detail: [
-      "Drop in a binary-classification CSV, declare its schema, and a closed loop takes over: Claude proposes a change, the system trains it on Kubernetes, and only candidates that beat the current champion get promoted. Accuracy went from roughly 70% to 80% across 20 iterations.",
+      "An autonomous research loop inspired by Karpathy's Autoresearch. Drop in a binary-classification CSV, declare its schema, and a closed loop takes over: Claude proposes a change, the system trains it on Kubernetes, and only candidates that beat the current champion get promoted. Accuracy went from roughly 70% to 80% across 20 iterations.",
       "DVC versions the data, Kubeflow Pipelines runs training, MLflow holds the champion/challenger registry, and a FastAPI service is rolled forward via GitOps whenever a new champion is promoted. No human in the loop.",
     ],
     stack: ["Kubernetes", "Kubeflow", "MLflow", "DVC", "FastAPI", "GitOps"],
@@ -323,85 +327,88 @@ export const projects: Project[] = [
 export type Achievement = { title: string; note?: string };
 
 export const achievements: Achievement[] = [
-  {
-    title: "IEEE YEIST12 — First in India, top 10 overall",
-    note: "Represented India in a special track held in Tunisia.",
-  },
   { title: "AWS Certified Cloud Practitioner (CLF-C02)" },
+  {
+    title: "IEEE YESIST12 — First in India, top 10 overall",
+    note: "Represented India in the AI track, held in Tunisia.",
+  },
   {
     title: "Amazon Sambhav Hackathon — prototype phase",
     note: "Built a connector for e-commerce platforms including Shopify.",
   },
-  { title: "Samsung Solve for Tomorrow 2024 — finalist cohort" },
+  {
+    title: "Samsung Solve for Tomorrow 2024 — finalist cohort",
+    note: "Presented to executive leaders.",
+  },
   { title: "Codeforces Div. 1 top 800 · LeetCode Guardian" },
+  {
+    title: "JEE Main and Advanced — All India Rank ~18,000",
+    note: "Self-taught, 2020–2021.",
+  },
 ];
 
 export const education = {
   school: "Dwarkadas J Sanghvi College of Engineering",
   degree: "B.Tech, Computer Engineering",
-  period: "2020 — 2024",
+  period: "Sep 2021 — May 2025",
   note: "GPA 8.13 / 10",
 };
 
 /** Grouped, so each set renders under its own heading rather than as one long list. */
 export const skills: Array<{ group: string; items: string[] }> = [
   {
-    group: "Platform & Cloud",
+    group: "Applied AI",
     items: [
-      "Kubernetes",
-      "Docker",
-      "Helm",
-      "Terraform",
-      "Crossplane",
-      "ArgoCD",
-      "Temporal",
-      "KEDA",
-      "AWS",
-      "GCP",
-      "Azure",
-      "GitHub Actions",
-      "Cloudflare",
-      "Kong",
+      "LangGraph",
+      "LiteLLM",
+      "Langfuse",
+      "MCP",
+      "Anthropic API",
+      "Claude Code",
+      "Pi",
     ],
   },
   {
-    group: "Languages",
+    group: "ML & Serving",
+    items: ["vLLM", "FastAPI", "MLflow", "Kubeflow Pipelines", "DVC"],
+  },
+  {
+    group: "Languages & Backend",
     items: [
       "Go",
       "Python",
       "TypeScript",
-      "Java",
       "SQL",
       "Bash",
       "Node.js",
+      "Bun",
       "React",
+      "Next.js",
       "Vue.js",
+      "Redis",
+      "Kafka",
     ],
   },
   {
-    group: "ML & AI",
+    group: "Platform & Cloud",
     items: [
-      "MLflow",
-      "Kubeflow Pipelines",
-      "DVC",
-      "vLLM",
-      "FastAPI",
-      "Anthropic API",
-      "MCP",
+      "Kubernetes",
+      "ArgoCD",
+      "Crossplane",
+      "Helm",
+      "Terraform",
+      "Temporal",
+      "KEDA",
+      "Docker",
+      "AWS",
+      "GCP",
+      "Azure",
+      "GitHub Actions",
     ],
   },
   {
     group: "Observability & Data",
-    items: [
-      "Prometheus",
-      "Grafana",
-      "OpenTelemetry",
-      "ClickHouse",
-      "Postgres",
-      "Redis",
-      "Kafka",
-      "SpiceDB",
-    ],
+    items: ["Prometheus", "Grafana", "OpenTelemetry", "ClickHouse", "Postgres"],
   },
 ];
 
