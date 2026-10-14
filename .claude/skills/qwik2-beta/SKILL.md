@@ -33,7 +33,7 @@ node -p "require('./node_modules/vite/package.json').version"
 grep -rn -E 'rollupOptions|rolldownOptions' node_modules/@qwik.dev/core/dist/starters/adapters/ssg
 ```
 
-## Snapshot — verified against `2.0.0-rc.2` + vite 8.3.3, 2026-10-13
+## Snapshot — verified against `2.0.0-rc.3` + vite 8.3.4, 2026-10-14
 
 | Thing                           | v1 name (wrong here)                  | v2 name               |
 | ------------------------------- | ------------------------------------- | --------------------- |
@@ -55,7 +55,7 @@ Details that cost time to establish:
   route config uses `getRouterConfig()` from `@qwik.dev/router`; the SSG build
   input stays `@qwik-router-config`. Verify:
   `grep -n "qwik-city-plan\|getRouterConfig" node_modules/@qwik.dev/router/lib/{modules,index}.d.ts`
-- **`rolldownOptions`, since Vite 8.** At rc.0 and rc.2 the router peers on
+- **`rolldownOptions`, since Vite 8.** At rc.0, rc.2 and rc.3 the router peers on
   `vite >=8 <9` and an exact `@qwik.dev/core` version, so core, router and
   `eslint-plugin-qwik` move together. Verify:
   `node -p "require('./node_modules/@qwik.dev/router/package.json').peerDependencies"`.
@@ -190,7 +190,7 @@ how components in this repo are written:
 **Repo convention, not from the docs:** static data is computed once at module
 scope, not in a component body — e.g. `grouped` in `src/routes/resume/index.tsx`.
 
-## Qwik 2 APIs to check before hand-rolling — rc.2, 2026-10-13
+## Qwik 2 APIs to check before hand-rolling — rc.3, 2026-10-14
 
 ```bash
 grep -oE '^export declare (const|function) [A-Za-z$]+' node_modules/@qwik.dev/core/dist/core-internal.d.ts

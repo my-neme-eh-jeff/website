@@ -32,8 +32,9 @@ export default createRenderer((opts) => {
        *
        * So `false`, which saves 18 requests and 16.6 kB on the wire.
        *
-       * What this does NOT save, and cannot: q-CqMIWLV0.js, the Qwik core and
-       * router, 111 kB raw / 36.6 kB brotli. It is fetched even with the
+       * What this does NOT save, and cannot: the Qwik core + router bundle,
+       * 109 kB raw / 39 kB gzip at rc.3 (2026-10-14; rc.3 shrank the inline
+       * state on every page by 1-2.5 kB but left this bundle unchanged). It is fetched even with the
        * preloader off because the container carries eager listeners that name
        * it — `q-d:qinit`, `q-d:qcinit`, `q-d:qrouterpopstate` — which the
        * router registers for client-side navigation. That bundle is the floor
