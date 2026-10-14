@@ -1,4 +1,4 @@
-import { component$, Slot } from "@qwik.dev/core";
+import { component$, Slot, sync$, useOnDocument } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
 import { Link, useDocumentHead, useLocation } from "@qwik.dev/router";
 import { profile } from "~/content/profile";
@@ -89,6 +89,28 @@ export default component$(() => {
   // Not `head`: this module exports that name, and the optimizer then counts
   // every expression using it as module scope, so none becomes a binding.
   const doc = useDocumentHead<Frontmatter>();
+
+  /*
+   * Qwik Router takes over every same-page `#` link: it cancels the click and
+   * scrolls the target into view, so focus stays on the link and the next Tab
+   * starts from the top again. That broke the skip link and the post's
+   * contents list. This moves focus to the target as well, inline from the
+   * HTML, so no click on the page waits on a bundle for it. The router's own
+   * handler: `grep -n 'scrollIntoView' node_modules/@qwik.dev/router/lib/index.qwik.mjs`
+   */
+  useOnDocument(
+    "click",
+    sync$((e: Event) => {
+      const link = (e.target as Element | null)?.closest?.('a[href^="#"]');
+      const target =
+        link && document.getElementById(link.getAttribute("href")!.slice(1));
+      if (!target) return;
+      if (!target.hasAttribute("tabindex"))
+        target.setAttribute("tabindex", "-1");
+      target.focus({ preventScroll: true });
+    }),
+    { passive: true },
+  );
 
   return (
     <div class="min-h-dvh">

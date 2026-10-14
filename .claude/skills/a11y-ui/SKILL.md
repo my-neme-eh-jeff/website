@@ -77,6 +77,13 @@ Do not read a green `verify` as "accessible". These need a person:
   reached by Tab, so the keyboard heuristic buys nothing, while programmatic
   `.focus()` does not reliably match `:focus-visible` — which would leave it
   focused and still invisible.
+- **In-page `#` links do not move focus by themselves.** Qwik Router cancels
+  every same-page hash link and only scrolls the target into view, so
+  `tabindex="-1"` on the target is not enough: focus stayed on the skip link
+  and the next Tab went back to the nav (rc.3, found 2026-10-14).
+  `src/routes/layout.tsx` moves focus from an inline (`sync$`) click handler,
+  and `pnpm run verify` checks it ships. The router's handler:
+  `grep -n 'scrollIntoView' node_modules/@qwik.dev/router/lib/index.qwik.mjs`
 - **`not-sr-only` and positioning utilities collide.** `not-sr-only` sets
   `position: static`; `focus:absolute` sets `absolute`. Equal specificity, so
   source order decides, and it currently works only because Tailwind emits

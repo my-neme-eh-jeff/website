@@ -836,6 +836,18 @@ check("skip link is present, first, and points at a real target", () => {
       el && /tabindex="-1"/i.test(el[0]),
       `${page}: #${target} lacks tabindex="-1", so focus does not follow the jump.`,
     );
+    /*
+     * Focusable is not enough here: Qwik Router cancels the jump and only
+     * scrolls. src/routes/layout.tsx moves focus from an inline (sync$) click
+     * handler on its root element.
+     */
+    const root = html.match(/<div\b[^>]*class="min-h-dvh"[^>]*>/)?.[0] ?? "";
+    const funcs =
+      html.match(/<script q:func="qwik\/json">([\s\S]*?)<\/script>/)?.[1] ?? "";
+    assert(
+      /q-dp:click="#\d+"/.test(root) && funcs.includes("preventScroll"),
+      `${page}: nothing moves focus to #${target}; the router only scrolls.`,
+    );
   }
   return `${PAGES.length} pages`;
 });
