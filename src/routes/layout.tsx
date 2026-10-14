@@ -53,7 +53,15 @@ export default component$(() => {
         Skip to content
       </a>
 
-      <div class="mr-0 ml-auto w-full max-w-[46rem] px-5 lg:max-w-[52rem] lg:pr-16">
+      {/* The blog is read, not browsed, so it gets a centred column. */}
+      <div
+        class={[
+          "flex min-h-dvh w-full flex-col px-5",
+          loc.url.pathname.startsWith("/blog/")
+            ? "mx-auto max-w-[48rem]"
+            : "mr-0 ml-auto max-w-[46rem] lg:max-w-[52rem] lg:pr-16",
+        ]}
+      >
         {/*
          * Links sit inline at the top of the column, not in a rail. Small,
          * horizontal, no border — an index line rather than a chrome band.
@@ -100,7 +108,7 @@ export default component$(() => {
         <main
           id="main"
           tabIndex={-1}
-          class="min-w-0 pt-14 pb-16 focus:outline-none"
+          class="min-w-0 flex-1 pt-14 pb-16 focus:outline-none"
           style={{ viewTransitionName: "page" }}
         >
           <Slot />

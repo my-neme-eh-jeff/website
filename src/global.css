@@ -343,29 +343,6 @@
 }
 
 /*
- * `wrap` is the opt-in content-column container: pages that need a column of
- * their own use it, the rest lay out inside the shell directly.
- *
- * It is deliberately NOT centred. `layout.tsx` already offsets the column, so
- * `margin-inline: auto` here would re-centre content inside that offset and
- * give the page two competing left edges. Padding-only keeps a single one.
- *
- * Prose is clamped inside this with `max-w-measure`, which is a separate
- * concern: this sets where content starts, that sets how wide a line gets.
- */
-@utility wrap {
-  width: 100%;
-  max-width: 64rem;
-  padding-inline: --spacing(5);
-}
-
-@media (min-width: 64rem) {
-  .wrap {
-    padding-inline: --spacing(10);
-  }
-}
-
-/*
  * ---------------------------------------------------------------------------
  * THE SCROLL MORPH
  *
@@ -993,11 +970,16 @@ dialog[data-shell-dialog]::backdrop {
  * from the wrapper rather than with a class on every tag. Direct children
  * only: a figure's insides are its own business.
  *
- * Text holds to the measure; figures take the whole column.
+ * Text holds to one centred width; figures take the whole column, so they
+ * stand out past the text on both sides. The width is in rem, not ch: ch
+ * follows each element's font size, which gave headings, prose and the small
+ * date line three different left edges.
  */
 @layer components {
-  .post > :where(p, ul, ol, h2, h3) {
-    max-width: var(--container-measure);
+  .post > :where(h1, p, ul, ol, h2, h3),
+  .post-text {
+    max-width: 40rem;
+    margin-inline: auto;
   }
   .post > :where(p, ul, ol) {
     margin-block: 1.1em;
@@ -1029,7 +1011,9 @@ dialog[data-shell-dialog]::backdrop {
   .post :where(strong) {
     font-weight: 650;
   }
+  /* Underlined: in running text, colour alone doesn't mark a link (WCAG 1.4.1). */
   .post :where(p, li) > a {
+    text-decoration-line: underline;
     text-decoration-color: color-mix(
       in oklab,
       var(--sem-accent) 55%,
@@ -1066,7 +1050,8 @@ dialog[data-shell-dialog]::backdrop {
   }
   /* Qwik's MDX plugin wraps every table in this div, as a scroll container. */
   .post > .table-wrapper {
-    max-width: var(--container-measure);
+    max-width: 40rem;
+    margin-inline: auto;
     margin-block: 1.5rem;
     overflow-x: auto;
   }

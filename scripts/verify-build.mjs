@@ -352,7 +352,7 @@ check("every class in the output has a CSS rule", () => {
    * would catch it by eye.
    *
    * So: collect every class token the built HTML actually uses, and assert each
-   * one appears as a selector in the built CSS. Semantic classes (wrap, pill,
+   * one appears as a selector in the built CSS. Semantic classes (pill,
    * eyebrow) have rules too, so there are no legitimate orphans.
    */
   const cssFile = readdirSync(p("dist", "assets")).find((f) =>

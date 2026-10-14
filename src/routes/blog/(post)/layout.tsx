@@ -9,7 +9,7 @@ export default component$(() => {
 
   return (
     <div>
-      <p class="text-muted mb-8 flex flex-wrap items-baseline gap-x-3 text-sm">
+      <p class="text-muted post-text mb-8 flex flex-wrap items-baseline gap-x-3 text-sm">
         <Link href="/blog/" class="hover:text-text no-underline">
           <span aria-hidden="true">← </span>Writing
         </Link>
@@ -21,9 +21,9 @@ export default component$(() => {
       </article>
 
       {post?.repo && (
-        <p class="hairline text-muted mt-16 text-sm">
+        <p class="text-muted post-text mt-16 text-sm">
           The code is in{" "}
-          <a href={post.repo} class="text-text">
+          <a href={post.repo} class="text-text underline">
             {new URL(post.repo).pathname.split("/").slice(1, 3).join("/")}
           </a>
           .

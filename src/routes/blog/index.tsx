@@ -10,7 +10,7 @@ const sorted = [...posts].sort((a, b) => (a.date < b.date ? 1 : -1));
 
 export default component$(() => {
   return (
-    <div class="max-w-measure">
+    <div class="post-text">
       <h1 class="mb-6">Writing</h1>
       {sorted.length === 0 ? (
         <div class="callout">

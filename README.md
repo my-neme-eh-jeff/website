@@ -85,7 +85,7 @@ it: colours are defined in two layers, and the `@theme inline` block is what
 lets a single `prefers-color-scheme` media query retint the entire site with
 almost no `dark:` variants in markup.
 
-Shared patterns (`pill`, `hairline`, `callout`, `wrap`) are `@utility` blocks in
+Shared patterns (`pill`, `hairline`, `callout`) are `@utility` blocks in
 the same file rather than components, because each one lands on several
 different elements — `pill` is used on a Qwik `<Link>`, a plain `<a>` and an
 `<li>`.

@@ -30,14 +30,16 @@ const grouped = roles.reduce<
 
 export default component$(() => {
   return (
-    <div class="wrap">
+    <div>
       <div class="max-w-measure">
         <p class="eyebrow mb-3">
           {profile.city}
           {profile.email && (
             <>
               {" · "}
-              <a href={`mailto:${profile.email}`}>{profile.email}</a>
+              <a href={`mailto:${profile.email}`} class="underline">
+                {profile.email}
+              </a>
             </>
           )}
         </p>

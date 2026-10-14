@@ -5,7 +5,7 @@ import { profile } from "~/content/profile";
 
 export default component$(() => {
   return (
-    <div class="wrap">
+    <div>
       <h1>404</h1>
       <p class="text-muted">That page doesn't exist.</p>
       <p>
