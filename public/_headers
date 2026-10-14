@@ -53,6 +53,6 @@
   # commit every future subdomain to HTTPS as well.
   Strict-Transport-Security: max-age=31536000; includeSubDomains
 
-  # No CSP here on purpose: Qwik's resumability relies on inline scripts, so a
-  # strict policy needs nonce or hash plumbing rather than a one-line guess.
-  # Tracked as an open item in the README.
+  # No CSP here on purpose. Each page gets its own, allowing its inline
+  # scripts by hash, appended to dist/_headers by scripts/csp.mjs after the
+  # build. One here would apply on top of those, and a page must satisfy both.

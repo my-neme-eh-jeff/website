@@ -10,6 +10,7 @@
  * Actions, and so the reasoning lives next to the assertion.
  */
 
+import { createHash } from "node:crypto";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -152,6 +153,77 @@ check("_headers ships in dist", () => {
       "Cache-Control and every asset costs a revalidation round trip.",
   );
 });
+
+/*
+ * scripts/csp.mjs gives each page a policy that allows its inline scripts by
+ * hash. Hashed again here from the pages, so a page that changed after the
+ * policy was written, or a script the generator skipped, fails the build
+ * instead of being blocked in the browser.
+ */
+check(
+  "every page's inline scripts are allowed by its CSP, and only by hash",
+  () => {
+    const lines = read("dist", "_headers").split("\n");
+    const long = lines.filter((l) => l.length > 2000);
+    assert(
+      long.length === 0,
+      "Cloudflare ignores a _headers line over 2,000 characters, so these " +
+        `lose their header: ${long.map((l) => l.trim().slice(0, 50)).join("; ")}`,
+    );
+    const paths = lines.filter((l) => l.startsWith("/"));
+    assert(
+      paths.length <= 100,
+      `${paths.length} _headers rules: Cloudflare reads only the first 100.`,
+    );
+
+    const csp = new Map();
+    let rule = "";
+    for (const l of lines) {
+      if (l.startsWith("/")) rule = l.trim();
+      const m = /^\s+Content-Security-Policy(?:-Report-Only)?:\s*(.+)$/.exec(l);
+      if (m) {
+        assert(!csp.has(rule), `two policies for ${rule}`);
+        csp.set(rule, m[1]);
+      }
+    }
+    assert(
+      !csp.has("/*"),
+      "The /* block sets a CSP. Every page would then carry two policies and " +
+        "need to satisfy both, so the per-page hashes would be blocked.",
+    );
+
+    let scripts = 0;
+    for (const page of PAGES) {
+      const path = `/${page.slice(0, -"index.html".length)}`;
+      const policy = csp.get(path);
+      assert(policy, `${page}: no Content-Security-Policy rule for ${path}`);
+      const scriptSrc =
+        policy
+          .split(";")
+          .map((d) => d.trim())
+          .find((d) => d.startsWith("script-src ")) ?? "";
+      assert(
+        scriptSrc && !/'unsafe-(inline|eval)'/.test(scriptSrc),
+        `${path}: script-src is missing or allows unsafe-inline/unsafe-eval`,
+      );
+      for (const [, attrs, body] of read("dist", page).matchAll(
+        /<script\b([^>]*)>([\s\S]*?)<\/script>/g,
+      )) {
+        const type = /\stype="([^"]*)"/.exec(attrs)?.[1] ?? "";
+        if (/\ssrc=/.test(attrs) || body === "") continue;
+        if (/^(application\/(ld\+)?json|qwik\/.+)$/.test(type)) continue;
+        const hash = createHash("sha256").update(body).digest("base64");
+        assert(
+          scriptSrc.includes(`'sha256-${hash}'`),
+          `${path}: the inline <script${attrs.slice(0, 40)}> (${body.length} B) ` +
+            "is not in its CSP, so the browser would refuse to run it.",
+        );
+        scripts++;
+      }
+    }
+    return `${PAGES.length} pages, ${scripts} inline scripts, each allowed by hash`;
+  },
+);
 
 check("q-manifest.json stays out of the upload, and nothing fetches it", () => {
   const ignore = existsSync(p("dist", ".assetsignore"))
