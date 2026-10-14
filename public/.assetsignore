@@ -1,0 +1,6 @@
+# Files in dist/ that wrangler does not upload. Gitignore syntax.
+
+# The build's map from source files to bundles. SSG reads it at build time;
+# no page or bundle fetches it, so serving it would only publish the source
+# tree's layout. `pnpm run verify` checks both halves.
+q-manifest.json

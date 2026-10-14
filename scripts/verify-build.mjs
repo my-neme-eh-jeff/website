@@ -153,6 +153,27 @@ check("_headers ships in dist", () => {
   );
 });
 
+check("q-manifest.json stays out of the upload, and nothing fetches it", () => {
+  const ignore = existsSync(p("dist", ".assetsignore"))
+    ? read("dist", ".assetsignore")
+    : "";
+  assert(
+    /^q-manifest\.json$/m.test(ignore),
+    "dist/.assetsignore does not list q-manifest.json, so wrangler uploads " +
+      "the build's map of the source tree as a public file.",
+  );
+  const served = readdirSync(p("dist"), { recursive: true }).filter(
+    (f) => /\.(html|js|json)$/.test(f) && !f.endsWith("q-manifest.json"),
+  );
+  const refs = served.filter((f) => read("dist", f).includes("q-manifest"));
+  assert(
+    refs.length === 0,
+    `${refs.join(", ")} mention q-manifest, so leaving it out of the upload ` +
+      "could break them.",
+  );
+  return `${served.length} served files never mention it`;
+});
+
 // --- Dependency hygiene ---------------------------------------------------
 
 check("no caret ranges on dependencies", () => {
