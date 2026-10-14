@@ -21,7 +21,7 @@ export const Contents = component$(() => {
       .map(({ id, text }) => ({ id, text })),
   );
   return (
-    <details class="post-text text-muted my-10 text-sm">
+    <details class="post-text text-muted my-10 text-sm xl:hidden">
       <summary class="hover:text-text w-fit cursor-pointer py-1">
         Contents
       </summary>

@@ -1,4 +1,4 @@
-import { component$ } from "@qwik.dev/core";
+import { component$, sync$ } from "@qwik.dev/core";
 import type { FunctionComponent, QwikIntrinsicElements } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
 import { Link } from "@qwik.dev/router";
@@ -28,6 +28,29 @@ const Cover = ({ src, ...props }: ImgProps & { src: string }) => {
   return Img ? <Img {...props} /> : null;
 };
 
+/*
+ * Where a mouse is over the list, the hovered row's cover is carried by its
+ * top-left corner in place of the pointer, and swings with sideways speed.
+ * Inline (sync$), so it moves with the first event instead of after a bundle
+ * loads. It only writes custom properties; global.css draws the sticker.
+ */
+const carry = sync$(
+  (e: PointerEvent, list: HTMLElement & { _x?: number; _rest?: number }) => {
+    if (e.pointerType !== "mouse") return;
+    const s = list.style;
+    const swing = Math.max(
+      -14,
+      Math.min(14, (e.clientX - (list._x ?? e.clientX)) * 0.9),
+    );
+    list._x = e.clientX;
+    s.setProperty("--x", `${e.clientX}px`);
+    s.setProperty("--y", `${e.clientY}px`);
+    s.setProperty("--swing", `${swing}deg`);
+    clearTimeout(list._rest);
+    list._rest = window.setTimeout(() => s.setProperty("--swing", "0deg"), 90);
+  },
+);
+
 export default component$(() => {
   return (
     <div>
@@ -39,7 +62,11 @@ export default component$(() => {
           indexable and a missing one is not.
         </div>
       ) : (
-        <ul class="border-line border-b">
+        <ul
+          class="stickers border-line border-b"
+          onPointerMove$={carry}
+          onPointerOver$={carry}
+        >
           {sorted.map((p) => (
             /*
              * One link per row, named by the title alone. Its ::after covers
@@ -67,14 +94,18 @@ export default component$(() => {
                 </p>
               </div>
               {p.cover && (
-                <Cover
-                  src={p.cover.src}
-                  alt=""
-                  sizes="(min-width: 64rem) 18rem, (min-width: 40rem) 14rem, 11rem"
-                  loading="lazy"
-                  decoding="async"
-                  class="peek mt-5 w-44 sm:absolute sm:inset-y-0 sm:right-0 sm:my-auto sm:w-56 lg:w-72"
-                />
+                <span class="sticker" aria-hidden="true">
+                  <span class="sticker-face">
+                    <Cover
+                      src={p.cover.src}
+                      alt=""
+                      sizes="(min-width: 64rem) 16rem, (min-width: 40rem) 14rem, 11rem"
+                      loading="lazy"
+                      decoding="async"
+                      class="block h-auto w-full"
+                    />
+                  </span>
+                </span>
               )}
             </li>
           ))}

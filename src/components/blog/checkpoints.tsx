@@ -5,6 +5,7 @@ import {
   useOn,
   useOnWindow,
   useSignal,
+  untrack,
 } from "@qwik.dev/core";
 import { useContent } from "@qwik.dev/router";
 
@@ -14,8 +15,13 @@ import { useContent } from "@qwik.dev/router";
  * width where the centred column leaves room for it.
  */
 export const Checkpoints = component$(() => {
+  // Untracked, as in contents.tsx, which says why.
   const content = useContent();
-  const sections = (content.headings ?? []).filter((h) => h.level === 2);
+  const sections = untrack(() =>
+    (content.headings ?? [])
+      .filter((h) => h.level === 2)
+      .map(({ id, text }) => ({ id, text })),
+  );
   const at = useSignal(-1);
   const label = useId();
 
