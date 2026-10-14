@@ -214,9 +214,6 @@ outage. Flush with
 - **AI / generative UI endpoints are not built.** Inference provider and cost
   controls are undecided. Whatever lands needs a server-side key as a Worker
   secret, per-IP rate limiting, and a spend ceiling before it goes public.
-- **The CSP is report-only.** `scripts/csp.mjs` writes one per page, allowing
-  that page's inline scripts by hash. It switches to enforcing once the live
-  site shows no violations under it.
 
 ## Gotchas
 

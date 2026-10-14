@@ -192,7 +192,11 @@ check(
     let rule = "";
     for (const l of lines) {
       if (l.startsWith("/")) rule = l.trim();
-      const m = /^\s+Content-Security-Policy(?:-Report-Only)?:\s*(.+)$/.exec(l);
+      assert(
+        !/^\s+Content-Security-Policy-Report-Only:/.test(l),
+        `${rule} sends a report-only CSP, which blocks nothing`,
+      );
+      const m = /^\s+Content-Security-Policy:\s*(.+)$/.exec(l);
       if (m) {
         assert(!csp.has(rule), `two policies for ${rule}`);
         csp.set(rule, m[1]);

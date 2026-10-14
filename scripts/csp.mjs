@@ -24,8 +24,7 @@ import { fileURLToPath } from "node:url";
 
 const DIST = join(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 
-/** Report-only until the live site has been checked under it. */
-const HEADER = "Content-Security-Policy-Report-Only";
+const HEADER = "Content-Security-Policy";
 
 /** Data blocks. The browser never runs them, so CSP never checks them. */
 const DATA = /^(application\/(ld\+)?json|qwik\/.+)$/i;
