@@ -115,7 +115,7 @@ const LINE_CLASS: Record<Line["kind"], string> = {
   hint: "text-accent",
   // Diagrams must not wrap — a re-flowed box drawing is unreadable — so this
   // is the one kind that scrolls its container instead.
-  art: "text-muted/85 whitespace-pre overflow-x-auto",
+  art: "text-muted/85 scroll-cue whitespace-pre overflow-x-auto",
   ai: "text-text",
   meta: "text-muted text-[0.6875rem] leading-snug",
 };
@@ -194,6 +194,22 @@ export function renderGroups(items: Line[]): Group[] {
     }
   }
   return groups;
+}
+
+/**
+ * A hanging indent, so a line that wraps continues after the prompt, under
+ * its last column (after a run of 2+ spaces), or under its own indent.
+ */
+function hang(g: Group) {
+  const n =
+    g.kind === "in"
+      ? PROMPT.length + 1
+      : g.kind === "ai"
+        ? 0
+        : (/^.*\S {2,}(?=\S)/.exec(g.text)?.[0].length ??
+          /^ */.exec(g.text)?.[0].length ??
+          0);
+  return n ? { paddingLeft: `${n}ch`, textIndent: `-${n}ch` } : undefined;
 }
 
 /**
@@ -397,6 +413,28 @@ function stickToBottom(lineCount: number) {
     scrolled = true;
     return done;
   });
+}
+
+/**
+ * The live body's width in characters, for `run` to lay output out to. A
+ * phone is about 40, so output padded for 68 would otherwise wrap mid-column.
+ */
+function shellColumns(): number {
+  for (const body of document.querySelectorAll<HTMLElement>(
+    "[data-shell] label",
+  )) {
+    const dialog = body.closest("dialog");
+    if (dialog && !dialog.open) continue;
+    const prompt = body.querySelector("#term-input")?.previousElementSibling;
+    const ch = (prompt?.getBoundingClientRect().width ?? 0) / PROMPT.length;
+    const cs = getComputedStyle(body);
+    const inner =
+      body.clientWidth -
+      parseFloat(cs.paddingLeft) -
+      parseFloat(cs.paddingRight);
+    if (ch > 0) return Math.floor(inner / ch);
+  }
+  return 80;
 }
 
 /**
@@ -633,8 +671,13 @@ export const Terminal = component$(() => {
       shellDialog()?.close();
       view.value = "min";
       restoreFocusTo(MIN_BTN_ID);
+    } else if (view.value === "min") {
+      view.value = "open";
+      // The body remounts at scrollTop 0, which leaves a long buffer's prompt
+      // below the fold — the same reason restore re-sticks.
+      stickToBottom(renderGroups(lines.items).length);
     } else {
-      view.value = view.value === "min" ? "open" : "min";
+      view.value = "min";
     }
     await feedback("chrome");
   });
@@ -867,7 +910,7 @@ export const Terminal = component$(() => {
         await saveHistory(cmdHistory.past);
       }
 
-      const result = run(raw);
+      const result = run(raw, shellColumns());
       if (result === ASK) {
         /*
          * NOT awaited. Qwik runs an element's handlers one at a time, so
@@ -1421,7 +1464,8 @@ export const Terminal = component$(() => {
                   </pre>
                 ) : (
                   <pre
-                    class={`m-0 whitespace-pre-wrap ${LINE_CLASS[g.kind]}`}
+                    class={`m-0 wrap-anywhere whitespace-pre-wrap ${LINE_CLASS[g.kind]}`}
+                    style={hang(g)}
                     key={i}
                   >
                     {/*

@@ -50,6 +50,16 @@ const art = (text: string): Line => ({ kind: "art", text });
 
 /* --- formatting ---------------------------------------------------------- */
 
+/** The shell's width in characters, as a CLI reads $COLUMNS. Set by `run`. */
+let cols = 80;
+
+/**
+ * Whether a column layout survives `cols`: it fits outright, or its last
+ * column starts in the left half, where the shell wraps it under itself.
+ */
+const fits = (lastAt: number, width: number) =>
+  width <= cols || lastAt <= cols / 2;
+
 /**
  * Pad columns to the widest cell, like kubectl.
  *
@@ -61,6 +71,15 @@ function table(header: string[], rows: string[][]): Line[] {
   const widths = header.map((_, i) =>
     Math.max(...all.map((r) => (r[i] ?? "").length)),
   );
+  const lastAt = widths.slice(0, -1).reduce((n, w) => n + w + 2, 0);
+  if (!fits(lastAt, lastAt + (widths[widths.length - 1] ?? 0))) {
+    // Too narrow for columns: each row's first cell heads the rest.
+    return rows.flatMap(([first = "", ...rest]) => [
+      out(first),
+      // A no-break space keeps each "·" off the start of a line.
+      ...wrap(rest.filter(Boolean).join("\u00a0· ")),
+    ]);
+  }
   const line = (cells: string[]) =>
     cells
       .map((c, i) => (i === cells.length - 1 ? c : c.padEnd(widths[i]!)))
@@ -71,7 +90,8 @@ function table(header: string[], rows: string[][]): Line[] {
 
 /** Wrap prose so a long paragraph does not force horizontal scrolling. */
 function wrap(text: string, width = 68, indent = "  "): Line[] {
-  const words = text.split(/\s+/);
+  width = Math.min(width, cols - indent.length);
+  const words = text.split(/[^\S\u00a0]+/);
   const lines: string[] = [];
   let cur = "";
   for (const w of words) {
@@ -318,19 +338,31 @@ function registry(): Command[] {
       name: "help",
       usage: "help",
       summary: "List available commands.",
-      run: () => [
-        out("Commands:"),
-        ...registry().map((c) => out(`  ${c.usage.padEnd(30)} ${c.summary}`)),
-        out(""),
-        out(`Resources: ${RESOURCES.map((r) => r.name).join(", ")}`),
-        out(""),
-        out("Aliases (the ones already in your shell profile):"),
-        ...Object.entries(ALIASES).map(([a, full]) =>
-          out(`  ${a.padEnd(6)} k ${full.join(" ")}`),
-        ),
-        out(""),
-        hint("Start with: kgp, or ask what he is working on."),
-      ],
+      run: () => {
+        const cmds = registry();
+        // Summaries start at 33: two spaces, the usage padded to 30, a space.
+        const wide = fits(
+          33,
+          33 + Math.max(...cmds.map((c) => c.summary.length)),
+        );
+        return [
+          out("Commands:"),
+          ...cmds.flatMap((c) =>
+            wide
+              ? [out(`  ${c.usage.padEnd(30)} ${c.summary}`)]
+              : [out(`  ${c.usage}`), ...wrap(c.summary, 68, "      ")],
+          ),
+          out(""),
+          out(`Resources: ${RESOURCES.map((r) => r.name).join(", ")}`),
+          out(""),
+          out("Aliases (the ones already in your shell profile):"),
+          ...Object.entries(ALIASES).map(([a, full]) =>
+            out(`  ${a.padEnd(6)} k ${full.join(" ")}`),
+          ),
+          out(""),
+          hint("Start with: kgp, or ask what he is working on."),
+        ];
+      },
     },
     {
       name: "k",
@@ -422,9 +454,11 @@ const GREETINGS = new Set(["hi", "hello", "hey", "yo", "thanks", "thx"]);
  *
  * Returns `null` for `clear` and `ASK` for anything that reads as a question,
  * both of which the shell handles: the registry has no access to the buffer
- * or the conversation and should not pretend otherwise.
+ * or the conversation and should not pretend otherwise. `width` is the shell's
+ * width in characters, which tables and prose lay themselves out to.
  */
-export function run(input: string): Line[] | null | typeof ASK {
+export function run(input: string, width = 80): Line[] | null | typeof ASK {
+  cols = width;
   const trimmed = input.trim();
   if (!trimmed) return [];
 
@@ -433,7 +467,7 @@ export function run(input: string): Line[] | null | typeof ASK {
 
   // `ollama run`'s own commands, for whoever types them out of habit.
   if (name === "/clear" || name === "/bye") return null;
-  if (name === "/?" || name === "/help") return run("help") as Line[];
+  if (name === "/?" || name === "/help") return run("help", width) as Line[];
   if (name.startsWith("/")) {
     return [err(`Unknown command '${head}'. Type help for the list.`)];
   }
