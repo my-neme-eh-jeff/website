@@ -165,7 +165,12 @@ const MUTE_BTN_ID = "term-mute";
  * stickToBottom go through it. They cannot drift.
  * ---------------------------------------------------------------------------
  */
-export type Group = { kind: Line["kind"]; text: string; link?: Line["link"] };
+export type Group = {
+  kind: Line["kind"];
+  text: string;
+  link?: Line["link"];
+  live?: Line["live"];
+};
 
 export function renderGroups(items: Line[]): Group[] {
   const groups: Group[] = [];
@@ -175,7 +180,7 @@ export function renderGroups(items: Line[]): Group[] {
     if (l.kind === "art" && prev?.kind === "art") {
       prev.text += `\n${l.text}`;
     } else {
-      groups.push({ kind: l.kind, text: l.text, link: l.link });
+      groups.push({ kind: l.kind, text: l.text, link: l.link, live: l.live });
     }
   }
   return groups;
@@ -487,6 +492,8 @@ const shellDialog = () =>
 
 export const Terminal = component$(() => {
   const lines = useStore<{ items: Line[] }>({ items: [INTRO] });
+  /** The answer while it streams; see converseInner. */
+  const partial = useSignal("");
   const value = useSignal("");
   const view = useSignal<View>("open");
 
@@ -827,6 +834,13 @@ export const Terminal = component$(() => {
      */
     let answer: Line | null = null;
     let got = "";
+    /*
+     * The streaming text goes to `partial`, which the transcript renders as
+     * one bound text node, and reaches the store once, at the end. Written
+     * into the store per token, it re-ran the whole shell per token: 202
+     * renders for a 200-token answer, 811 ms of script at 4x CPU with 187
+     * lines on screen, against 74 ms this way (rc.3, 2026-10-14).
+     */
     const slow = setTimeout(() => {
       convo.note = "cold start, ~20s";
     }, SLOW_MS);
@@ -837,21 +851,26 @@ export const Terminal = component$(() => {
         if (!got) return;
         // The prompt asks for plain text and "-" lists; gpt-oss uses
         // asterisks for emphasis and bullets anyway.
-        const shown = got.replace(/^(\s*)\* /gm, "$1- ").replace(/\*/g, "");
+        partial.value = got.replace(/^(\s*)\* /gm, "$1- ").replace(/\*/g, "");
         if (answer) {
-          answer.text = shown;
           followIfPinned();
           return;
         }
         clearTimeout(slow);
         convo.note = "";
         clearBusy();
-        say([{ kind: "ai", text: shown }]);
+        say([{ kind: "ai", text: "", live: true }]);
         answer = lines.items[lines.items.length - 1]!;
       });
     } finally {
       clearTimeout(slow);
       convo.note = "";
+      // Before aria-busy drops, so the finished answer is announced once.
+      const done = answer as Line | null;
+      if (done) {
+        done.text = partial.value;
+        done.live = false;
+      }
       convo.streaming = false;
     }
 
@@ -1421,7 +1440,14 @@ export const Terminal = component$(() => {
               aria-busy={convo.streaming}
             >
               {renderGroups(lines.items).map((g, i) =>
-                g.kind === "art" ? (
+                g.live ? (
+                  <pre
+                    class={`m-0 wrap-anywhere whitespace-pre-wrap ${LINE_CLASS.ai}`}
+                    key={i}
+                  >
+                    {partial.value}
+                  </pre>
+                ) : g.kind === "art" ? (
                   /*
                    * A diagram, as ONE element rather than one per line.
                    *

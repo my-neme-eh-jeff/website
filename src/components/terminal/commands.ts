@@ -41,6 +41,8 @@ export type Line = {
   text: string;
   /** A link printed after the text, for paths linkify cannot see (`/privacy/`). */
   link?: { text: string; href: string };
+  /** The answer still streaming: its text is in a signal, not here. */
+  live?: boolean;
 };
 
 const out = (text: string): Line => ({ kind: "out", text });
