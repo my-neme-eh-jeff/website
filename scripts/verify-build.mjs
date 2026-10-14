@@ -380,6 +380,23 @@ check("every referenced font file exists and is a real woff2", () => {
   return `${new Set(refs).size} files`;
 });
 
+check("the stylesheet is inlined into every page, not linked", () => {
+  for (const page of [...PAGES, "404.html"]) {
+    const html = read("dist", page);
+    assert(
+      !/<link[^>]*rel="stylesheet"/.test(html),
+      `${page} links its stylesheet: the CSS has outgrown ` +
+        "inlineStylesUpToBytes in vite.config.ts. Raise the limit, or accept " +
+        "the render-blocking request and update this check and the a11y-ui skill.",
+    );
+    assert(
+      /<style[^>]*data-src="\/assets\/[^"]+-style\.css"/.test(html),
+      `${page} has neither a linked nor an inlined stylesheet.`,
+    );
+  }
+  return `${PAGES.length + 1} pages`;
+});
+
 check("every class in the output has a CSS rule", () => {
   /*
    * Tailwind does not error on a class it does not recognise -- it emits
