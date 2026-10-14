@@ -22,14 +22,20 @@ import { profile } from "~/content/profile";
 export const CircledChoice = component$<{ label?: string }>(
   ({ label = "say hi" }) => {
     const open = useSignal(false);
+    const button = useSignal<HTMLButtonElement>();
     const id = useId();
     const panelId = `choice-${id}`;
 
-    // Escape is the expected way out of any transient overlay.
+    // Escape is the expected way out of any transient overlay. Hiding the
+    // panel under a focused link would drop focus on <body>, so hand it back
+    // to the button first.
     useOnDocument(
       "keydown",
       $((e: Event) => {
-        if ((e as KeyboardEvent).key === "Escape") open.value = false;
+        if ((e as KeyboardEvent).key !== "Escape" || !open.value) return;
+        if (document.getElementById(panelId)?.contains(document.activeElement))
+          button.value?.focus();
+        open.value = false;
       }),
       { passive: true },
     );
@@ -53,6 +59,7 @@ export const CircledChoice = component$<{ label?: string }>(
     return (
       <div class="relative inline-block" data-circled-choice>
         <button
+          ref={button}
           type="button"
           aria-expanded={open.value}
           aria-controls={panelId}
