@@ -34,8 +34,10 @@ export type Line = {
    * the meaning is carried in the `detail` prose that accompanies it.
    *
    * `ai` is a model's answer. It differs from `out` in what may become a link.
+   *
+   * `meta` is the caption under an answer: where it ran and how fast.
    */
-  kind: "in" | "out" | "err" | "hint" | "art" | "ai";
+  kind: "in" | "out" | "err" | "hint" | "art" | "ai" | "meta";
   text: string;
 };
 
@@ -230,6 +232,8 @@ type Command = {
   usage: string;
   summary: string;
   run: (args: string[]) => Line[];
+  /** Without this, `help me with…` is a question, not `help`. */
+  takesArgs?: boolean;
 };
 
 const KUBECTL = new Set(["k", "kubectl"]);
@@ -323,7 +327,7 @@ function registry(): Command[] {
           out(`  ${a.padEnd(6)} k ${full.join(" ")}`),
         ),
         out(""),
-        hint("Start with: kgp"),
+        hint("Start with: kgp, or ask what he is working on."),
       ],
     },
     {
@@ -331,6 +335,7 @@ function registry(): Command[] {
       usage: "k get|describe <resource>",
       summary: "Query the content, kubectl-style.",
       run: kubectl,
+      takesArgs: true,
     },
     {
       name: "whoami",
@@ -346,15 +351,14 @@ function registry(): Command[] {
     },
     {
       name: "chat",
-      usage: "chat",
-      summary: "Ask a model about Aman. It runs on his desk.",
-      // Handled by the shell, like clear. Listed so `help` shows it.
-      run: () => [],
+      usage: "<any question>",
+      summary: "Answered by a model running on Aman's desk.",
+      run: () => ABOUT_CHAT,
     },
     {
       name: "clear",
       usage: "clear",
-      summary: "Clear the screen.",
+      summary: "Start over: clears the screen and the conversation.",
       // The buffer belongs to the shell; declared here so `help` lists it and
       // so it never falls through to "command not found".
       run: () => [],
@@ -362,26 +366,76 @@ function registry(): Command[] {
   ];
 }
 
-/** Returned by `run` for `chat`: the shell switches into chat mode. */
-export const CHAT = "chat";
+const ABOUT_CHAT: Line[] = [
+  out("Talking to a model running on a GPU on Aman's desk, at home."),
+  out("It answers from his CV and can be wrong."),
+  hint("There is no mode to enter. Just type a question."),
+];
+
+/**
+ * Returned by `run` when the line is meant for the model rather than the
+ * shell. The shell owns the conversation, so it does the asking.
+ */
+export const ASK = "ask";
+
+/**
+ * Shell verbs a visitor types to poke at the terminal. As the first word of a
+ * line they mean "command not found", not a question for the GPU.
+ */
+const SHELL_VERBS = new Set([
+  "cat",
+  "cd",
+  "curl",
+  "echo",
+  "exit",
+  "git",
+  "grep",
+  "less",
+  "ls",
+  "man",
+  "mkdir",
+  "nano",
+  "npm",
+  "ps",
+  "pwd",
+  "rm",
+  "ssh",
+  "sudo",
+  "top",
+  "touch",
+  "vi",
+  "vim",
+]);
+
+/** One-word lines that are still conversation. */
+const GREETINGS = new Set(["hi", "hello", "hey", "yo", "thanks", "thx"]);
 
 /**
  * Resolve a raw input line to output.
  *
- * Returns `null` for `clear` and `CHAT` for `chat`, which the shell handles —
- * the registry has no access to the buffer and should not pretend otherwise.
+ * Returns `null` for `clear` and `ASK` for anything that reads as a question,
+ * both of which the shell handles: the registry has no access to the buffer
+ * or the conversation and should not pretend otherwise.
  */
-export function run(input: string): Line[] | null | typeof CHAT {
+export function run(input: string): Line[] | null | typeof ASK {
   const trimmed = input.trim();
   if (!trimmed) return [];
 
   const [head, ...rest] = trimmed.split(/\s+/);
   const name = (head ?? "").toLowerCase();
 
-  if (name === "clear") return null;
-  if (name === "chat") return CHAT;
+  // `ollama run`'s own commands, for whoever types them out of habit.
+  if (name === "/clear" || name === "/bye") return null;
+  if (name === "/?" || name === "/help") return run("help") as Line[];
+  if (name.startsWith("/")) {
+    return [err(`Unknown command '${head}'. Type help for the list.`)];
+  }
+
+  if (name === "clear" && rest.length === 0) return null;
   if (name === "ollama") {
-    if (rest[0] === "run" && rest[1]?.toLowerCase() === "aman") return CHAT;
+    if (rest[0] === "run" && rest[1]?.toLowerCase() === "aman") {
+      return ABOUT_CHAT;
+    }
     // What the real client says for a model it has never pulled.
     return [err("Error: pull model manifest: file does not exist")];
   }
@@ -392,14 +446,17 @@ export function run(input: string): Line[] | null | typeof CHAT {
   if (alias) return kubectl([...alias, ...rest]);
 
   const cmd = registry().find((c) => c.name === name);
-  if (cmd) return cmd.run(rest);
+  if (cmd && (rest.length === 0 || cmd.takesArgs)) return cmd.run(rest);
 
-  const question = trimmed.endsWith("?") || rest.length >= 2;
+  const word = name.replace(/[!.,]+$/, "");
+  const question =
+    trimmed.endsWith("?") ||
+    (rest.length === 0 ? GREETINGS.has(word) : !SHELL_VERBS.has(name));
+  if (question) return ASK;
+
   return [
     err(`${name}: command not found`),
-    question
-      ? hint("Asking a question? Type `chat` to ask the model.")
-      : out("Type `help` for the list."),
+    hint("To ask about Aman, use a few words: `what is he working on?`"),
   ];
 }
 

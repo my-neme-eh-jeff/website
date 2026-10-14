@@ -938,55 +938,52 @@ dialog[data-shell-dialog]::backdrop {
 }
 
 /*
- * The shell's busy spinner.
+ * The shell's busy line: three dots filling in, on their own row where the
+ * output is about to land.
  *
  * `[data-busy]` is set by a sync$ handler on keydown rather than by a signal,
  * because the wait it covers is the one before any Qwik handler has been
  * fetched. See keyGuard in terminal.tsx.
  *
- * ASCII frames, not the braille spinner every CLI uses. Braille lives at
- * U+2800-28FF, and the @font-face blocks above declare Fira Mono only for
- * latin and latin-ext — so every frame would fall out to whatever system mono
- * the visitor has, at a different weight and width, jittering on every tick.
- *
- * Animating `content` is a discrete animation and degrades to the static "|"
- * where it is unsupported, which still reads as a cursor sitting there.
+ * Middle dots (U+00B7), not braille or a block cursor: the @font-face blocks
+ * above declare Fira Mono only for latin and latin-ext, and anything outside
+ * them falls out to whatever system mono the visitor has, jittering on every
+ * tick. `white-space: pre` keeps the trailing spaces, so the width never
+ * changes between frames.
  */
-.term-spinner {
+.term-pending {
   display: none;
 }
 
-[data-shell][data-busy] .term-spinner {
-  display: inline-block;
+[data-shell][data-busy] .term-pending {
+  display: flex;
 }
 
-.term-spinner::after {
-  content: "|";
-  animation: term-spin 320ms steps(1, end) infinite;
+.term-dots::after {
+  content: "\00b7  ";
+  white-space: pre;
+  animation: term-dots 1.2s steps(1, end) infinite;
 }
 
-@keyframes term-spin {
+@keyframes term-dots {
   0% {
-    content: "|";
+    content: "\00b7  ";
   }
-  25% {
-    content: "/";
+  33% {
+    content: "\00b7\00b7 ";
   }
-  50% {
-    content: "-";
-  }
-  75% {
-    content: "\\";
+  66% {
+    content: "\00b7\00b7\00b7";
   }
 }
 
 /*
- * The global reduce block only shortens durations, which would spin this at
+ * The global reduce block only shortens durations, which would cycle this at
  * 0.01ms per frame -- strobing, i.e. worse than the thing it is mitigating.
  */
 @media (prefers-reduced-motion: reduce) {
-  .term-spinner::after {
-    content: "\2026";
+  .term-dots::after {
+    content: "\00b7\00b7\00b7";
     animation: none;
   }
 }

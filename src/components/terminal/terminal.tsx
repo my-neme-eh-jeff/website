@@ -2,7 +2,7 @@ import { component$, useSignal, useStore, $, sync$ } from "@qwik.dev/core";
 import { haptic } from "./haptics";
 import { sound, isMuted, setMuted, type Tone } from "./sounds";
 import { load as loadHistory, save as saveHistory } from "./history";
-import { run, completions, CHAT, type Line } from "./commands";
+import { run, completions, ASK, type Line } from "./commands";
 import { abortChat, sendChat, type Outcome, type Turn } from "./chat";
 import { KNOWN_HREFS } from "~/content/chat";
 
@@ -36,37 +36,24 @@ const BANNER: Line[] = [
   { kind: "out", text: "amannambisan.com — interactive shell" },
   {
     kind: "hint",
-    text: "`help` for commands, or start with `k get projects`.",
+    text: "Ask anything about Aman's work, or type `help` for commands.",
   },
 ];
 
 const PROMPT = "~ $";
 
-/** `ollama run`'s prompt, because `chat` is that client's grammar. */
-const CHAT_PROMPT = ">>>";
-
-const CHAT_BANNER: Line[] = [
-  {
-    kind: "out",
-    text: "Talking to a model running on a GPU on Aman's desk, at home.",
-  },
-  {
-    kind: "out",
-    text: "It answers from his CV and can be wrong. /bye to leave, /? for help.",
-  },
-];
-
-const CHAT_HELP: Line[] = [
-  { kind: "out", text: "Available Commands:" },
-  { kind: "out", text: "  /clear   Clear session context" },
-  { kind: "out", text: "  /bye     Exit" },
-  { kind: "out", text: "  /?       Help for a command" },
-  { kind: "out", text: "" },
-  { kind: "out", text: "Ctrl+C stops an answer." },
+/** Shown under the shell until it is closed, so nobody has to guess. */
+const SUGGESTIONS = [
+  "What is he working on?",
+  "What's his stack?",
+  "How does this chat work?",
 ];
 
 /** Matches the Worker's cap, so the visitor hears it here first. */
 const MAX_CHAT_CHARS = 800;
+
+/** After this long with no answer, say why: the model is probably loading. */
+const SLOW_MS = 4_000;
 
 function chatError(code: string): Line[] {
   if (code === "rate_limited") {
@@ -82,16 +69,19 @@ function chatError(code: string): Line[] {
       { kind: "err", text: "The model on Aman's desk is offline right now." },
       {
         kind: "hint",
-        text: "The rest of the shell still works: `/bye`, then `k get projects`.",
+        text: "The rest of the shell still works: try `help` or `k get projects`.",
       },
     ];
   }
   return [{ kind: "err", text: "The model could not answer that. Try again." }];
 }
 
-/** One dim line of provenance under an answer: where it ran, how fast. */
+/**
+ * The caption under an answer: where it ran, that it can be wrong, how fast.
+ * Provenance first, because it is the disclosure; the numbers are garnish.
+ */
 function statsLine(o: Extract<Outcome, { ok: true }>): string {
-  const parts: string[] = [];
+  const parts = [`${o.model || "model"} on Aman's desk`, "can be wrong"];
   if (o.stats && o.stats.genMs > 0) {
     parts.push(`${(o.stats.tokens / (o.stats.genMs / 1000)).toFixed(1)} tok/s`);
   }
@@ -101,8 +91,7 @@ function statsLine(o: Extract<Outcome, { ok: true }>): string {
   if (o.stats && o.stats.loadMs > 1000) {
     parts.push(`cold start ${(o.stats.loadMs / 1000).toFixed(1)}s`);
   }
-  parts.push(`${o.model || "model"} on Aman's desk`);
-  return `— ${parts.join(" · ")}`;
+  return parts.join(" · ");
 }
 
 /** Styling per line kind, so the render stays a lookup rather than a branch. */
@@ -118,6 +107,7 @@ const LINE_CLASS: Record<Line["kind"], string> = {
   // is the one kind that scrolls its container instead.
   art: "text-muted/85 whitespace-pre overflow-x-auto",
   ai: "text-text",
+  meta: "text-muted text-[0.6875rem] leading-snug",
 };
 
 /**
@@ -512,14 +502,15 @@ export const Terminal = component$(() => {
   const tab = useStore({ base: "", last: "", i: -1, armed: false });
 
   /**
-   * Chat mode. `turns` is the conversation sent with each question; the
-   * server keeps nothing. Declared above every QRL that reads it — see the
-   * note on cmdHistory for why the order matters.
+   * The conversation. `turns` is sent with each question; the server keeps
+   * nothing. `note` explains a long wait while it is happening. Declared
+   * above every QRL that reads it — see the note on cmdHistory for why the
+   * order matters.
    */
-  const convo = useStore<{ on: boolean; streaming: boolean; turns: Turn[] }>({
-    on: false,
+  const convo = useStore<{ streaming: boolean; turns: Turn[]; note: string }>({
     streaming: false,
     turns: [],
+    note: "",
   });
 
   /*
@@ -742,7 +733,6 @@ export const Terminal = component$(() => {
   const toggleClose = $(async () => {
     stirred.value = true;
     if (view.value === "closed") {
-      convo.on = false;
       convo.turns = [];
       lines.items = [...BANNER];
       cmdHistory.past = [];
@@ -770,34 +760,13 @@ export const Terminal = component$(() => {
    * would mean two things racing to own the same key.
    */
 
-  /** One chat turn: slash commands, or a question streamed into an `ai` line. */
-  const converseInner = $(async (raw: string) => {
-    const text = raw.trim();
-    if (!text) return;
+  /** One question, streamed into an `ai` line created by the first token. */
+  const converseInner = $(async (text: string) => {
     const say = (more: Line[]) => {
       lines.items = [...lines.items, ...more];
       stickToBottom(renderGroups(lines.items).length);
     };
 
-    if (text === "/bye") {
-      convo.on = false;
-      convo.turns = [];
-      await feedback("chrome");
-      return;
-    }
-    if (text === "/?" || text === "/help") return say(CHAT_HELP);
-    if (text === "/clear") {
-      convo.turns = [];
-      return say([{ kind: "out", text: "Cleared session context" }]);
-    }
-    if (text.startsWith("/")) {
-      return say([
-        {
-          kind: "err",
-          text: `Unknown command '${text.split(/\s/)[0]}'. Type /? for help`,
-        },
-      ]);
-    }
     if (text.length > MAX_CHAT_CHARS) {
       return say([
         {
@@ -812,57 +781,74 @@ export const Terminal = component$(() => {
       { role: "user" as const, content: text },
     ].slice(-8);
     convo.streaming = true;
-    say([{ kind: "ai", text: "" }]);
-    const answer = lines.items[lines.items.length - 1]!;
     await feedback("enter");
 
+    /*
+     * No empty answer line up front: it would sit as a blank row between the
+     * question and the pending dots. The line appears with its first word.
+     */
+    let answer: Line | null = null;
     let got = "";
+    const slow = setTimeout(() => {
+      convo.note =
+        "Waking the model on Aman's desk. After a quiet spell the first answer takes about 20 seconds.";
+    }, SLOW_MS);
     let outcome: Outcome;
     try {
       outcome = await sendChat(turns, (t) => {
-        clearBusy();
-        followIfPinned();
         got = (got + t).trimStart();
-        // The prompt asks for plain text and gpt-oss bolds anyway.
-        answer.text = got.replace(/\*\*/g, "");
+        if (!got) return;
+        // The prompt asks for plain text and "-" lists; gpt-oss uses
+        // asterisks for emphasis and bullets anyway.
+        const shown = got.replace(/^(\s*)\* /gm, "$1- ").replace(/\*/g, "");
+        if (answer) {
+          answer.text = shown;
+          followIfPinned();
+          return;
+        }
+        clearTimeout(slow);
+        convo.note = "";
+        clearBusy();
+        say([{ kind: "ai", text: shown }]);
+        answer = lines.items[lines.items.length - 1]!;
       });
     } finally {
+      clearTimeout(slow);
+      convo.note = "";
       convo.streaming = false;
     }
 
-    if (!got) lines.items = lines.items.filter((l) => l !== answer);
     if (outcome.ok) {
       convo.turns = [...turns, { role: "assistant" as const, content: got }];
-      say([{ kind: "out", text: statsLine(outcome) }]);
+      say([{ kind: "meta", text: statsLine(outcome) }]);
     } else if (outcome.code !== "aborted") {
       say(chatError(outcome.code));
       await feedback("error");
-    } else {
-      stickToBottom(renderGroups(lines.items).length);
+    } else if (got) {
+      // Otherwise a half answer reads as the model losing its train of thought.
+      say([{ kind: "meta", text: "stopped" }]);
     }
   });
 
-  const converse = $(async (raw: string) => {
+  const converse = $(async (text: string) => {
     try {
-      await converseInner(raw);
+      await converseInner(text);
     } finally {
-      // Every path out, including /bye and the other early returns.
+      // Every path out, including the early returns and a throw.
       clearBusy();
     }
   });
 
-  const submit = $(async () => {
-    // One answer at a time. What they typed stays in the field.
-    if (convo.streaming) return;
-    // finally, not a tail call: every early return has to clear the spinner,
-    // and a throw must not leave it spinning forever.
+  /**
+   * Run one line, typed or picked from the suggestions. The shell decides per
+   * line whether it is a command or a question; there is no mode to enter.
+   */
+  const runLine = $(async (raw: string) => {
+    // finally, not a tail call: every early return has to clear the busy
+    // dots, and a throw must not leave them running forever.
     let handedOff = false;
     try {
-      const raw = value.value;
-      value.value = "";
-
-      const shown = convo.on ? CHAT_PROMPT : PROMPT;
-      lines.items = [...lines.items, { kind: "in", text: `${shown} ${raw}` }];
+      lines.items = [...lines.items, { kind: "in", text: `${PROMPT} ${raw}` }];
       if (raw.trim()) {
         // Before the push, never after — see ensureHistory.
         await ensureHistory();
@@ -871,30 +857,23 @@ export const Terminal = component$(() => {
         await saveHistory(cmdHistory.past);
       }
 
-      if (convo.on) {
+      const result = run(raw);
+      if (result === ASK) {
         /*
          * NOT awaited. Qwik runs an element's handlers one at a time, so
          * awaiting the stream here held every later keydown — Ctrl+C
          * included — until the answer had finished. converse clears the
-         * spinner itself.
+         * busy dots itself.
          */
         handedOff = true;
-        void converse(raw);
+        void converse(raw.trim());
         return;
       }
-
-      const result = run(raw);
       if (result === null) {
-        // `clear` — the buffer belongs to the shell, so it is handled here.
+        // `clear`. What is on screen is what the model knows, so the
+        // conversation goes with the buffer.
         lines.items = [];
-        await feedback("enter");
-        return;
-      }
-      if (result === CHAT) {
-        convo.on = true;
         convo.turns = [];
-        lines.items = [...lines.items, ...CHAT_BANNER];
-        stickToBottom(renderGroups(lines.items).length);
         await feedback("enter");
         return;
       }
@@ -905,6 +884,26 @@ export const Terminal = component$(() => {
     } finally {
       if (!handedOff) clearBusy();
     }
+  });
+
+  const submit = $(async () => {
+    // One answer at a time. What they typed stays in the field.
+    if (convo.streaming) return;
+    const raw = value.value;
+    value.value = "";
+    await runLine(raw);
+  });
+
+  /**
+   * A suggestion is asked exactly as if it had been typed. The row stays put
+   * afterwards, so the button keeps focus rather than vanishing from under it.
+   */
+  const suggest = $(async (q: string) => {
+    if (convo.streaming) {
+      clearBusy();
+      return;
+    }
+    await runLine(q);
   });
 
   /**
@@ -946,7 +945,9 @@ export const Terminal = component$(() => {
     if (e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
       const k = e.key.toLowerCase();
       if (k === "l") {
+        // Same rule as `clear`: the conversation goes with the screen.
         lines.items = [];
+        convo.turns = [];
         await feedback("enter");
         return;
       }
@@ -964,10 +965,7 @@ export const Terminal = component$(() => {
         }
         lines.items = [
           ...lines.items,
-          {
-            kind: "in",
-            text: `${convo.on ? CHAT_PROMPT : PROMPT} ${value.value}^C`,
-          },
+          { kind: "in", text: `${PROMPT} ${value.value}^C` },
         ];
         value.value = "";
         cmdHistory.cursor = -1;
@@ -1008,8 +1006,7 @@ export const Terminal = component$(() => {
      *      through them on each further Tab.
      */
     if (e.key === "Tab") {
-      // Completions are shell commands; in chat they would be noise.
-      if (e.shiftKey || convo.on) return;
+      if (e.shiftKey) return;
 
       const continuing = tab.armed && value.value === tab.last;
       const base = continuing ? tab.base : value.value.trimStart();
@@ -1127,7 +1124,7 @@ export const Terminal = component$(() => {
      *
      * A sync$ body is serialised into the HTML and run straight from
      * qwikloader with no fetch and no resume, so it paints in the same tick as
-     * the keypress. It cannot touch signals, hence a DOM attribute; submit()
+     * the keypress. It cannot touch signals, hence a DOM attribute; runLine()
      * clears it in a finally.
      *
      * Preloading the bundles would not have fixed this. Measured on the built
@@ -1154,6 +1151,11 @@ export const Terminal = component$(() => {
     if (k === "c" && !window.getSelection()?.toString()) {
       e.preventDefault();
     }
+  });
+
+  /** keyGuard's busy mark, for a suggestion clicked instead of Enter. */
+  const clickGuard = sync$((_: MouseEvent, el: HTMLElement) => {
+    el.closest("[data-shell]")?.setAttribute("data-busy", "");
   });
 
   const maxed = view.value === "max";
@@ -1456,9 +1458,26 @@ export const Terminal = component$(() => {
               )}
             </div>
 
+            {/*
+             * The busy line, where the output is about to land. CSS shows it
+             * off `[data-busy]`, which keyGuard sets in the same tick as the
+             * keypress — see there for why that cannot be a signal. Not a
+             * <pre>: stickToBottom counts those.
+             *
+             * The note is the one part that speaks. It lives outside the live
+             * region above, which is aria-busy while an answer streams and
+             * would hold the announcement until the wait was over.
+             */}
+            <div class="term-pending text-muted items-baseline gap-3">
+              <span class="term-dots" aria-hidden="true" />
+              <span role="status" class="text-[0.6875rem] leading-snug">
+                {convo.note}
+              </span>
+            </div>
+
             <div class="mt-1 flex items-center gap-2">
               <span class="text-accent shrink-0 font-mono text-[0.8125rem]">
-                {convo.on ? CHAT_PROMPT : PROMPT}
+                {PROMPT}
               </span>
               <input
                 id="term-input"
@@ -1475,7 +1494,13 @@ export const Terminal = component$(() => {
                  * measurement `pnpm run verify` structurally cannot make, since
                  * it compares --sem-* against --sem-bg only.
                  */
-                placeholder={convo.on ? "Send a message (/? for help)" : "help"}
+                /*
+                 * The first thing a visitor reads, before any JavaScript. At
+                 * most 22 characters: it is 16px on a phone (see below), and
+                 * a 320px screen cut the 28-character version off mid-word.
+                 * The banner says `help`, so this does not have to.
+                 */
+                placeholder="Ask about Aman's work"
                 /*
                  * 16px on phones, 13px from `sm` up, and that is not a taste
                  * call. iOS Safari zooms the page whenever a focused input is
@@ -1495,18 +1520,38 @@ export const Terminal = component$(() => {
                  * the lazily-fetched async handler below. */
                 onKeyDown$={[keyGuard, onKeyDown]}
               />
-              {/*
-               * After the input, not before. It is a flex item, so appearing
-               * before the input would shove the text the visitor just typed
-               * sideways at the exact moment they are waiting on it.
-               */}
-              <span
-                class="term-spinner text-accent shrink-0 font-mono text-[0.8125rem]"
-                aria-hidden="true"
-              />
             </div>
           </div>
         </label>
+      )}
+
+      {/*
+       * Example questions, so nobody has to guess that the shell takes plain
+       * English. Server-rendered, so they are there before any JavaScript.
+       *
+       * Outside the <label>: a button is labelable, and a label may not
+       * contain a labelable element other than its own control.
+       */}
+      {(view.value === "open" || maxed) && (
+        <div
+          role="group"
+          aria-labelledby="term-suggest"
+          class="border-line/60 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t px-4 py-2.5"
+        >
+          <span id="term-suggest" class="text-muted font-mono text-[0.6875rem]">
+            Try asking
+          </span>
+          {SUGGESTIONS.map((q) => (
+            <button
+              type="button"
+              key={q}
+              onClick$={[clickGuard, $(() => suggest(q))]}
+              class="border-line text-muted hover:text-text hover:border-muted min-h-6 rounded-full border px-2.5 font-mono text-[0.6875rem] transition-colors duration-150"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

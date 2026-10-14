@@ -8,7 +8,7 @@ import {
 } from "./profile";
 
 /**
- * What the shell's `chat` model is told, and which links it may print.
+ * What the shell's model is told, and which links it may print.
  *
  * Both are derived from profile.ts at build time, so the model cannot know
  * anything the pages do not say, and a profile edit reaches it on the next

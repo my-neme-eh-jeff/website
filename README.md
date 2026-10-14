@@ -60,9 +60,9 @@ one Worker script, `src/worker/index.ts`, runs only for `/api/*` via
 and bill each against the 100,000/day free tier. `pnpm run verify` fails the
 build if that scoping is lost.
 
-`POST /api/chat` relays the shell's `chat` mode to Ollama on Aman's desk,
-reached through a Cloudflare Tunnel and a Workers VPC binding, so the desk
-has no public hostname. When the desk is off, the shell says so.
+`POST /api/chat` relays questions typed into the shell to Ollama on
+Aman's desk, reached through a Cloudflare Tunnel and a Workers VPC binding, so
+the desk has no public hostname. When the desk is off, the shell says so.
 
 ### Styling: Tailwind v4, and why not a component library
 

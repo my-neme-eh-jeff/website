@@ -37,7 +37,7 @@ That rule covers facts, which carry numbers. Two things it kept missing:
 | Visual design direction for NEW surfaces                | `.claude/skills/frontend-design/` (upstream)       |
 | Favicon / og:image generation                           | `scripts/make-icons.mjs` (run it, don't hand-edit) |
 | Every fact the pages render                             | `src/content/profile.ts` (and its comments)        |
-| What the `chat` model is told, which links it may print | `src/content/chat.ts`                              |
+| What the shell's model is told, what links it may print | `src/content/chat.ts`                              |
 | Meta tags + JSON-LD generation                          | `src/content/seo.ts`                               |
 | Hosting + free-tier config, with rationale              | `wrangler.jsonc` comments                          |
 | Cache + security headers, with rationale                | `public/_headers` comments                         |

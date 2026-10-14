@@ -45,7 +45,7 @@ export default component$(() => {
       <section class="pt-8">
         <div class="mb-3 flex items-baseline justify-between gap-4">
           <p class="eyebrow">Shell</p>
-          <span class="text-muted font-mono text-xs">try `help`</span>
+          <span class="text-muted font-mono text-xs">ask it anything</span>
         </div>
         <Terminal />
       </section>

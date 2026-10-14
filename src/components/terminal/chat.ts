@@ -1,5 +1,6 @@
 /**
- * The browser half of `chat`: POST /api/chat, read the NDJSON events back.
+ * The browser half of the shell's questions: POST /api/chat, then read the
+ * NDJSON events back.
  *
  * Imported only from terminal handlers, so like commands.ts it downloads the
  * first time someone uses it. The in-flight request lives at module scope
