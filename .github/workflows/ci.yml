@@ -74,7 +74,6 @@ jobs:
       # Performance budget against the build just produced. `--local` because it
       # must gate THIS build, not whatever is deployed; its floors are relaxed
       # accordingly, since the local server has no compression or cache headers.
-      # It writes nothing -- src/content/audit.json is refreshed deliberately
-      # with `pnpm run audit`, because a CI job that commits would trigger itself.
+      # It writes nothing; the site does not publish its scores.
       - name: Lighthouse budget
         run: node scripts/audit.mjs --check --local

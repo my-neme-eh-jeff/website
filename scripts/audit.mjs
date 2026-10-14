@@ -1,9 +1,10 @@
 /**
  * Lighthouse audit. Run: `pnpm run audit`
  *
- * Runs Lighthouse against the LIVE site and writes the four category scores to
- * src/content/audit.json, which the footer renders. Pass --local to measure a
- * freshly built ./dist instead.
+ * Runs Lighthouse against the LIVE site and saves the four category scores to
+ * tmp/audit.json (gitignored). They are for our own sanity, not for display:
+ * the site no longer publishes them. Pass --local to measure a freshly built
+ * ./dist instead.
  *
  * ---------------------------------------------------------------------------
  * WHY IT RUNS THREE TIMES AND TAKES THE MEDIAN
@@ -50,28 +51,21 @@
  * available for before/after comparison on an unpushed change, but it prints a
  * warning, because its absolute numbers are not comparable to production.
  *
- * WHY IT IS COMMITTED RATHER THAN GENERATED AT DEPLOY TIME
- *
- * Deploys run through Cloudflare Workers Builds, which has no Chrome. Having
- * CI generate the file and commit it back would mean a push triggered by a
- * push. So this is a deliberate manual step, like `pnpm run icons` -- the
- * scores only move when the site meaningfully changes.
- *
- * CI still runs Lighthouse, but as a REGRESSION GATE (see ci.yml): it fails
+ * CI runs Lighthouse, but as a REGRESSION GATE (see ci.yml): it fails
  * the build if any category drops below the threshold, without writing
  * anything.
  * ---------------------------------------------------------------------------
  */
 
 import { execFileSync, spawn } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { loadavg, cpus } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 8175;
-const OUT = join(ROOT, "src", "content", "audit.json");
+const OUT = join(ROOT, "tmp", "audit.json");
 
 /** Categories in the order Chrome's own report shows them. */
 const CATEGORIES = ["performance", "accessibility", "best-practices", "seo"];
@@ -221,7 +215,7 @@ async function main() {
       target: LOCAL ? "local" : "production",
       lighthouseVersion: lhr.lighthouseVersion,
       formFactor: lhr.configSettings.formFactor,
-      // Recorded so the footer's number is traceable to how it was obtained.
+      // Recorded so the number is traceable to how it was obtained.
       runs: RUNS,
       scores,
     };
@@ -239,7 +233,7 @@ async function main() {
      * The header above already says the metric "moves with CPU contention on
      * the measuring machine, not with the site". This is that sentence made
      * executable: if the runs disagree by more than SPREAD_LIMIT, the sample
-     * is measuring the machine and must not become the footer's number.
+     * is measuring the machine, not the site.
      *
      * 3 points, because a 1-2 point wobble is normal at the rounding boundary
      * (FCP and Speed Index both sit near 0.99 here, so the category legitimately
@@ -252,7 +246,7 @@ async function main() {
     const unstable = CATEGORIES.filter((k) => spread[k] > SPREAD_LIMIT);
 
     if (LOCAL) {
-      console.log("--local run: not written to audit.json.");
+      console.log("--local run: not written to tmp/audit.json.");
     } else if (unstable.length) {
       const load = loadavg()
         .map((n) => n.toFixed(2))
@@ -263,10 +257,11 @@ async function main() {
           .join(", ")} — above the limit of ${SPREAD_LIMIT}.\n` +
           `Load average ${load} on ${cpus().length} cores. These runs measured ` +
           `this machine as much as the site.\nRe-run when it is quiet; ` +
-          `audit.json still holds the last stable measurement.`,
+          `tmp/audit.json still holds the last stable measurement.`,
       );
       process.exitCode = 1;
     } else {
+      mkdirSync(dirname(OUT), { recursive: true });
       writeFileSync(OUT, JSON.stringify(payload, null, 2) + "\n");
     }
 
@@ -283,7 +278,7 @@ async function main() {
     // the file — the exact kind of confident-but-wrong output this script's
     // guards exist to prevent.
     if (!LOCAL && !unstable.length) {
-      console.log(`\nwrote src/content/audit.json (commit ${commit})`);
+      console.log(`\nwrote tmp/audit.json (commit ${commit})`);
     }
   } finally {
     await chrome.kill();

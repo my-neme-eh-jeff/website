@@ -27,7 +27,7 @@ Then:
     pnpm start        # dev server
     pnpm run build    # client + SSG + type check + lint
     pnpm run verify   # assert build invariants against dist/ (after build)
-    pnpm run audit    # Lighthouse against production -> src/content/audit.json
+    pnpm run audit    # Lighthouse against production -> tmp/audit.json (not published)
     pnpm run preview  # serve the built output
     pnpm run fmt      # prettier, incl. Tailwind class sorting
     pnpm run icons    # regenerate favicon/touch icon from one geometry source
@@ -136,7 +136,7 @@ request, which is exactly what the point above avoids.
     src/
       global.css                design tokens, theme swap, shared patterns
       content/profile.ts        ALL site content lives here
-      components/               terminal, score-ring, circled-choice, copy-email
+      components/               terminal, circled-choice, copy-email, blog
       routes/                   layout + index + resume + blog + 404
 
 ### Content

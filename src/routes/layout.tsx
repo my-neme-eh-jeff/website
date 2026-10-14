@@ -1,6 +1,5 @@
 import { component$, Slot } from "@qwik.dev/core";
 import { Link, useLocation } from "@qwik.dev/router";
-import { ScoreRow } from "~/components/score-ring/score-ring";
 import { profile } from "~/content/profile";
 
 const buildYear = new Date().getFullYear();
@@ -108,9 +107,6 @@ export default component$(() => {
         </main>
 
         <footer class="text-muted border-line/50 border-t py-8 text-xs">
-          <div class="mb-6">
-            <ScoreRow />
-          </div>
           <div class="flex flex-wrap gap-4">
             <span>
               © {buildYear} {profile.name}
