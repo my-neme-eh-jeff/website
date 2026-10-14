@@ -19,7 +19,7 @@ export default createRenderer((opts) => {
        *   grep -n -A3 'const requestPreload' node_modules/@qwik.dev/core/dist/core.mjs
        *
        * `node scripts/measure-nav.mjs --rtt 40` (and 150): headless Chrome,
-       * cold cache, / -> Writing, median of 3, rc.3, 2026-10-14. Brotli is
+       * cold cache, / -> /blog/, median of 3, rc.3, 2026-10-14. Brotli is
        * computed from the files, since python's http.server does not compress.
        *
        *   preloader   JS on / before a click     click -> transition ready
@@ -27,10 +27,19 @@ export default createRenderer((opts) => {
        *   false        6 req,  44.9 kB brotli       397 ms       1277 ms
        *   on          48 req,  72.6 kB brotli        88 ms        207 ms
        *
-       * The price is that middle column: +42 requests and +27.7 kB, fetched
-       * after the load event and an idle callback rather than before first
-       * paint (`ssrPreloads: 0`, also Qwik's default, keeps it that way).
-       * It includes the shell's handlers, so the first keystroke there no
+       * The price is that middle column, +42 requests and +27.7 kB, and a
+       * little first paint. All but two of the requests wait for the load
+       * event and an idle callback. Those two, the preloader module and the
+       * bundle graph (3.6 kB brotli), the server always puts in <head> ahead
+       * of the stylesheet, whatever `ssrPreloads` says (0 is the default):
+       *   grep -n -A50 'var preloaderPre' node_modules/@qwik.dev/core/dist/server.mjs
+       * On a throttled phone profile (4x CPU, 150 ms RTT, 1.6 Mbps, HTTP/2,
+       * brotli; median of 5, run twice; 81bbc6b, 2026-10-14) first paint went
+       * from ~598 to ~630 ms while the click went from ~1345 to ~260 ms.
+       * Deleting the two links from the built HTML is no way out: the page
+       * then stops resuming, and its links no longer navigate.
+       *
+       * The 42 include the shell's handlers, so the first keystroke there no
        * longer waits on the network. On /blog/ the same figure is larger,
        * because the post link it prefetches carries the interactive figures.
        * To trade some speed back for bytes, `prefetchBundles="intent"` on a

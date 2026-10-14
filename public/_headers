@@ -4,8 +4,10 @@
 # Workers defaults every asset to `max-age=0, must-revalidate`, which is safe
 # but means a revalidation round trip for files that can never change.
 #
-# Rules are matched most-specific-first, so the narrow cache rules must come
-# before the catch-all `/*` block.
+# Every rule whose path matches applies, in file order, and a header that two
+# rules both set is joined with a comma. So Cache-Control never goes under the
+# catch-all `/*`: it would be appended to every immutable asset above. Asserted
+# by `pnpm run verify`.
 
 # Qwik emits content-hashed filenames here, so the content is immutable by
 # construction: a change produces a new filename.

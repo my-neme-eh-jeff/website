@@ -740,8 +740,8 @@ export const Terminal = component$(() => {
    * `onClose$` works even though `close` does not bubble, because qwikloader
    * delegates with CAPTURE-phase listeners and a non-bubbling event still
    * traverses the capture phase down to its target. Verified twice over: every
-   * delegation call site in the loader passes capture=true
-   * (`grep -o 'S([^;]*)' dist/build/q-*.js` — the qwikloader bundle), and a
+   * delegation call site in the loader passes capture=true (rc.3: prints 3,
+   * `grep -c ', true, passive)' node_modules/@qwik.dev/core/dist/qwikloader.debug.js`), and a
    * trusted Escape driven over CDP against a real page restores the panel and
    * puts focus back on the maximise button.
    *

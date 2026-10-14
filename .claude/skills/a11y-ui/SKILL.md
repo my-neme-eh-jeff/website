@@ -83,13 +83,16 @@ Do not read a green `verify` as "accessible". These need a person:
   position utilities later. If a focused skip link ever pushes the page down
   instead of overlaying it, this is why.
 - **Qwik switches CSS delivery based on size, so check which mode you are in
-  before trying to patch it.** Below roughly 15 kB it inlines the whole
+  before trying to patch it.** Below 20,000 bytes of CSS it inlines the whole
   stylesheet into a `<style>` tag and emits no `<link rel="stylesheet">`, so
   `dist/assets/*-style.css` is present but never fetched (referenced only as
   `data-src`) and editing it does nothing. Above that it links the file and the
   inline style disappears. This repo crossed the threshold on 2026-08-23 when
-  the webfonts and atmosphere layer landed (15.4 kB to 21.5 kB). Always check:
-  `grep -c 'rel="stylesheet"' dist/index.html` gives 1 for linked, 0 for inlined.
+  the webfonts and atmosphere layer landed (15.4 kB to 21.5 kB). The limit is
+  the optimizer's `inlineStylesUpToBytes` (rc.3 default `2e4`):
+  `grep -n 'inlineStylesUpToBytes: ' node_modules/@qwik.dev/core/dist/optimizer.mjs`.
+  Always check: `grep -c 'rel="stylesheet"' dist/index.html` gives 1 for
+  linked, 0 for inlined.
 - **Reduced motion** is handled globally in `global.css` AND per-element with
   `motion-reduce:` in components. The global rule only shortens durations, so
   anything that must not animate at all needs the variant too.

@@ -26,9 +26,6 @@ export default defineConfig((): UserConfig => {
      * is the whole integration. Wiring taken from the starter Qwik itself
      * ships, which is version-matched to the installed beta:
      *   node_modules/@qwik.dev/core/dist/starters/features/tailwind/package.json
-     *
-     * It runs before qwikRouter so the CSS is already transformed by the time
-     * Qwik's optimizer collects styles for SSG.
      */
     plugins: [
       tailwindcss(),

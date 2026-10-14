@@ -111,7 +111,7 @@ publish — deploys stay with Workers Builds watching `main`.
 `pnpm run verify` is the interesting part: it executes the invariants that are
 otherwise only prose in `CLAUDE.md`, against real build output. Today it
 asserts `dist/404.html` exists where `not_found_handling` looks for it, that the
-sitemap excludes the 404, that `wrangler.jsonc` still has no `main`, that every
+sitemap excludes the 404, that the Worker runs on `/api/*` only, that every
 dependency is pinned exact, and that each page emits exactly one JSON-LD block
 and one canonical tag. Add invariants there rather than to a doc.
 

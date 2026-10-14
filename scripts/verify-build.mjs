@@ -129,6 +129,22 @@ check("wrangler.jsonc runs the Worker on /api/* only", () => {
   return `Worker on ${first.join(", ")}`;
 });
 
+/*
+ * Cloudflare applies every _headers rule whose path matches and comma-joins a
+ * header set twice, so a Cache-Control in the catch-all would be appended to
+ * every immutable /build/ and /assets/ file. Verified on wrangler's asset worker.
+ */
+check("_headers sets no Cache-Control in its catch-all block", () => {
+  const blocks = read("public", "_headers").split(/\n(?=\/)/);
+  const all = blocks.find((b) => b.startsWith("/*\n"));
+  assert(all, "no `/*` block in public/_headers -- did its shape change?");
+  assert(
+    !/^\s+Cache-Control:/im.test(all),
+    "the `/*` block sets Cache-Control, which every asset rule then inherits",
+  );
+  return `${blocks.length - 1} rules, none caching through the catch-all`;
+});
+
 check("_headers ships in dist", () => {
   assert(
     existsSync(p("dist", "_headers")),
