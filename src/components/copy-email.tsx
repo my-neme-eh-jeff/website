@@ -48,7 +48,11 @@ export const CopyEmail = component$<{ email: string }>(({ email }) => {
 
   return (
     <span class="inline-flex items-center gap-1">
-      <a class="pill hover:border-accent font-mono" href={`mailto:${email}`}>
+      {/* 13px under 360px: at 15px the pill and button are 304px in a 280px column. */}
+      <a
+        class="pill hover:border-accent font-mono max-[22.5rem]:text-[0.8125rem]"
+        href={`mailto:${email}`}
+      >
         {email}
       </a>
       <button

@@ -76,7 +76,7 @@ export const Sessions = component$(() => {
     <div>
       <Choice legend="Session B is working in" options={OPTIONS} value={mode} />
 
-      <div class="mt-5 overflow-x-auto">
+      <div class="scroll-cue mt-5 overflow-x-auto">
         <table class="w-full border-collapse font-mono text-xs">
           <thead>
             <tr class="text-muted border-line border-b text-left font-sans text-sm">

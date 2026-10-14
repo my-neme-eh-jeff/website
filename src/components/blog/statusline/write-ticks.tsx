@@ -68,7 +68,7 @@ export const WriteTicks = component$(() => {
         />
       </div>
 
-      <div class="mt-6 overflow-x-auto">
+      <div class="scroll-cue relative mt-6 overflow-x-auto">
         <table class="border-separate border-spacing-y-1.5 text-xs">
           <caption class="sr-only">
             Writes per tick over three minutes, one row per file

@@ -782,6 +782,55 @@
 }
 
 /*
+ * A fade on whichever edge of a horizontal scroller still hides content.
+ * Phones draw no scrollbar until you scroll, so a status line cut off at the
+ * edge otherwise reads as the whole line. With nothing to scroll the timeline
+ * is inactive and there is no fade; without scroll timelines, no fade either.
+ */
+@property --cue-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --cue-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@supports (animation-timeline: scroll()) {
+  .scroll-cue,
+  .post > .table-wrapper {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--cue-start),
+      #000 calc(100% - var(--cue-end)),
+      transparent
+    );
+    animation: scroll-cue linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+
+@keyframes scroll-cue {
+  0% {
+    --cue-start: 0px;
+    --cue-end: 2.5rem;
+  }
+  8% {
+    --cue-start: 2.5rem;
+  }
+  92% {
+    --cue-end: 2.5rem;
+  }
+  100% {
+    --cue-start: 2.5rem;
+    --cue-end: 0px;
+  }
+}
+
+/*
  * The shell's maximise, animated.
  *
  * ---------------------------------------------------------------------------
@@ -1027,7 +1076,15 @@ dialog[data-shell-dialog]::backdrop {
     padding: 0.05em 0.35em;
     font-family: var(--font-mono);
     font-size: 0.88em;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  /* Below 40rem a path like ~/.cache/claude-statusline/ is wider than the column. */
+  @media (width >= 40rem) {
+    .post :where(:not(pre) > code) {
+      white-space: nowrap;
+    }
   }
   .post > pre {
     margin-block: 1.5rem;

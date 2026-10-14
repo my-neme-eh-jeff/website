@@ -28,7 +28,7 @@ export const WidthTwin = component$(() => {
     <div>
       <Choice legend="Measure the line with" options={OPTIONS} value={how} />
 
-      <div class="mt-5 overflow-x-auto pb-1">
+      <div class="scroll-cue mt-5 overflow-x-auto pb-1">
         <div
           class="grid w-max font-mono text-[0.6875rem] leading-6"
           style={{ gridTemplateColumns: `repeat(${COLS}, 0.6rem)` }}
