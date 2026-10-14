@@ -39,8 +39,12 @@ export const Anatomy = component$(() => {
         {ROWS.map((r) => (
           <li
             key={r.key}
-            onMouseEnter$={() => (hl.value = r.key)}
-            onMouseLeave$={() => (hl.value = "")}
+            // Pointer, not mouse, events: iOS sends no mouse events to a plain
+            // <li>, so a tap did nothing. A tap's highlight stays until the next.
+            onPointerEnter$={() => (hl.value = r.key)}
+            onPointerLeave$={(e) => {
+              if (e.pointerType === "mouse") hl.value = "";
+            }}
             class={[
               "grid gap-x-6 gap-y-0.5 rounded-lg px-2 py-1.5 transition-colors sm:grid-cols-[15rem_1fr]",
               hl.value === r.key ? "bg-text/5" : "",
