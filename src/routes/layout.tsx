@@ -1,9 +1,18 @@
 import { component$, Slot } from "@qwik.dev/core";
+import type { DocumentHead } from "@qwik.dev/router";
 import { Link, useDocumentHead, useLocation } from "@qwik.dev/router";
 import { profile } from "~/content/profile";
 
-/** What a route tells this layout through `head.frontmatter`. */
-export type Frontmatter = { column?: "reading" };
+/**
+ * `column` is what a route tells this layout through `head.frontmatter`; the
+ * rest is derived for every page by this layout's own `head`, below.
+ */
+export type Frontmatter = {
+  column?: "reading";
+  navHref?: string;
+  navCurrent?: "page" | "true";
+  transitionName?: string;
+};
 
 /**
  * A view-transition name for the content that is different on every page, so
@@ -12,12 +21,12 @@ export type Frontmatter = { column?: "reading" };
  * a long page that slid the old content thousands of pixels, because the
  * router scrolls the new page to the top only after the transition starts.
  *
- * Keyed on the title because head is what the router updates before it
- * captures the new page; the URL is updated after (see the column note below).
+ * Keyed on the path, which `head` below receives before the router captures
+ * the new page.
  */
-const pageTransitionName = (title: string) => {
+const pageTransitionName = (path: string) => {
   let hash = 0;
-  for (const ch of title)
+  for (const ch of path)
     hash = (Math.imul(hash, 31) + (ch.codePointAt(0) ?? 0)) >>> 0;
   return `page-${hash.toString(36)}`;
 };
@@ -28,6 +37,34 @@ const pages = [
   { href: "/", label: "Index" },
   { href: "/blog/", label: "Blog" },
 ];
+
+/**
+ * Everything this layout shows that differs per page is worked out here, once
+ * per navigation, and the component below only reads it. Two reasons:
+ *
+ * - Head is updated before the view transition captures the new page, and
+ *   `useLocation()` readers only after (see the column note below), so the lit
+ *   link and the transition name are right in the captured snapshot.
+ * - Read straight from head in JSX, each becomes a signal binding, so a click
+ *   updates a few attributes and never re-runs this layout. rc.3's optimizer
+ *   only makes a binding of an expression with no call, nothing from module
+ *   scope and at most 150 characters; anything else is evaluated in the render
+ *   and subscribes the whole component. `pnpm run verify` checks the bindings.
+ */
+export const head: DocumentHead = ({ url }) => {
+  const path = url.pathname;
+  // A post is inside the blog, so the blog link stays lit there.
+  const lit = pages.find(
+    (p) => p.href === path || (p.href !== "/" && path.startsWith(p.href)),
+  );
+  return {
+    frontmatter: {
+      navHref: lit?.href,
+      navCurrent: lit && (lit.href === path ? "page" : "true"),
+      transitionName: pageTransitionName(path),
+    },
+  };
+};
 
 /**
  * No sidebar, no rule, no navbar.
@@ -49,7 +86,9 @@ const pages = [
  */
 export default component$(() => {
   const loc = useLocation();
-  const head = useDocumentHead<Frontmatter>();
+  // Not `head`: this module exports that name, and the optimizer then counts
+  // every expression using it as module scope, so none becomes a binding.
+  const doc = useDocumentHead<Frontmatter>();
 
   return (
     <div class="min-h-dvh">
@@ -83,9 +122,9 @@ export default component$(() => {
       <div
         class={[
           "flex min-h-dvh w-full flex-col px-5",
-          head.frontmatter.column === "reading"
+          doc.frontmatter.column === "reading"
             ? "mx-auto max-w-[48rem]"
-            : "mr-0 ml-auto max-w-[46rem] lg:max-w-[52rem] lg:pr-16",
+            : "ml-auto max-w-[46rem] lg:max-w-[52rem] lg:pr-16",
         ]}
       >
         {/*
@@ -95,30 +134,27 @@ export default component$(() => {
         <header class="flex flex-wrap items-baseline gap-x-5 gap-y-2 pt-8 lg:pt-14">
           <nav
             aria-label="Site"
-            class="flex flex-wrap items-baseline gap-x-5 gap-y-2"
+            class="flex flex-wrap items-baseline gap-x-5 gap-y-2 text-sm"
             style={{ viewTransitionName: "site-nav" }}
           >
-            {pages.map((p) => {
-              const path = loc.url.pathname;
-              const here = path === p.href;
-              // A post is inside the blog, so the blog link stays lit there.
-              const active =
-                here || (p.href !== "/" && path.startsWith(p.href));
-              return (
-                <Link
-                  key={p.href}
-                  href={p.href}
-                  aria-current={here ? "page" : active ? "true" : undefined}
-                  class={
-                    active
-                      ? "decoration-accent text-text text-sm underline underline-offset-4"
-                      : "text-muted hover:text-text text-sm no-underline"
-                  }
-                >
-                  {p.label}
-                </Link>
-              );
-            })}
+            {pages.map((p) => (
+              <Link
+                key={p.href}
+                href={p.href}
+                aria-current={
+                  doc.frontmatter.navHref === p.href
+                    ? doc.frontmatter.navCurrent
+                    : undefined
+                }
+                class={
+                  doc.frontmatter.navHref === p.href
+                    ? "decoration-accent text-text underline underline-offset-4"
+                    : "text-muted hover:text-text no-underline"
+                }
+              >
+                {p.label}
+              </Link>
+            ))}
           </nav>
 
           <span
@@ -149,7 +185,7 @@ export default component$(() => {
           tabIndex={-1}
           class="min-w-0 flex-1 pt-14 pb-16 focus:outline-none"
           style={{
-            viewTransitionName: pageTransitionName(head.title),
+            viewTransitionName: doc.frontmatter.transitionName,
             viewTransitionClass: "page",
           }}
         >
@@ -181,7 +217,7 @@ export default component$(() => {
          * load — so it never duplicates the title for someone reading the page.
          */}
         <p aria-live="assertive" aria-atomic="true" class="sr-only">
-          {loc.prevUrl ? head.title : ""}
+          {loc.prevUrl ? doc.title : ""}
         </p>
       </div>
     </div>

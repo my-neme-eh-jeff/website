@@ -1043,6 +1043,42 @@ check("every page has an empty route announcer", () => {
   return `${PAGES.length} pages`;
 });
 
+/*
+ * A click must not re-run the root layout. Each value it shows per page is read
+ * in JSX, which the optimizer compiles to a signal binding and serialises into
+ * the page's q:func script. For an expression with a call, a module-scope name
+ * (even a shadowed one, like the route's own `head` export) or over 150
+ * characters, rc.3 instead evaluates it in the render, which subscribes the
+ * whole layout -- silently, so a missing function here is the only sign.
+ */
+check("the root layout's per-page values are bindings, not re-renders", () => {
+  const reads = [
+    "frontmatter.column",
+    "frontmatter.navHref",
+    "frontmatter.navCurrent",
+    "frontmatter.transitionName",
+    "prevUrl",
+  ];
+  for (const page of PAGES) {
+    const funcs =
+      read("dist", page).match(
+        /<script q:func="qwik\/json">([\s\S]*?)<\/script>/,
+      )?.[1] ?? "";
+    assert(
+      funcs,
+      `${page}: no q:func script -- has Qwik changed how it serialises bindings?`,
+    );
+    const missing = reads.filter((r) => !funcs.includes(r));
+    assert(
+      missing.length === 0,
+      `${page}: no binding reads ${missing.join(", ")}, so src/routes/layout.tsx ` +
+        `re-renders on every navigation. Keep that JSX expression free of calls ` +
+        `and module-scope names, and under 150 characters.`,
+    );
+  }
+  return `${reads.length} bindings on ${PAGES.length} pages`;
+});
+
 // --- Report ---------------------------------------------------------------
 
 // --- Privacy ---------------------------------------------------------------
