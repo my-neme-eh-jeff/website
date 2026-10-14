@@ -1,4 +1,4 @@
-import { component$ } from "@qwik.dev/core";
+import { component$, untrack } from "@qwik.dev/core";
 import { useContent } from "@qwik.dev/router";
 
 /**
@@ -8,8 +8,18 @@ import { useContent } from "@qwik.dev/router";
  * screenful on a phone.
  */
 export const Contents = component$(() => {
+  /*
+   * Read untracked, into plain objects: each post renders its own list, so it
+   * never needs to update. Subscribed, it serialized the headings again with
+   * their subscriptions, and emptied an open list in the leaving page's
+   * snapshot when navigating away.
+   */
   const content = useContent();
-  const sections = (content.headings ?? []).filter((h) => h.level === 2);
+  const sections = untrack(() =>
+    (content.headings ?? [])
+      .filter((h) => h.level === 2)
+      .map(({ id, text }) => ({ id, text })),
+  );
   return (
     <details class="post-text text-muted my-10 text-sm">
       <summary class="hover:text-text w-fit cursor-pointer py-1">
