@@ -998,27 +998,24 @@ check("no full-viewport layer carries a view-transition-name", () => {
 
 /*
  * The reading column comes from head frontmatter set in
- * src/routes/blog/layout.tsx, not from the URL; src/routes/layout.tsx says
- * why. If that wiring breaks, blog pages still render — in the wide column —
+ * src/routes/blog/(post)/layout.tsx, not from the URL; src/routes/layout.tsx
+ * says why. If that wiring breaks, posts still render — in the wide column —
  * so this is the only place it shows.
  */
-check(
-  "blog pages use the reading column, every other page the wide one",
-  () => {
-    for (const page of PAGES) {
-      const html = read("dist", page);
-      /* The column is the last <div> opened before the header. */
-      const before = html.slice(0, html.indexOf("<header"));
-      const column = [...before.matchAll(/<div\b[^>]*>/g)].at(-1)?.[0] ?? "";
-      const reading = /\bmx-auto\b/.test(column);
-      assert(
-        reading === page.startsWith("blog/"),
-        `${page}: ${reading ? "reading" : "wide"} column, from ${column}`,
-      );
-    }
-    return `${PAGES.length} pages`;
-  },
-);
+check("posts use the reading column, every other page the wide one", () => {
+  for (const page of PAGES) {
+    const html = read("dist", page);
+    /* The column is the last <div> opened before the header. */
+    const before = html.slice(0, html.indexOf("<header"));
+    const column = [...before.matchAll(/<div\b[^>]*>/g)].at(-1)?.[0] ?? "";
+    const reading = /\bmx-auto\b/.test(column);
+    assert(
+      reading === (page.startsWith("blog/") && page !== "blog/index.html"),
+      `${page}: ${reading ? "reading" : "wide"} column, from ${column}`,
+    );
+  }
+  return `${PAGES.length} pages`;
+});
 
 /*
  * <Link> prefetches through Qwik's preloader. With `preloader: false` the

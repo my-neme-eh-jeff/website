@@ -1,7 +1,18 @@
 import { component$, Slot } from "@qwik.dev/core";
+import type { DocumentHeadValue } from "@qwik.dev/router";
 import { Link, useLocation } from "@qwik.dev/router";
 import { longDate } from "~/components/blog/date";
 import { posts } from "~/content/profile";
+import type { Frontmatter } from "../../layout";
+
+/*
+ * Posts are read in the centred column; the /blog/ index is not, so this is
+ * set here rather than on the whole of /blog/. Why it is head and not the URL:
+ * src/routes/layout.tsx.
+ */
+export const head: DocumentHeadValue<Frontmatter> = {
+  frontmatter: { column: "reading" },
+};
 
 export default component$(() => {
   const slug = useLocation().url.pathname.split("/")[2];

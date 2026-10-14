@@ -110,9 +110,9 @@ export default component$(() => {
       </a>
 
       {/*
-       * The blog is read, not browsed, so it gets a centred column.
+       * A post is read, not browsed, so it gets a centred column.
        *
-       * Which column comes from the route's head (src/routes/blog/layout.tsx),
+       * Which column comes from the route's head (src/routes/blog/(post)/layout.tsx),
        * not the URL. Qwik Router notifies `useLocation()` readers only after
        * the view transition has captured the new page, so a URL-driven column
        * is captured wrong and then jumps; head updates land before the

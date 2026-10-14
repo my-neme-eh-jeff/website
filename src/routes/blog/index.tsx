@@ -10,8 +10,8 @@ const sorted = [...posts].sort((a, b) => (a.date < b.date ? 1 : -1));
 
 export default component$(() => {
   return (
-    <div class="post-text">
-      <h1 class="mb-8">Blog</h1>
+    <div>
+      <h1 class="mb-10">Blog</h1>
       {sorted.length === 0 ? (
         <div class="callout">
           Nothing published yet. When there is, it will be here — the list is
@@ -19,35 +19,25 @@ export default component$(() => {
           indexable and a missing one is not.
         </div>
       ) : (
-        <ul class="grid gap-8">
+        <ul class="border-line border-b">
           {sorted.map((p) => (
             /*
-             * One link per card, named by the title alone. Its ::after covers
-             * the card, so the cover and summary click through too, without a
-             * screen reader announcing the whole card as the link text.
+             * One link per row, named by the title alone. Its ::after covers
+             * the row, so the date and summary click through too, without a
+             * screen reader announcing the whole row as the link text.
              */
             <li
               key={p.slug}
-              class="border-line bg-surface hover:border-accent/50 has-[:focus-visible]:outline-accent relative overflow-hidden rounded-2xl border transition-colors has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2"
+              class="hairline group has-[:focus-visible]:outline-accent relative items-center gap-x-10 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 sm:grid sm:grid-cols-[minmax(0,1fr)_14rem] lg:grid-cols-[minmax(0,1fr)_18rem]"
             >
-              {p.cover && (
-                <img
-                  src={p.cover.src}
-                  alt=""
-                  width={1200}
-                  height={630}
-                  decoding="async"
-                  class="border-line block h-auto w-full border-b"
-                />
-              )}
-              <div class="p-5 sm:p-6">
-                <time dateTime={p.date} class="text-muted text-sm">
+              <div class="max-w-[32rem]">
+                <time dateTime={p.date} class="text-muted font-mono text-xs">
                   {longDate(p.date)}
                 </time>
-                <h2 class="mt-1 mb-2">
+                <h2 class="mt-1.5 mb-1.5 text-lg">
                   <Link
                     href={`/blog/${p.slug}/`}
-                    class="no-underline after:absolute after:inset-0 focus-visible:outline-none"
+                    class="group-hover:decoration-accent no-underline group-hover:underline after:absolute after:inset-0 focus-visible:outline-none"
                   >
                     {p.title}
                   </Link>
@@ -56,6 +46,16 @@ export default component$(() => {
                   {p.summary}
                 </p>
               </div>
+              {p.cover && (
+                <img
+                  src={p.cover.src}
+                  alt=""
+                  width={1200}
+                  height={630}
+                  decoding="async"
+                  class="peek mt-5 w-44 sm:absolute sm:inset-y-0 sm:right-0 sm:my-auto sm:w-56 lg:w-72"
+                />
+              )}
             </li>
           ))}
         </ul>
