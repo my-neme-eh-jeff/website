@@ -1,6 +1,9 @@
 import { component$, Slot } from "@qwik.dev/core";
-import { Link, useLocation } from "@qwik.dev/router";
+import { Link, useDocumentHead, useLocation } from "@qwik.dev/router";
 import { profile } from "~/content/profile";
+
+/** What a route tells this layout through `head.frontmatter`. */
+export type Frontmatter = { column?: "reading" };
 
 const buildYear = new Date().getFullYear();
 
@@ -30,14 +33,12 @@ const pages = [
  */
 export default component$(() => {
   const loc = useLocation();
+  const head = useDocumentHead<Frontmatter>();
 
   return (
     <div class="min-h-dvh">
-      <div
-        class="field"
-        aria-hidden="true"
-        style={{ viewTransitionName: "field" }}
-      />
+      {/* Never named either: see the view-transition note in global.css. */}
+      <div class="field" aria-hidden="true" />
       {/*
        * No view-transition-name here, deliberately — `pnpm run verify` asserts
        * it. A named element is snapshotted into the transition's own layer,
@@ -53,11 +54,20 @@ export default component$(() => {
         Skip to content
       </a>
 
-      {/* The blog is read, not browsed, so it gets a centred column. */}
+      {/*
+       * The blog is read, not browsed, so it gets a centred column.
+       *
+       * Which column comes from the route's head (src/routes/blog/layout.tsx),
+       * not the URL. Qwik Router notifies `useLocation()` readers only after
+       * the view transition has captured the new page, so a URL-driven column
+       * is captured wrong and then jumps; head updates land before the
+       * capture. The order, in the router's commit step:
+       *   grep -n 'const headUpdated\|forceStoreEffects(routeLocation, "url")' node_modules/@qwik.dev/router/lib/index.qwik.mjs
+       */}
       <div
         class={[
           "flex min-h-dvh w-full flex-col px-5",
-          loc.url.pathname.startsWith("/blog/")
+          head.frontmatter.column === "reading"
             ? "mx-auto max-w-[48rem]"
             : "mr-0 ml-auto max-w-[46rem] lg:max-w-[52rem] lg:pr-16",
         ]}
@@ -67,25 +77,34 @@ export default component$(() => {
          * horizontal, no border — an index line rather than a chrome band.
          */}
         <header class="flex flex-wrap items-baseline gap-x-5 gap-y-2 pt-8 lg:pt-14">
-          {pages.map((p) => {
-            const active = loc.url.pathname === p.href;
-            return (
-              <Link
-                key={p.href}
-                href={p.href}
-                aria-current={active ? "page" : undefined}
-                class={
-                  active
-                    ? "decoration-accent text-text text-sm underline underline-offset-4"
-                    : "text-muted hover:text-text text-sm no-underline"
-                }
-              >
-                {p.label}
-              </Link>
-            );
-          })}
+          <nav
+            aria-label="Site"
+            class="flex flex-wrap items-baseline gap-x-5 gap-y-2"
+            style={{ viewTransitionName: "site-nav" }}
+          >
+            {pages.map((p) => {
+              const active = loc.url.pathname === p.href;
+              return (
+                <Link
+                  key={p.href}
+                  href={p.href}
+                  aria-current={active ? "page" : undefined}
+                  class={
+                    active
+                      ? "decoration-accent text-text text-sm underline underline-offset-4"
+                      : "text-muted hover:text-text text-sm no-underline"
+                  }
+                >
+                  {p.label}
+                </Link>
+              );
+            })}
+          </nav>
 
-          <span class="ml-auto flex flex-wrap gap-x-4 gap-y-2">
+          <span
+            class="ml-auto flex flex-wrap gap-x-4 gap-y-2"
+            style={{ viewTransitionName: "site-links" }}
+          >
             {profile.links.map((l) => (
               <a
                 key={l.href}
@@ -105,11 +124,19 @@ export default component$(() => {
           </span>
         </header>
 
+        {/*
+         * A different name per column, so moving between columns is one page
+         * leaving and another arriving rather than one box sliding sideways
+         * with both pages showing through it.
+         */}
         <main
           id="main"
           tabIndex={-1}
           class="min-w-0 flex-1 pt-14 pb-16 focus:outline-none"
-          style={{ viewTransitionName: "page" }}
+          style={{
+            viewTransitionName:
+              head.frontmatter.column === "reading" ? "page-reading" : "page",
+          }}
         >
           <Slot />
         </main>
@@ -130,6 +157,17 @@ export default component$(() => {
             </a>
           </div>
         </footer>
+
+        {/*
+         * Announces the new title after a client-side navigation, which a
+         * screen reader otherwise does not hear at all: the router has no live
+         * region of its own (`grep -c aria-live` on its index.qwik.mjs is 0).
+         * Empty until the first navigation — `prevUrl` is unset on a full page
+         * load — so it never duplicates the title for someone reading the page.
+         */}
+        <p aria-live="assertive" aria-atomic="true" class="sr-only">
+          {loc.prevUrl ? head.title : ""}
+        </p>
       </div>
     </div>
   );

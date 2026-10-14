@@ -844,6 +844,52 @@ check("field's static fallback matches the 0% keyframe", () => {
   return `${names.length} declarations identical`;
 });
 
+// --- Navigation and view transitions ----------------------------------------
+
+/** Classes whose built rule satisfies `test`, e.g. `.grain-page{…mix-blend-mode:overlay…}`. */
+function classesWhere(test) {
+  const css = readdirSync(p("dist", "assets"))
+    .filter((f) => f.endsWith(".css"))
+    .map((f) => read("dist", "assets", f))
+    .join("\n");
+  const found = new Set();
+  for (const m of css.matchAll(/\.([a-zA-Z0-9_-]+)\{([^}]*)\}/g)) {
+    if (test(m[2])) found.add(m[1]);
+  }
+  return found;
+}
+
+/**
+ * The classes of every element named for a view transition, whether the name
+ * is inline in the HTML or set by a class rule.
+ *
+ * Match the whole tag first and pull `class` out of it. Anchoring on
+ * `<div class="…"` instead silently matches nothing the moment the serialiser
+ * reorders attributes, and a check that matches nothing passes for ever.
+ */
+function namedElements() {
+  const namedByCss = classesWhere((rule) =>
+    /view-transition-name:\s*(?!none)/.test(rule),
+  );
+  const found = [];
+  for (const page of PAGES) {
+    for (const tag of read("dist", page).match(/<[^>]*>/g) ?? []) {
+      const classes = (tag.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
+      if (
+        tag.includes("view-transition-name") ||
+        classes.some((c) => namedByCss.has(c))
+      ) {
+        found.push({ page, classes });
+      }
+    }
+  }
+  assert(
+    found.length > 0,
+    "parsed no view-transition-name attributes -- check the extraction",
+  );
+  return found;
+}
+
 /*
  * A blended layer must never carry a view-transition-name.
  *
@@ -858,48 +904,94 @@ check("field's static fallback matches the 0% keyframe", () => {
  * belongs to the combination, not to that element.
  */
 check("no blended element carries a view-transition-name", () => {
-  const css = readdirSync(p("dist", "assets"))
-    .filter((f) => f.endsWith(".css"))
-    .map((f) => read("dist", "assets", f))
-    .join("\n");
-
-  /* Classes whose rule sets a blend mode, e.g. `.grain-page{…mix-blend-mode:overlay…}` */
-  const blended = new Set();
-  for (const m of css.matchAll(/\.([a-zA-Z0-9_-]+)\{([^}]*)\}/g)) {
-    if (/mix-blend-mode:\s*(?!normal)/.test(m[2])) blended.add(m[1]);
-  }
+  const blended = classesWhere((rule) =>
+    /mix-blend-mode:\s*(?!normal)/.test(rule),
+  );
   assert(
     blended.size > 0,
     "found no blended classes -- did the selector shape change?",
   );
+  const named = namedElements();
+  for (const { page, classes } of named) {
+    const clash = classes.filter((c) => blended.has(c));
+    assert(
+      clash.length === 0,
+      `${page}: .${clash.join(", .")} sets mix-blend-mode AND a ` +
+        `view-transition-name. During a transition the element is snapshotted ` +
+        `into its own layer with no backdrop, so the blend silently stops ` +
+        `applying and the layer composites raw over the page.`,
+    );
+  }
+  return `${named.length} named elements, ${blended.size} blended classes, no overlap`;
+});
 
-  let named = 0;
-  for (const page of PAGES) {
-    const html = read("dist", page);
-    /*
-     * Match the whole tag first and pull `class` out of it. Anchoring on
-     * `<div class="…"` instead silently matches nothing the moment the
-     * serialiser reorders attributes, and a check that matches nothing passes
-     * for ever.
-     */
-    for (const tag of html.match(/<[^>]*view-transition-name[^>]*>/g) ?? []) {
-      named++;
-      const classes = (tag.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
-      const clash = classes.filter((c) => blended.has(c));
+/*
+ * Nor may a full-viewport layer. `field` was named: named groups paint above
+ * the root snapshot, so its opaque gradient covered everything left in root
+ * and the header, footer and grain vanished for the length of every
+ * transition. The mean-luma measurement behind the name could not see that;
+ * one frame of `node scripts/measure-nav.mjs --frames <dir>` does.
+ */
+check("no full-viewport layer carries a view-transition-name", () => {
+  const full = classesWhere(
+    (rule) => /position:fixed/.test(rule) && /inset:0(?![.\d])/.test(rule),
+  );
+  assert(
+    full.has("field"),
+    "`.field` is no longer a fixed, inset:0 rule -- did the selector shape change?",
+  );
+  for (const { page, classes } of namedElements()) {
+    const clash = classes.filter((c) => full.has(c));
+    assert(
+      clash.length === 0,
+      `${page}: .${clash.join(", .")} covers the viewport AND carries a ` +
+        `view-transition-name. Named groups paint above the root snapshot, so ` +
+        `it hides everything unnamed for the whole transition.`,
+    );
+  }
+  return `${full.size} full-viewport classes, none named`;
+});
+
+/*
+ * The reading column comes from head frontmatter set in
+ * src/routes/blog/layout.tsx, not from the URL; src/routes/layout.tsx says
+ * why. If that wiring breaks, blog pages still render — in the wide column,
+ * under the wrong transition name — so this is the only place it shows.
+ */
+check(
+  "blog pages use the reading column, every other page the wide one",
+  () => {
+    for (const page of PAGES) {
+      const main = read("dist", page).match(/<main\b[^>]*>/)?.[0] ?? "";
+      const name = main.match(/view-transition-name:\s*([\w-]+)/)?.[1];
+      const want = page.startsWith("blog/") ? "page-reading" : "page";
       assert(
-        clash.length === 0,
-        `${page}: .${clash.join(", .")} sets mix-blend-mode AND a ` +
-          `view-transition-name. During a transition the element is snapshotted ` +
-          `into its own layer with no backdrop, so the blend silently stops ` +
-          `applying and the layer composites raw over the page.`,
+        name === want,
+        `${page}: <main> is named ${name ?? "nothing"}, expected ${want}`,
       );
     }
+    return `${PAGES.length} pages`;
+  },
+);
+
+/*
+ * Client-side navigation is silent to a screen reader unless something
+ * announces it; the router does not. The region must start empty, or it reads
+ * the title out a second time to anyone browsing the page.
+ */
+check("every page has an empty route announcer", () => {
+  for (const page of PAGES) {
+    const regions =
+      read("dist", page).match(
+        /<p\b[^>]*aria-live="assertive"[^>]*>[^<]*<\/p>/g,
+      ) ?? [];
+    assert(regions.length === 1, `${page}: ${regions.length} route announcers`);
+    assert(
+      /><\/p>$/.test(regions[0]),
+      `${page}: the route announcer has text at load: ${regions[0]}`,
+    );
   }
-  assert(
-    named > 0,
-    "parsed no view-transition-name attributes -- check the extraction",
-  );
-  return `${named} named elements, ${blended.size} blended classes, no overlap`;
+  return `${PAGES.length} pages`;
 });
 
 // --- Report ---------------------------------------------------------------
