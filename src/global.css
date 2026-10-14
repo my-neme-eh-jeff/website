@@ -1052,8 +1052,11 @@ dialog[data-shell-dialog]::backdrop {
 @layer components {
   .post > :where(h1, p, ul, ol, h2, h3),
   .post-text {
-    max-width: 40rem;
+    max-width: 44rem;
     margin-inline: auto;
+  }
+  .post > h2 {
+    scroll-margin-top: 2rem;
   }
   .post > :where(p, ul, ol) {
     margin-block: 1.1em;
@@ -1137,7 +1140,7 @@ dialog[data-shell-dialog]::backdrop {
   }
   /* Qwik's MDX plugin wraps every table in this div, as a scroll container. */
   .post > .table-wrapper {
-    max-width: 40rem;
+    max-width: 44rem;
     margin-inline: auto;
     margin-block: 1.5rem;
     overflow-x: auto;

@@ -30,7 +30,7 @@ export const WidthTwin = component$(() => {
 
       <div class="scroll-cue mt-5 overflow-x-auto pb-1">
         <div
-          class="grid w-max font-mono text-[0.6875rem] leading-6"
+          class="mx-auto grid w-max font-mono text-[0.6875rem] leading-6"
           style={{ gridTemplateColumns: `repeat(${COLS}, 0.6rem)` }}
           aria-hidden="true"
         >

@@ -123,7 +123,7 @@ export default component$(() => {
         class={[
           "flex min-h-dvh w-full flex-col px-5",
           doc.frontmatter.column === "reading"
-            ? "mx-auto max-w-[48rem]"
+            ? "mx-auto max-w-[52rem]"
             : "ml-auto max-w-[46rem] lg:max-w-[52rem] lg:pr-16",
         ]}
       >

@@ -1,6 +1,7 @@
 import { component$, Slot } from "@qwik.dev/core";
 import type { DocumentHeadValue } from "@qwik.dev/router";
 import { Link, useLocation } from "@qwik.dev/router";
+import { Checkpoints } from "~/components/blog/checkpoints";
 import { longDate } from "~/components/blog/date";
 import { posts } from "~/content/profile";
 import type { Frontmatter } from "../../layout";
@@ -38,9 +39,14 @@ export default component$(() => {
         )}
       </p>
 
-      <article class="post">
-        <Slot />
-      </article>
+      <div class="relative">
+        <aside class="absolute inset-y-0 right-full mr-8 hidden w-44 xl:block">
+          <Checkpoints />
+        </aside>
+        <article class="post">
+          <Slot />
+        </article>
+      </div>
     </div>
   );
 });

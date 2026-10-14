@@ -69,7 +69,7 @@ export const WriteTicks = component$(() => {
       </div>
 
       <div class="scroll-cue relative mt-6 overflow-x-auto">
-        <table class="border-separate border-spacing-y-1.5 text-xs">
+        <table class="mx-auto border-separate border-spacing-y-1.5 text-xs">
           <caption class="sr-only">
             Writes per tick over three minutes, one row per file
           </caption>
@@ -105,7 +105,7 @@ export const WriteTicks = component$(() => {
           </tbody>
         </table>
       </div>
-      <p class="text-muted mt-1 text-xs">
+      <p class="text-muted mt-1 text-center text-xs">
         Three minutes, {ticks.length} ticks. The session is renamed at 1m35s.
       </p>
 
