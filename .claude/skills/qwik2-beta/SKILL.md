@@ -147,7 +147,9 @@ Re-check before trusting either side.
   `type="number"` converts; a bound range input writes strings.
   `grep -n -A5 'function _val' node_modules/@qwik.dev/core/dist/core.mjs`
 - `/docs/deprecated-features` is the v1 list. rc.3's deprecations are in the
-  types: `grep -rn '@deprecated' node_modules/@qwik.dev/*/lib/*.d.ts node_modules/@qwik.dev/core/dist/*.d.ts`
+  types, including the router's subfolders (`staticAdapter` is in
+  `lib/adapters/ssg/vite/`):
+  `grep -rn '@deprecated' node_modules/@qwik.dev/router/lib node_modules/@qwik.dev/core/dist --include='*.d.ts'`
 - The `.md` mirrors drop JSX tags inside inline code and some lists (`/docs/upgrade`,
   `/docs/integrations`). If a section reads empty, open the HTML page.
 - `/docs/guides/mdx` says `useContent().headings` exist only on the client;
