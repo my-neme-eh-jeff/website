@@ -87,7 +87,7 @@ export default component$(() => {
                   <a href={pr.repo} rel="noopener">
                     {pr.title}
                     <span
-                      class="text-accent ml-1 font-mono text-xs"
+                      class="text-accent font-arrow ml-1 text-xs"
                       aria-hidden="true"
                     >
                       ↗

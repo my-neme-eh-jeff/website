@@ -17,7 +17,10 @@ export default component$(() => {
         {post?.repo && (
           <a href={post.repo} class="hover:text-text no-underline">
             Source on GitHub
-            <span class="text-accent ml-1 font-mono text-xs" aria-hidden="true">
+            <span
+              class="text-accent font-arrow ml-1 text-xs"
+              aria-hidden="true"
+            >
               ↗
             </span>
           </a>

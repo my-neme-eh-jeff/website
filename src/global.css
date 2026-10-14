@@ -262,6 +262,11 @@
     "Hanken Grotesk", "Helvetica Neue", Arial, ui-sans-serif, system-ui,
     sans-serif;
   --font-mono: "Fira Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /*
+   * The ↗ marks. Fira Mono has no U+2197, so naming it only made pages with no
+   * code on them fetch it (10.9 kB) to draw Menlo's arrow anyway.
+   */
+  --font-arrow: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Body copy, capped for legibility (~65-75 chars). */
   --container-measure: 68ch;

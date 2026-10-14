@@ -170,7 +170,7 @@ export default component$(() => {
               >
                 {l.label}
                 <span
-                  class="text-accent ml-1 font-mono text-xs"
+                  class="text-accent font-arrow ml-1 text-xs"
                   aria-hidden="true"
                 >
                   ↗
@@ -202,7 +202,7 @@ export default component$(() => {
             </Link>
             <a href="https://github.com/my-neme-eh-jeff/website">
               Source
-              <span class="text-accent ml-1 font-mono" aria-hidden="true">
+              <span class="text-accent font-arrow ml-1" aria-hidden="true">
                 ↗
               </span>
             </a>
