@@ -75,3 +75,9 @@ them against the real build output. Add new ones there, not here.
   property, not a style choice. It needs ≥3:1 on `--sem-bg` in BOTH themes —
   which is why light uses `--clay-deep` and dark uses `--clay`. `pnpm run verify`
   recomputes this; see `.claude/skills/a11y-ui/`.
+- **No sideways page scroll at any width from 320px up** (320 = 400% zoom,
+  WCAG 1.4.10). Wide content scrolls inside its own box, which needs `relative`
+  (an `sr-only` child escapes one that isn't) and `scroll-cue` (phones show no
+  scrollbar). Checked 2026-10-14 at 25 widths, 320–3440px. Re-check in device
+  mode at 320, 390, 768, 1440 and 1920: `document.documentElement.scrollWidth`
+  must equal `clientWidth` on every page.
