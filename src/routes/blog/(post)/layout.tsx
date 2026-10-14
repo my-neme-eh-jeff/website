@@ -16,7 +16,7 @@ export default component$(() => {
   return (
     <div>
       <div class="relative">
-        <aside class="absolute inset-y-0 right-full mr-8 hidden w-44 xl:block">
+        <aside class="absolute inset-y-0 right-full mr-[clamp(3rem,5vw_-_1rem,5rem)] hidden w-44 xl:block">
           <Checkpoints />
         </aside>
         <article class="post">
