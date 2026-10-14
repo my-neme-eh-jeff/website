@@ -13,13 +13,14 @@ import { SYSTEM_PROMPT } from "../content/chat";
  *
  * Errors before streaming starts are a JSON body with a non-200 status instead.
  *
- * The visitor controls only message text and an opaque session id. The path,
- * model, sampling and prompt are fixed here. The desk's proxy also refuses
- * every path but /api/chat (desk/chat-log-proxy.mjs), so Ollama's pull and
- * delete endpoints are unreachable twice over.
+ * The visitor controls only message text. The path, model, sampling and
+ * prompt are fixed here. The desk's proxy also refuses every path but
+ * /api/chat (desk/chat-log-proxy.mjs), so Ollama's pull and delete endpoints
+ * are unreachable twice over.
  *
- * Alongside the question the desk gets coarse facts about the visitor for its
- * log: country, Cloudflare colo, ray id and user agent. Never the IP address.
+ * The desk logs each chat for 30 days. The only fact about the visitor sent
+ * with it is their country: /privacy/ promises exactly that, so adding a
+ * header here means changing that page too.
  */
 
 interface Env {
@@ -78,26 +79,10 @@ function parseTurns(body: unknown): Turn[] | null {
   return turns;
 }
 
-/** A browser-made random id, so the desk's log can group a conversation. */
-function parseSession(body: unknown): string | null {
-  const s = (body as { session?: unknown } | null)?.session;
-  return typeof s === "string" && /^[A-Za-z0-9-]{8,64}$/.test(s) ? s : null;
-}
-
-/** What the desk's log is told about the visitor. Coarse on purpose. */
-function visitorHeaders(request: Request, session: string | null) {
-  const cf = (request as { cf?: { country?: string; colo?: string } }).cf;
-  const pairs: [string, string | null | undefined][] = [
-    ["x-chat-session", session],
-    ["x-visitor-country", cf?.country],
-    ["x-visitor-colo", cf?.colo],
-    ["x-visitor-ray", request.headers.get("cf-ray")],
-    ["x-visitor-ua", request.headers.get("user-agent")?.slice(0, 200)],
-  ];
-  return Object.fromEntries(pairs.filter(([, v]) => v)) as Record<
-    string,
-    string
-  >;
+/** What the desk's log is told about the visitor: the country, nothing else. */
+function visitorHeaders(request: Request): Record<string, string> {
+  const country = (request as { cf?: { country?: string } }).cf?.country;
+  return country ? { "x-visitor-country": country } : {};
 }
 
 /**
@@ -226,11 +211,8 @@ async function chat(request: Request, env: Env): Promise<Response> {
   if (raw.length > MAX_BODY_BYTES) return json({ error: "too_large" }, 413);
 
   let turns: Turn[] | null = null;
-  let session: string | null = null;
   try {
-    const body: unknown = JSON.parse(raw);
-    turns = parseTurns(body);
-    session = parseSession(body);
+    turns = parseTurns(JSON.parse(raw));
   } catch {
     // Falls through to the 400 below.
   }
@@ -244,7 +226,7 @@ async function chat(request: Request, env: Env): Promise<Response> {
       env,
       turns,
       controller.signal,
-      visitorHeaders(request, session),
+      visitorHeaders(request),
     );
   } catch {
     // Tunnel down, desk off, or the wait above ran out. Which one is not the

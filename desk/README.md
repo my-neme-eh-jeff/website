@@ -10,7 +10,10 @@ visitor -> Worker (/api/chat) -> Workers VPC -> Cloudflare Tunnel
 
 - `chat-log-proxy.mjs` forwards only `POST /api/chat`, streams the answer
   through unchanged, and appends each exchange to
-  `~/.local/share/portfolio-chat/chats-YYYY-MM.jsonl`.
+  `~/.local/share/portfolio-chat/chats-YYYY-MM-DD.jsonl` (one file per UTC day).
+- **Retention is 30 days.** The proxy deletes a day file once that day began
+  more than 30 days ago, at startup and hourly. `/privacy/` promises this; change
+  `RETENTION_DAYS` and that page together.
 - `chatlog.mjs` prints that log. Its options are in the comment at its top.
 - `portfolio-chat-proxy.service` keeps the proxy running as a user unit.
 
@@ -18,18 +21,19 @@ visitor -> Worker (/api/chat) -> Workers VPC -> Cloudflare Tunnel
 
 Written by the proxy, so it can only contain what reaches the desk:
 
-| Field                                            | From                                                             |
-| ------------------------------------------------ | ---------------------------------------------------------------- |
-| `ts`, `id`                                       | the proxy                                                        |
-| `question`, `history`                            | the conversation the browser sent (up to 8 turns)                |
-| `answer`, `reasoning`                            | Ollama's stream: the visible answer and the model's hidden notes |
-| `stats`, `firstTokenMs`, `totalMs`               | Ollama's timings and the proxy's clock                           |
-| `outcome`                                        | `ok`, `cancelled` (visitor hung up), `error`, `upstream_<code>`  |
-| `systemPrompt`                                   | a 12-character hash: which prompt version answered               |
-| `session`, `country`, `colo`, `ray`, `userAgent` | headers the Worker adds; `null` until it does                    |
+| Field                              | From                                                             |
+| ---------------------------------- | ---------------------------------------------------------------- |
+| `ts`, `id`                         | the proxy                                                        |
+| `question`, `history`              | the conversation the browser sent (up to 8 turns)                |
+| `answer`, `reasoning`              | Ollama's stream: the visible answer and the model's hidden notes |
+| `stats`, `firstTokenMs`, `totalMs` | Ollama's timings and the proxy's clock                           |
+| `outcome`                          | `ok`, `cancelled` (visitor hung up), `error`, `upstream_<code>`  |
+| `systemPrompt`                     | a 12-character hash: which prompt version answered               |
+| `country`                          | the one visitor fact the Worker forwards (Cloudflare's geo)      |
 
-No IP address is stored: the desk never sees one, and the Worker does not
-forward it.
+Nothing else about the visitor is stored: no IP address, user agent, request
+id or session id. The desk never sees them, because the Worker forwards only the
+country.
 
 ## Install or update on the desk
 

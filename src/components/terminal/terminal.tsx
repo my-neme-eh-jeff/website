@@ -3,13 +3,7 @@ import { haptic } from "./haptics";
 import { sound, isMuted, setMuted, type Tone } from "./sounds";
 import { load as loadHistory, save as saveHistory } from "./history";
 import { run, completions, ASK, type Line } from "./commands";
-import {
-  abortChat,
-  resetSession,
-  sendChat,
-  type Outcome,
-  type Turn,
-} from "./chat";
+import { abortChat, sendChat, type Outcome, type Turn } from "./chat";
 import { KNOWN_HREFS } from "~/content/chat";
 
 /**
@@ -43,6 +37,16 @@ const BANNER: Line[] = [
   {
     kind: "hint",
     text: "Ask anything about Aman's work, or type `help` for commands.",
+  },
+  /*
+   * Before the first question, not after: answers are AI-generated and chats
+   * are logged, and a visitor is owed both facts before typing one. The 30
+   * days is what desk/chat-log-proxy.mjs enforces and /privacy/ promises.
+   */
+  {
+    kind: "out",
+    text: "Answers come from an AI model on Aman's computer. Chats are kept 30 days.",
+    link: { text: "privacy", href: "/privacy/" },
   },
 ];
 
@@ -176,7 +180,7 @@ const MUTE_BTN_ID = "term-mute";
  * stickToBottom go through it. They cannot drift.
  * ---------------------------------------------------------------------------
  */
-export type Group = { kind: Line["kind"]; text: string };
+export type Group = { kind: Line["kind"]; text: string; link?: Line["link"] };
 
 export function renderGroups(items: Line[]): Group[] {
   const groups: Group[] = [];
@@ -186,7 +190,7 @@ export function renderGroups(items: Line[]): Group[] {
     if (l.kind === "art" && prev?.kind === "art") {
       prev.text += `\n${l.text}`;
     } else {
-      groups.push({ kind: l.kind, text: l.text });
+      groups.push({ kind: l.kind, text: l.text, link: l.link });
     }
   }
   return groups;
@@ -740,7 +744,6 @@ export const Terminal = component$(() => {
     stirred.value = true;
     if (view.value === "closed") {
       convo.turns = [];
-      resetSession();
       lines.items = [...BANNER];
       cmdHistory.past = [];
       cmdHistory.cursor = -1;
@@ -881,7 +884,6 @@ export const Terminal = component$(() => {
         // conversation goes with the buffer.
         lines.items = [];
         convo.turns = [];
-        resetSession();
         await feedback("enter");
         return;
       }
@@ -956,7 +958,6 @@ export const Terminal = component$(() => {
         // Same rule as `clear`: the conversation goes with the screen.
         lines.items = [];
         convo.turns = [];
-        resetSession();
         await feedback("enter");
         return;
       }
@@ -1087,6 +1088,15 @@ export const Terminal = component$(() => {
     const next = !(await isMuted());
     muted.value = next;
     await setMuted(next);
+    // setMuted writes to localStorage, and a visitor is told so when it does.
+    lines.items = [
+      ...lines.items,
+      {
+        kind: "meta",
+        text: `Sounds ${next ? "off" : "on"}. This choice is remembered on this device.`,
+      },
+    ];
+    stickToBottom(renderGroups(lines.items).length);
     if (!next) await sound("chrome");
     await haptic("key");
   });
@@ -1287,6 +1297,7 @@ export const Terminal = component$(() => {
           type="button"
           id={MUTE_BTN_ID}
           onClick$={toggleMute}
+          title="Sound on or off. Remembered on this device."
           class="hover:bg-text/10 text-muted ml-auto grid size-6 place-items-center rounded-full transition duration-150 active:scale-90"
         >
           <span class="sr-only">
@@ -1462,6 +1473,22 @@ export const Terminal = component$(() => {
                           ),
                         )
                       : g.text}
+                    {/* A new tab for the same reason as the links above:
+                     * following it in place would end the session. */}
+                    {g.link && (
+                      <>
+                        {" "}
+                        <a
+                          href={g.link.href}
+                          target="_blank"
+                          rel="noopener"
+                          class="text-accent underline decoration-dotted underline-offset-2 hover:decoration-solid"
+                        >
+                          {g.link.text}
+                          <span class="sr-only"> (opens in a new tab)</span>
+                        </a>
+                      </>
+                    )}
                   </pre>
                 ),
               )}

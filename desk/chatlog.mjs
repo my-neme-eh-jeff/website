@@ -19,7 +19,7 @@ const flag = (name) => args.includes(name);
 const n = Number(args[args.indexOf("-n") + 1]) || 20;
 
 const files = (await readdir(LOG_DIR).catch(() => []))
-  .filter((f) => /^chats-\d{4}-\d{2}\.jsonl$/.test(f))
+  .filter((f) => /^chats-\d{4}-\d{2}-\d{2}\.jsonl$/.test(f))
   .sort();
 
 let entries = [];
@@ -58,7 +58,7 @@ const bold = (s) => (process.stdout.isTTY ? `\x1b[1m${s}\x1b[0m` : s);
 
 for (const e of entries) {
   const when = new Date(e.ts).toLocaleString();
-  const where = [e.country, e.colo].filter(Boolean).join("/") || "?";
+  const where = e.country ?? "?";
   const speed =
     e.stats?.genMs > 0
       ? `${(e.stats.tokens / (e.stats.genMs / 1000)).toFixed(1)} tok/s`
@@ -66,7 +66,6 @@ for (const e of entries) {
   const head = [
     when,
     where,
-    e.session ? `session ${e.session.slice(0, 8)}` : "",
     e.outcome === "ok" ? "" : e.outcome.toUpperCase(),
     `${(e.totalMs / 1000).toFixed(1)}s`,
     speed,

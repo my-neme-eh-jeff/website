@@ -39,6 +39,8 @@ export type Line = {
    */
   kind: "in" | "out" | "err" | "hint" | "art" | "ai" | "meta";
   text: string;
+  /** A link printed after the text, for paths linkify cannot see (`/privacy/`). */
+  link?: { text: string; href: string };
 };
 
 const out = (text: string): Line => ({ kind: "out", text });
@@ -369,6 +371,11 @@ function registry(): Command[] {
 const ABOUT_CHAT: Line[] = [
   out("Talking to a model running on a GPU on Aman's desk, at home."),
   out("It answers from his CV and can be wrong."),
+  {
+    kind: "out",
+    text: "Chats are kept for 30 days.",
+    link: { text: "privacy", href: "/privacy/" },
+  },
   hint("There is no mode to enter. Just type a question."),
 ];
 

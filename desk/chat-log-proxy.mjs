@@ -7,8 +7,9 @@
  *   - Only POST /api/chat gets through. Pointed at Ollama directly, the
  *     binding could reach every endpoint, including the ones that pull and
  *     delete models.
- *   - Every exchange is appended to a JSON Lines log, one file per month, so
- *     Aman can read what visitors ask. `chatlog.mjs` prints it.
+ *   - Every exchange is appended to a JSON Lines log, one file per UTC day,
+ *     so Aman can read what visitors ask. `chatlog.mjs` prints it. Files
+ *     older than RETENTION_DAYS are deleted, because /privacy/ promises it.
  *
  * The response is forwarded byte for byte as it arrives; the log is built
  * from a copy. If the visitor hangs up, the upstream request is aborted so
@@ -17,7 +18,7 @@
  * Node's standard library only: there is nothing to install on the desk.
  */
 import http from "node:http";
-import { appendFile, mkdir } from "node:fs/promises";
+import { appendFile, mkdir, readdir, unlink } from "node:fs/promises";
 import { createHash, randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -29,14 +30,31 @@ const LOG_DIR =
 // The Worker caps a request at 16 kB; this only has to stop abuse.
 const MAX_BODY = 64_000;
 
-/** Headers the Worker adds about the visitor. All optional. */
-const META = {
-  session: "x-chat-session",
-  country: "x-visitor-country",
-  colo: "x-visitor-colo",
-  ray: "x-visitor-ray",
-  userAgent: "x-visitor-ua",
-};
+/** What the privacy page promises. Change both together. */
+const RETENTION_DAYS = 30;
+const DAY_MS = 86_400_000;
+
+/** The only fact about the visitor the Worker passes on. */
+const COUNTRY_HEADER = "x-visitor-country";
+
+/**
+ * Delete day files older than the retention window. Runs at startup and
+ * hourly, so it holds even on days nobody asks anything.
+ *
+ * A file goes as soon as its day STARTED more than RETENTION_DAYS ago: early
+ * rather than late, so no entry outlives the promise by more than the hour
+ * between runs.
+ */
+async function prune() {
+  const cutoff = Date.now() - RETENTION_DAYS * DAY_MS;
+  for (const f of await readdir(LOG_DIR).catch(() => [])) {
+    const day = /^chats-(\d{4}-\d{2}-\d{2})\.jsonl$/.exec(f)?.[1];
+    if (day && Date.parse(`${day}T00:00:00Z`) < cutoff) {
+      await unlink(join(LOG_DIR, f));
+      console.log(`deleted ${f} (older than ${RETENTION_DAYS} days)`);
+    }
+  }
+}
 
 const json = (res, status, body) => {
   res.writeHead(status, { "content-type": "application/json" });
@@ -55,10 +73,10 @@ async function readBody(req) {
 }
 
 async function record(entry) {
-  const month = entry.ts.slice(0, 7);
+  const day = entry.ts.slice(0, 10);
   await mkdir(LOG_DIR, { recursive: true, mode: 0o700 });
   await appendFile(
-    join(LOG_DIR, `chats-${month}.jsonl`),
+    join(LOG_DIR, `chats-${day}.jsonl`),
     JSON.stringify(entry) + "\n",
     { mode: 0o600 },
   );
@@ -75,9 +93,7 @@ async function relay(req, res) {
   const entry = {
     id: randomUUID(),
     ts: new Date(started).toISOString(),
-    ...Object.fromEntries(
-      Object.entries(META).map(([k, h]) => [k, req.headers[h] ?? null]),
-    ),
+    country: req.headers[COUNTRY_HEADER] ?? null,
     model: body.model ?? null,
     question: turns.at(-1)?.content ?? "",
     // Earlier turns of the same conversation, as the visitor's browser sent
@@ -188,3 +204,8 @@ server.listen(PORT, "127.0.0.1", () => {
     `chat log proxy on 127.0.0.1:${PORT} -> ${OLLAMA}, logs in ${LOG_DIR}`,
   );
 });
+
+const pruneSafely = () =>
+  prune().catch((err) => console.error("prune failed:", err));
+await pruneSafely();
+setInterval(pruneSafely, DAY_MS / 24);
