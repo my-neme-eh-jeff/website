@@ -58,7 +58,6 @@ const assert = (cond, msg) => {
  */
 const PAGES = [
   "index.html",
-  "resume/index.html",
   "blog/index.html",
   "privacy/index.html",
   ...(existsSync(p("dist", "blog"))

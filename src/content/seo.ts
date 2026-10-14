@@ -23,7 +23,7 @@ export const ld = (obj: unknown) =>
   JSON.stringify(obj).replace(/</g, "\\u003c");
 
 type SeoInput = {
-  /** Route path with leading and trailing slash, e.g. "/resume/". */
+  /** Route path with leading and trailing slash, e.g. "/blog/". */
   path: string;
   title: string;
   description: string;
@@ -147,23 +147,6 @@ export const homeGraph = () => ({
       isPartOf: { "@id": `${ORIGIN}/#website` },
       // mainEntity is REQUIRED on ProfilePage.
       mainEntity: { "@id": `${ORIGIN}/#person` },
-      inLanguage: "en",
-    },
-    personNode(),
-  ],
-});
-
-/** Resume page. References the Person rather than redefining it. */
-export const resumeGraph = () => ({
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebPage",
-      "@id": `${ORIGIN}/resume/#webpage`,
-      url: `${ORIGIN}/resume/`,
-      name: `Resume — ${profile.name}`,
-      isPartOf: { "@id": `${ORIGIN}/#website` },
-      about: { "@id": `${ORIGIN}/#person` },
       inLanguage: "en",
     },
     personNode(),

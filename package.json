@@ -1,6 +1,6 @@
 {
   "name": "amannambisan",
-  "description": "Personal portfolio, blog and resume",
+  "description": "Personal portfolio and blog",
   "engines": {
     "node": ">=22.19.0"
   },

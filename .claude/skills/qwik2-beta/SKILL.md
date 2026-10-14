@@ -112,4 +112,4 @@ Re-check before trusting either side.
 - Several pages still import from `@builder.io/qwik`.
 
 **Repo convention, not from the docs:** static data is computed once at module
-scope, not in a component body (e.g. `grouped` in `src/routes/resume/index.tsx`).
+scope, not in a component body (e.g. `sorted` in `src/routes/blog/index.tsx`).

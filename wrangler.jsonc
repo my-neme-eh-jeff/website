@@ -41,8 +41,8 @@
     // setting would find nothing. Asserted by scripts/verify-build.mjs.
     "not_found_handling": "404-page",
     // Explicit rather than relying on the default. Qwik SSG emits
-    // resume/index.html and the canonical URLs and sitemap both use a
-    // trailing slash, so /resume and /resume/ must resolve to one page and
+    // blog/index.html and the canonical URLs and sitemap both use a
+    // trailing slash, so /blog and /blog/ must resolve to one page and
     // one canonical. Naming it here means a change to Cloudflare's default
     // cannot silently split them.
     "html_handling": "auto-trailing-slash",

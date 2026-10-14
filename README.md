@@ -1,6 +1,6 @@
 # amannambisan.com
 
-Personal portfolio, blog and resume. Qwik 2 compiled to static HTML, served
+Personal portfolio and blog. Qwik 2 compiled to static HTML, served
 from Cloudflare Workers static assets.
 
 |           |                                                                 |
@@ -9,7 +9,7 @@ from Cloudflare Workers static assets.
 | Framework | Qwik 2 (`@qwik.dev/core`), SSG via the `ssg` adapter            |
 | Styling   | Tailwind v4 via `@tailwindcss/vite`; tokens in `src/global.css` |
 | Hosting   | Cloudflare Workers static assets                                |
-| Output    | `./dist` (4 prerendered pages + sitemap)                        |
+| Output    | `./dist`, prerendered pages + sitemap                           |
 | Deploys   | Workers Builds, on push to `main`                               |
 | Cost      | $0 — static asset requests are free and unlimited               |
 
@@ -138,7 +138,7 @@ request, which is exactly what the point above avoids.
       global.css                design tokens, theme swap, shared patterns
       content/profile.ts        ALL site content lives here
       components/               terminal, circled-choice, copy-email, blog
-      routes/                   layout + index + resume + blog + 404
+      routes/                   layout + index + blog + privacy + 404
 
 ### Content
 

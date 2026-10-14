@@ -343,7 +343,7 @@ export const education = {
   note: "GPA 8.13 / 10",
 };
 
-/** Grouped so the resume page can render headings rather than one long list. */
+/** Grouped, so each set renders under its own heading rather than as one long list. */
 export const skills: Array<{ group: string; items: string[] }> = [
   {
     group: "Platform & Cloud",
