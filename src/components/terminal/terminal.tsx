@@ -12,9 +12,9 @@ import { KNOWN_HREFS } from "~/content/chat";
  * ---------------------------------------------------------------------------
  * HOW THIS COSTS NOTHING UNTIL SOMEONE USES IT
  *
- * The whole frame — chrome, prompt, banner — is server-rendered HTML. On first
- * paint it is text and CSS, no JavaScript at all, so it costs no hydration and
- * no layout shift, and a crawler reads the banner as content.
+ * The whole frame — chrome, prompt, intro line — is server-rendered HTML. On
+ * first paint it is text and CSS, no JavaScript at all, so it costs no
+ * hydration and no layout shift, and a crawler reads the intro as content.
  *
  * Every handler is a `$()` QRL, which Qwik compiles into its own bundle
  * referenced from the DOM by attribute. Nothing is fetched until an actual
@@ -32,23 +32,11 @@ import { KNOWN_HREFS } from "~/content/chat";
  * ---------------------------------------------------------------------------
  */
 
-const BANNER: Line[] = [
-  { kind: "out", text: "amannambisan.com — interactive shell" },
-  {
-    kind: "hint",
-    text: "Ask anything about Aman's work, or type `help` for commands.",
-  },
-  /*
-   * Before the first question, not after: answers are AI-generated and chats
-   * are logged, and a visitor is owed both facts before typing one. The 30
-   * days is what desk/chat-log-proxy.mjs enforces and /privacy/ promises.
-   */
-  {
-    kind: "out",
-    text: "Answers come from an AI model on Aman's computer. Chats are kept 30 days.",
-    link: { text: "privacy", href: "/privacy/" },
-  },
-];
+/** The only line before the first question, which removes it. */
+const INTRO: Line = {
+  kind: "hint",
+  text: "Ask anything about Aman's work — a model on his desktop answers. Or type `help`.",
+};
 
 const PROMPT = "~ $";
 
@@ -501,7 +489,7 @@ const shellDialog = () =>
   document.getElementById(DIALOG_ID) as HTMLDialogElement | null;
 
 export const Terminal = component$(() => {
-  const lines = useStore<{ items: Line[] }>({ items: [...BANNER] });
+  const lines = useStore<{ items: Line[] }>({ items: [INTRO] });
   const value = useSignal("");
   const view = useSignal<View>("open");
 
@@ -787,7 +775,7 @@ export const Terminal = component$(() => {
     stirred.value = true;
     if (view.value === "closed") {
       convo.turns = [];
-      lines.items = [...BANNER];
+      lines.items = [INTRO];
       cmdHistory.past = [];
       cmdHistory.cursor = -1;
       value.value = "";
@@ -901,7 +889,11 @@ export const Terminal = component$(() => {
     // dots, and a throw must not leave them running forever.
     let handedOff = false;
     try {
-      lines.items = [...lines.items, { kind: "in", text: `${PROMPT} ${raw}` }];
+      const shown =
+        lines.items[0]?.text === INTRO.text
+          ? lines.items.slice(1)
+          : lines.items;
+      lines.items = [...shown, { kind: "in", text: `${PROMPT} ${raw}` }];
       if (raw.trim()) {
         // Before the push, never after — see ensureHistory.
         await ensureHistory();
@@ -1391,8 +1383,8 @@ export const Terminal = component$(() => {
        * fold, and the panel never came back down. That is a transcript, not a
        * shell. The cap is `min(55svh,24rem)` — 24rem is what fits comfortably
        * inside the page's rhythm, and the viewport term stops it eating a
-       * short screen. `max-h` rather than `h` so a two-line banner still
-       * renders as two lines instead of a mostly-empty box.
+       * short screen. `max-h` rather than `h` so a one-line intro still
+       * renders as one line instead of a mostly-empty box.
        *
        * `svh`, NOT `vh` OR `dvh`. On a phone `vh` is the layout viewport and
        * ignores browser chrome, so 55vh can exceed what is actually on screen;
@@ -1578,7 +1570,7 @@ export const Terminal = component$(() => {
                  * The first thing a visitor reads, before any JavaScript. At
                  * most 22 characters: it is 16px on a phone (see below), and
                  * a 320px screen cut the 28-character version off mid-word.
-                 * The banner says `help`, so this does not have to.
+                 * The intro says `help`, so this does not have to.
                  */
                 placeholder="Ask about Aman's work"
                 /*
