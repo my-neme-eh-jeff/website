@@ -1281,55 +1281,60 @@ check("posts use the reading column, every other page the wide one", () => {
 });
 
 /*
- * <Link> prefetches through Qwik's preloader. With `preloader: false` the
- * preloader module never loads, so every visible, hover and click prefetch is
- * a silent no-op and a click fetches the next route as a waterfall. Its
- * bootstrap is a preload of the bundle graph. Numbers in src/entry.ssr.tsx.
+ * Qwik loads nothing and runs no component code until a handler that names a
+ * bundle fires; then it resumes the page (q:container "paused" -> "resumed").
+ * An element's own handlers fire when the reader acts on that element, which
+ * is what they are for. These fire without that: window and document
+ * listeners, on any scroll, click or key anywhere, and qvisible, qinit and
+ * qidle by themselves. Each must be an inline sync$ (`#n`), which runs without
+ * waking Qwik, or be listed in WAKES with the reason it may name a bundle.
+ * The say-hi choice and the post's checkpoint rail both first shipped as a
+ * plain $(). `node scripts/measure-wake.mjs` watches it in a browser.
  */
-/*
- * The say-hi choice listens for Escape and outside clicks on the document. As
- * a sync$ the listener is inline (`#n`); as a plain $() it names a bundle, and
- * every keypress and click on the page wakes Qwik to run it.
- */
-check("the say-hi choice's document listeners are inline", () => {
-  const tag =
-    read("dist", "index.html").match(
-      /<div\b[^>]*data-circled-choice[^>]*>/,
-    )?.[0] ?? "";
-  for (const ev of ["keydown", "click"]) {
-    const v = new RegExp(`q-dp:${ev}="([^"]*)"`).exec(tag)?.[1];
-    assert(
-      v?.startsWith("#"),
-      `index.html: the choice's document ${ev} listener is ${v ?? "missing"}, ` +
-        "not an inline sync$.",
-    );
-  }
-});
-
-/*
- * The same for the post's checkpoint rail, which follows scrolling. As a plain
- * $() a desktop post wakes Qwik on load, and a phone on its first scroll,
- * though the rail is not displayed there.
- */
-check("the checkpoint rail's listeners are inline", () => {
-  const rails = PAGES.flatMap((page) => {
-    const attrs = read("dist", page).match(
-      /<nav\b([^>]*)>\s*<p\b[^>]*>On this page<\/p>/,
-    )?.[1];
-    return attrs === undefined ? [] : [{ page, attrs }];
-  });
-  assert(rails.length > 0, "No post renders the checkpoint rail.");
-  for (const { page, attrs } of rails) {
-    for (const ev of ["e:qvisible", "wp:scroll"]) {
-      const v = new RegExp(`q-${ev}="([^"]*)"`).exec(attrs)?.[1];
-      assert(
-        v?.startsWith("#"),
-        `${page}: the rail's ${ev} listener is ${v ?? "missing"}, ` +
-          "not an inline sync$.",
+const WAKES = [
+  { listener: "d:qcinit", why: "Qwik Router's startup: scroll memory" },
+  { listener: "d:qrouterpopstate", why: "back and forward, a reader action" },
+  {
+    listener: "e:qvisible",
+    page: "privacy/index.html",
+    why: "the analytics switch must read this browser's choice to show it",
+  },
+];
+check("nothing wakes Qwik before the reader acts on it", () => {
+  const used = new Set();
+  const named = [];
+  let inline = 0;
+  for (const page of [...PAGES, "404.html"]) {
+    for (const [, scope, event, value] of read("dist", page).matchAll(
+      /\bq-(wp?|dp?|ep?):([a-z-]+)="([^"]*)"/g,
+    )) {
+      if (scope[0] === "e" && !["qvisible", "qinit", "qidle"].includes(event))
+        continue;
+      if (value.split("|").every((qrl) => qrl.startsWith("#"))) {
+        inline++;
+        continue;
+      }
+      const listener = `${scope[0]}:${event}`;
+      const allowed = WAKES.find(
+        (w) => w.listener === listener && (!w.page || w.page === page),
       );
+      if (allowed) used.add(allowed);
+      else named.push(`${page}: q-${scope}:${event}="${value}"`);
     }
   }
-  return `on ${rails.length} of ${PAGES.length} pages`;
+  assert(
+    named.length === 0,
+    "These name a bundle and fire without the reader acting, so each wakes " +
+      "Qwik. Make it a sync$ (state goes through attributes), or add it to " +
+      `WAKES with why:\n      ${named.join("\n      ")}`,
+  );
+  const stale = WAKES.filter((w) => !used.has(w));
+  assert(
+    stale.length === 0,
+    `In WAKES but no longer found, so the exception can go: ` +
+      stale.map((w) => w.listener).join(", "),
+  );
+  return `${inline} inline, ${WAKES.length} allowed by WAKES`;
 });
 
 /*
@@ -1348,6 +1353,12 @@ check("the checkpoint rail is remounted for each post", () => {
   );
 });
 
+/*
+ * <Link> prefetches through Qwik's preloader. With `preloader: false` the
+ * preloader module never loads, so every visible, hover and click prefetch is
+ * a silent no-op and a click fetches the next route as a waterfall. Its
+ * bootstrap is a preload of the bundle graph. Numbers in src/entry.ssr.tsx.
+ */
 check("the preloader ships, so <Link> prefetch has something to call", () => {
   for (const page of PAGES) {
     assert(
