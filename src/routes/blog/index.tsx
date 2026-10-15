@@ -32,8 +32,8 @@ const Cover = ({ src, ...props }: ImgProps & { src: string }) => {
  * What tilts into a row's right-hand slot on hover:
  * src/content/backdrops/<slug>.png if there is one, else the cover. Not under
  * public/, because only the WebP is ever shown. The status-line post's is its
- * own Playground figure: the first two lines of each state at 64px, cropped to
- * 1280x807 from the brain emoji on.
+ * own Playground figure: each state's first line from the brain emoji to the
+ * cost, at 72px.
  */
 const backdrops = import.meta.glob<FunctionComponent<ImgProps>>(
   "/src/content/backdrops/*.png",

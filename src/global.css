@@ -1258,12 +1258,17 @@ dialog[data-shell-dialog]::backdrop {
         0 0 0 1px color-mix(in oklab, var(--term-fg) 12%, transparent),
         0 18px 36px -18px rgb(0 0 0 / 0.6);
     }
+    /*
+     * The pointer is usually over the text, around --lean-x -0.4, so that is
+     * where the tilt rests at -10deg; it eases toward flat, -4deg, as the
+     * pointer reaches the image, rather than swinging about the row's middle.
+     */
     .covers > li:is(:hover, :has(:focus-visible)) > .backdrop {
       opacity: 1;
       transform: perspective(40rem)
-        rotateX(calc(3deg - var(--lean-y, 0) * 4deg))
-        rotateY(calc(-16deg + var(--lean-x, 0) * 8deg)) rotateZ(-1deg)
-        scale(0.94);
+        rotateX(calc(3deg - var(--lean-y, 0) * 3deg))
+        rotateY(calc(-10deg + (var(--lean-x, -0.4) + 0.4) * 5deg))
+        rotateZ(-1deg) scale(0.94);
     }
   }
   @media (hover: hover) and (width >= 64rem) {
@@ -1273,7 +1278,7 @@ dialog[data-shell-dialog]::backdrop {
   }
   @media (prefers-reduced-motion: reduce) {
     .covers > li:is(:hover, :has(:focus-visible)) > .backdrop {
-      transform: perspective(40rem) rotateX(3deg) rotateY(-16deg) rotateZ(-1deg)
+      transform: perspective(40rem) rotateX(3deg) rotateY(-10deg) rotateZ(-1deg)
         scale(0.94);
     }
   }
