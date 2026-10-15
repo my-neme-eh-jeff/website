@@ -1332,6 +1332,22 @@ check("the checkpoint rail's listeners are inline", () => {
   return `on ${rails.length} of ${PAGES.length} pages`;
 });
 
+/*
+ * The rail reads its post's headings once, untracked, and lives in the post
+ * layout, which stays mounted from one post to the next. Without a per-page
+ * key, client-side navigation to another post kept the first post's sections.
+ */
+check("the checkpoint rail is remounted for each post", () => {
+  const rail = read("src", "components", "blog", "checkpoints.tsx");
+  const layout = read("src", "routes", "blog", "(post)", "layout.tsx");
+  if (!/untrack\(/.test(rail)) return "the rail reads its headings tracked";
+  assert(
+    /<Checkpoints\s+key=\{[^}]+\}/.test(layout),
+    "src/routes/blog/(post)/layout.tsx renders <Checkpoints> without a key, " +
+      "so it keeps the first post's sections after navigating to another.",
+  );
+});
+
 check("the preloader ships, so <Link> prefetch has something to call", () => {
   for (const page of PAGES) {
     assert(

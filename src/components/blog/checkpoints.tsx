@@ -48,7 +48,8 @@ const mark = sync$((_: Event, nav: Element) => {
  * width where the centred column leaves room for it.
  */
 export const Checkpoints = component$(() => {
-  // Untracked, as in contents.tsx, which says why.
+  // Untracked, as in contents.tsx, which says why. The post layout keys
+  // this per page, so a new post mounts a new rail.
   const content = useContent();
   const sections = untrack(() =>
     (content.headings ?? [])
