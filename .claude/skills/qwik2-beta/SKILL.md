@@ -1,6 +1,6 @@
 ---
 name: qwik2-beta
-description: Use when touching Qwik 2 APIs, imports, routing, <Link>/prefetching, view transitions, adapters, SSG/build config, or vite config in this repo — or when a Qwik import fails to resolve, an API looks deprecated, or docs and the installed package disagree. An index of where the truth lives (the live docs as markdown, and node_modules), plus the traps this repo has hit, each with a command that re-checks it.
+description: Use when touching Qwik 2 APIs, imports, routing, <Link>/prefetching, view transitions, event handlers (useOn*, on*$ props, sync$) or anything that runs on scroll, visibility or load, adapters, SSG/build config, or vite config in this repo — or when a Qwik import fails to resolve, an API looks deprecated, or docs and the installed package disagree. An index of where the truth lives (the live docs as markdown, and node_modules), plus the traps this repo has hit, each with a command that re-checks it.
 ---
 
 # Qwik 2 (rc) in this repo
@@ -49,6 +49,23 @@ Docs paths are under `https://next.qwik.dev`; append `.md` for markdown.
 | Hooks and primitives that exist       | `/api/qwik`, `/docs/guides/best-practices`                                                             | `sed -n '/^export {/,/^}/p' node_modules/@qwik.dev/core/public.d.ts`                                           |
 | Renamed or removed since v1           | `/docs/upgrade`, `/docs/deprecated-features`                                                           | `grep -rn deprecated node_modules/@qwik.dev/router/lib --include="*.d.ts"`                                     |
 
+## Keep Qwik asleep
+
+A page should load and scroll at `<html q:container="paused">`. Qwik resumes
+the first time a handler that names a bundle runs. An element's own handlers
+wait for the reader; window and document listeners, `qvisible`, `qinit` and
+`qidle` do not, so those are `sync$`, which the loader runs from the page
+without an import. A `sync$` cannot close over state: it keeps what it needs in
+`data-*` / `aria-*` attributes, drawn with Tailwind variants
+(`src/components/blog/checkpoints.tsx`). Docs: `/docs/advanced/sync-events`.
+
+- Enforced: verify's "nothing wakes Qwik before the reader acts on it". Its
+  exceptions, each with a reason, are `WAKES` in `scripts/verify-build.mjs`.
+- Measured: `node scripts/measure-wake.mjs` (`--url` for production). Judge by
+  `q:container`, not by scripts that ran: the preloader's idle queue and the
+  router's scroll memory run on every scroll and resume nothing.
+  `grep -n 'qFuncs_' node_modules/@qwik.dev/core/dist/qwikloader.debug.js`
+
 ## Traps this repo has hit
 
 Each cost real time, and none is stated accurately on the docs site.
@@ -59,12 +76,15 @@ Each cost real time, and none is stated accurately on the docs site.
   `grep -n -A3 'const requestPreload' node_modules/@qwik.dev/core/dist/core.mjs`
 - **`maxIdlePreloads` caps concurrency, not volume, and `0` is ignored.**
   `grep -n 'options.maxIdlePreloads' node_modules/@qwik.dev/core/dist/server.mjs`
-- **`useLocation()` readers update after the view transition captures the new
-  page**, so anything that should look right in the transition must come from
-  head instead; `src/routes/layout.tsx` reads `head.frontmatter`. `headUpdated`
-  runs in the update callback, the forced `url` effects in `.finally` after
-  `ready`:
-  `grep -n 'const headUpdated\|forceStoreEffects(routeLocation, "url")' node_modules/@qwik.dev/router/lib/index.qwik.mjs`
+- **A navigation updates route state in three steps.** `useContent()` is
+  written before the router captures the page being left, head in the
+  transition's update callback, and `useLocation()` readers only after the new
+  page is captured. So what should look right in a transition comes from head
+  (`src/routes/layout.tsx`), and content is read untracked
+  (`src/components/blog/contents.tsx`). Layouts stay mounted between sibling
+  routes, so a layout child that reads content once is keyed per page from head
+  (`src/routes/blog/(post)/layout.tsx`; verify checks the key). In that order:
+  `grep -n 'content.headings = pageModule.headings\|const headUpdated\|forceStoreEffects(routeLocation, "url")' node_modules/@qwik.dev/router/lib/index.qwik.mjs`
 - **A transition name shared by consecutive pages morphs one into the other**,
   across any scroll offset. Name content per page from head (`layout.tsx`'s
   `head` function keys it on the path). Renaming in a `qviewtransition`
@@ -120,56 +140,15 @@ Each cost real time, and none is stated accurately on the docs site.
 - **Tailwind v4 has no config file here**, and `@theme inline` is load-bearing
   for dark mode — read the header of `src/global.css` before touching colour.
 
+- **Cloudflare's build names chunks differently from a local one** from the
+  same source, so a deploy is not confirmed by comparing HTML: fetch the
+  `q-*.js` that holds the change and look for it.
+
 ## Known doc drift
 
-Re-check before trusting either side.
-
-- SSG integration: `/docs/guides/static-site-generation` says `qwik add static`;
-  `/docs/deployments/static` says `ssg`. The adapter module exports both
-  `ssgAdapter` and the deprecated `staticAdapter`.
-- Service-worker prefetching is still described as current on some pages; it is
-  deprecated. `grep -n deprecated node_modules/@qwik.dev/router/lib/service-worker.d.ts`
-- `/docs/api` says `useLocation` in root.tsx is unsupported, then uses it there
-  in its own `DocumentHeadTags` sample. A JSX-only read like `href={url.href}` is
-  compiled to a signal binding and does not re-render root.
-- Several pages still import from `@builder.io/qwik`.
-- `/api/qwik` documents names `@qwik.dev/core` does not export (e.g.
-  `unwrapStore`, `forceStoreEffects`, `TaskOptions`); they live in
-  `@qwik.dev/core/internal`, and `tsc` rejects them from the main entry. Check
-  against `public.d.ts` (the table above), not the API page.
-- `DocumentHeadTags` "normally only runs once, during SSR" (`/docs/api` and the
-  router's `.d.ts`): it re-renders on navigation, so title, description and
-  `og:` tags follow a client-side click.
-  `grep -n 'trackWholeStore(useDocumentHead())' node_modules/@qwik.dev/router/lib/index.qwik.mjs`
-- `ssrPreloads: 0` "will disable all preload links": the preloader, bundle-graph
-  and core links stay (see the preloader trap).
-- `bind:value` is typed `Signal<number>` on any input, but only
-  `type="number"` converts; a bound range input writes strings.
-  `grep -n -A5 'function _val' node_modules/@qwik.dev/core/dist/core.mjs`
-- `/docs/deprecated-features` is the v1 list. rc.3's deprecations are in the
-  types, including the router's subfolders (`staticAdapter` is in
-  `lib/adapters/ssg/vite/`):
-  `grep -rn '@deprecated' node_modules/@qwik.dev/router/lib node_modules/@qwik.dev/core/dist --include='*.d.ts'`
-- The `.md` mirrors drop JSX tags inside inline code and some lists (`/docs/upgrade`,
-  `/docs/integrations`). If a section reads empty, open the HTML page.
-- `/docs/guides/mdx` says `useContent().headings` exist only on the client;
-  rc.3 fills them during SSG.
-  `grep -n 'headings: pageModule.headings' node_modules/@qwik.dev/router/lib/index.qwik.mjs`
-- There is no `q-data.json` in rc.3, whatever the deployment pages say: loader
-  data is `q-loader-<id>.<hash>.json`, and SSG writes it only for `immutable`
-  loaders (this site has none). `grep -rl q-data node_modules/@qwik.dev/router/lib | wc -l` is 0.
-- The build prints "Qwik Router SSG was skipped ... no pages were
-  prerendered", then prerenders every page (rc.3 on Vite 8: two plugin
-  instances). Trust `pnpm run verify`'s page counts, not that line.
-- `?jsx` image imports (built into `qwikRouter()`; the docs promise avif too)
-  emit WebP only, at quality 75 and widths 200-1200, with `loading="lazy"` and
-  no `src` or `sizes`: an image above the fold needs `loading="eager"` and a
-  real `sizes` passed in.
-  `grep -n -A12 'function createImageJsxDirectives' node_modules/@qwik.dev/router/lib/vite/index.mjs`
-- Paths the docs get wrong: `extendConfig` is exported from
-  `@qwik.dev/router/vite`, the SSG adapter is `.../adapters/ssg/vite` (not
-  `/vite/ssg`), and there is no Cloudflare Workers adapter -- its starter
-  aliases `cloudflarePagesAdapter`. `node -p "Object.keys(require('./node_modules/@qwik.dev/router/package.json').exports)"`
+Where the docs and the installed package disagree, each with a command:
+[references/doc-drift.md](references/doc-drift.md). Read it before trusting a
+page over `node_modules`.
 
 **Repo convention, not from the docs:** static data is computed once at module
 scope, not in a component body (e.g. `sorted` in `src/routes/blog/index.tsx`).
