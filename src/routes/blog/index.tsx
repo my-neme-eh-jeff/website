@@ -29,27 +29,44 @@ const Cover = ({ src, ...props }: ImgProps & { src: string }) => {
 };
 
 /*
- * Where a mouse is over the list, the hovered row's cover is carried by its
- * top-left corner in place of the pointer, and swings with sideways speed.
- * Inline (sync$), so it moves with the first event instead of after a bundle
- * loads. It only writes custom properties; global.css draws the sticker.
+ * What stands behind the list on hover: src/content/backdrops/<slug>.png if
+ * there is one, else the cover. Not under public/, because only the WebP is
+ * ever shown. The status-line post's is its own Playground figure: the first
+ * two lines of each state at 64px, cropped to 2100px wide.
  */
-const carry = sync$(
-  (e: PointerEvent, list: HTMLElement & { _x?: number; _rest?: number }) => {
-    if (e.pointerType !== "mouse") return;
-    const s = list.style;
-    const swing = Math.max(
-      -14,
-      Math.min(14, (e.clientX - (list._x ?? e.clientX)) * 0.9),
-    );
-    list._x = e.clientX;
-    s.setProperty("--x", `${e.clientX}px`);
-    s.setProperty("--y", `${e.clientY}px`);
-    s.setProperty("--swing", `${swing}deg`);
-    clearTimeout(list._rest);
-    list._rest = window.setTimeout(() => s.setProperty("--swing", "0deg"), 90);
-  },
+const backdrops = import.meta.glob<FunctionComponent<ImgProps>>(
+  "/src/content/backdrops/*.png",
+  { query: "?jsx", import: "default", eager: true },
 );
+const Backdrop = ({
+  slug,
+  src,
+  ...props
+}: ImgProps & { slug: string; src: string }) => {
+  const Img =
+    backdrops[`/src/content/backdrops/${slug}.png`] ?? covers[`/public${src}`];
+  return Img ? <Img {...props} /> : null;
+};
+
+/*
+ * Where a mouse is over the list, the hovered row's cover stands behind it and
+ * leans toward the pointer. Inline (sync$), so it follows from the first event
+ * instead of after a bundle loads. It only writes custom properties, from -1
+ * to 1 across the list; global.css draws the cover.
+ */
+const lean = sync$((e: PointerEvent, list: HTMLElement) => {
+  if (e.pointerType !== "mouse") return;
+  const r = list.getBoundingClientRect();
+  const s = list.style;
+  s.setProperty(
+    "--lean-x",
+    (((e.clientX - r.left) / r.width) * 2 - 1).toFixed(3),
+  );
+  s.setProperty(
+    "--lean-y",
+    (((e.clientY - r.top) / r.height) * 2 - 1).toFixed(3),
+  );
+});
 
 export default component$(() => {
   return (
@@ -62,11 +79,7 @@ export default component$(() => {
           indexable and a missing one is not.
         </div>
       ) : (
-        <ul
-          class="stickers border-line border-b"
-          onPointerMove$={carry}
-          onPointerOver$={carry}
-        >
+        <ul class="covers border-line border-b" onPointerMove$={lean}>
           {sorted.map((p) => (
             /*
              * One link per row, named by the title alone. Its ::after covers
@@ -75,7 +88,7 @@ export default component$(() => {
              */
             <li
               key={p.slug}
-              class="hairline group has-[:focus-visible]:outline-accent relative items-center gap-x-10 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 sm:grid sm:grid-cols-[minmax(0,1fr)_14rem] lg:grid-cols-[minmax(0,1fr)_18rem]"
+              class="hairline group has-[:focus-visible]:outline-accent relative has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2"
             >
               <div class="max-w-[32rem]">
                 <p class="text-muted m-0 font-mono text-xs">
@@ -96,18 +109,29 @@ export default component$(() => {
                 </p>
               </div>
               {p.cover && (
-                <span class="sticker" aria-hidden="true">
-                  <span class="sticker-face">
+                <>
+                  <span class="cover" aria-hidden="true">
                     <Cover
                       src={p.cover.src}
                       alt=""
-                      sizes="(min-width: 64rem) 16rem, (min-width: 40rem) 14rem, 11rem"
+                      sizes="11rem"
                       loading="lazy"
                       decoding="async"
                       class="block h-auto w-full"
                     />
                   </span>
-                </span>
+                  <span class="backdrop" aria-hidden="true">
+                    <Backdrop
+                      slug={p.slug}
+                      src={p.cover.src}
+                      alt=""
+                      sizes="(min-width: 64rem) 47rem, 100vw"
+                      loading="lazy"
+                      decoding="async"
+                      class="block h-auto w-full"
+                    />
+                  </span>
+                </>
               )}
             </li>
           ))}

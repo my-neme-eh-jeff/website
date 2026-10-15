@@ -1192,117 +1192,84 @@ dialog[data-shell-dialog]::backdrop {
 }
 
 /*
- * A post's cover on the /blog/ index, as a die-cut sticker: a paper border,
- * one corner folded back. Paper in both themes, because it is an object on
- * the page, not part of it.
+ * A post's images on the /blog/ index.
  *
- * With a mouse it replaces the pointer over its row: the sticker hangs from
- * the pointer by its top-left corner, swings with --swing, and presses flat
- * while the button is down. The position comes from `carry` in
- * src/routes/blog/index.tsx. Keyboard focus shows it at the row's right
- * instead, and a phone, which can't hover, shows it under the summary.
+ * Where a mouse can hover, the row's backdrop stands behind the list while
+ * the row is hovered or focused: as wide as the list, tilted back, faint, with
+ * the row's text and rules drawn over it. It leans toward the pointer by
+ * --lean-x and --lean-y, written by `lean` in src/routes/blog/index.tsx.
+ * z-index -1 puts it under everything in <main>, which its view-transition-name
+ * makes a stacking context.
+ *
+ * A phone can't hover, so there the cover is a small print under the summary
+ * and the backdrop is not shown.
  */
 @layer components {
-  .sticker {
-    position: relative;
+  .cover {
     display: block;
     width: 11rem;
     margin-top: 1.25rem;
-    rotate: -3deg;
-    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.18))
-      drop-shadow(0 12px 18px rgb(0 0 0 / 0.28));
+    border-radius: 0.75rem;
+    background: var(--paper);
+    padding: 0.3rem;
+    transform: rotate(-3deg);
+    box-shadow: 0 10px 24px -12px rgb(0 0 0 / 0.5);
     pointer-events: none;
   }
-  .sticker-face {
-    display: block;
-    border-radius: 0.875rem;
-    background: var(--paper);
-    padding: 0.375rem;
-    clip-path: polygon(
-      0 0,
-      100% 0,
-      100% calc(100% - 1.5rem),
-      calc(100% - 1.5rem) 100%,
-      0 100%
-    );
-  }
-  .sticker-face img {
+  .cover img {
     border-radius: 0.5rem;
   }
-  /* The folded-back corner, the mirror of the one the clip cut away. */
-  .sticker::after {
-    content: "";
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 1.5rem;
-    height: 1.5rem;
-    border-radius: 0 0 0 0.375rem;
-    background: linear-gradient(
-      to bottom right,
-      color-mix(in oklab, var(--paper) 82%, black),
-      var(--paper) 50%,
-      transparent 50%
-    );
+  .backdrop {
+    display: none;
   }
-  @media (width >= 40rem) {
-    .sticker {
+  @media (hover: hover) and (width >= 40rem) {
+    .cover {
+      display: none;
+    }
+    .backdrop {
+      display: block;
       position: absolute;
-      inset-block: 0;
-      right: 0;
-      height: fit-content;
-      width: 14rem;
-      margin-block: auto;
-    }
-  }
-  @media (width >= 64rem) {
-    .sticker {
-      width: 16rem;
-    }
-  }
-  @media (hover: hover) {
-    .sticker {
+      z-index: -1;
+      top: 50%;
+      left: 50%;
+      /* Below 64rem the column has 20px to the page edge, and the tilt
+         pushes the near side past the box. */
+      width: 92%;
       opacity: 0;
-      scale: 0.85;
+      filter: grayscale(1) invert(1) blur(0.5px);
+      pointer-events: none;
+      /* One transform list: Lightning CSS drops `translate` and `rotate` set
+         beside `transform` in the same rule. */
+      transform: translate(-50%, -50%) perspective(60rem) rotateX(-30deg)
+        rotateY(-4deg) scale(0.92);
       transition:
-        opacity 140ms ease-out,
-        scale 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        opacity 260ms ease-out,
+        transform 800ms cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .stickers > li:has(:focus-visible) > .sticker {
-      opacity: 1;
-      scale: 1;
+    @media (width >= 64rem) {
+      .backdrop {
+        width: 100%;
+      }
+    }
+    .covers > li:is(:hover, :has(:focus-visible)) > .backdrop {
+      opacity: 0.22;
+      transform: translate(-50%, -50%) perspective(60rem)
+        rotateX(calc(-14deg + var(--lean-y, 0) * 5deg))
+        rotateY(calc(-8deg + var(--lean-x, 0) * 8deg)) rotateZ(-1.5deg);
     }
   }
-  @media (hover: hover) and (pointer: fine) {
-    .stickers > li:has(> .sticker) {
-      cursor: none;
+  @media (hover: hover) and (width >= 40rem) and (prefers-color-scheme: dark) {
+    .backdrop {
+      filter: blur(0.5px);
     }
-    .stickers > li:hover > .sticker {
-      position: fixed;
-      inset: 0 auto auto 0;
-      margin: 0;
-      z-index: 40;
-      opacity: 1;
-      scale: 1;
-      translate: calc(var(--x, -100vw) - 0.75rem) calc(var(--y, 0px) - 0.75rem);
-      transform-origin: 0.75rem 0.75rem;
-      rotate: calc(4deg + var(--swing, 0deg));
-      transition:
-        opacity 140ms ease-out,
-        scale 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
-        rotate 260ms cubic-bezier(0.3, 1.4, 0.5, 1),
-        filter 120ms ease-out;
-    }
-    .stickers > li:hover:active > .sticker {
-      scale: 0.94;
-      rotate: 0deg;
-      filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.25))
-        drop-shadow(0 3px 4px rgb(0 0 0 / 0.2));
+    .covers > li:is(:hover, :has(:focus-visible)) > .backdrop {
+      opacity: 0.32;
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .stickers > li:hover > .sticker {
-      rotate: 4deg;
+    .covers > li:is(:hover, :has(:focus-visible)) > .backdrop {
+      transform: translate(-50%, -50%) perspective(60rem) rotateX(-14deg)
+        rotateY(-8deg) rotateZ(-1.5deg);
     }
   }
 }

@@ -676,10 +676,12 @@ check("og:image is referenced only if it exists and is a real image", () => {
 });
 
 /*
- * /blog/ draws each cover through `?jsx` (src/routes/blog/index.tsx), found
- * by its path under public/. One it cannot find renders nothing, silently.
+ * /blog/ draws each post twice through `?jsx` (src/routes/blog/index.tsx): its
+ * cover as a print for phones, and a backdrop for hover, which is
+ * src/content/backdrops/<slug>.png or else the cover again. Each is found by
+ * its path, and one it cannot find renders nothing, silently.
  */
-check("every post's cover reaches /blog/ as a WebP srcset", () => {
+check("every post's cover and backdrop reach /blog/ as WebP srcsets", () => {
   const covers = (
     read("src", "content", "profile.ts").match(/^\s+cover: \{/gm) ?? []
   ).length;
@@ -687,8 +689,9 @@ check("every post's cover reaches /blog/ as a WebP srcset", () => {
     ...read("dist", "blog", "index.html").matchAll(/<img\b[^>]*>/g),
   ];
   assert(
-    imgs.length === covers,
-    `profile.ts gives ${covers} post(s) a cover; /blog/ shows ${imgs.length}`,
+    imgs.length === covers * 2,
+    `profile.ts gives ${covers} post(s) a cover, each drawn twice (print ` +
+      `and backdrop); /blog/ shows ${imgs.length} images`,
   );
   for (const [img] of imgs) {
     assert(
@@ -696,7 +699,7 @@ check("every post's cover reaches /blog/ as a WebP srcset", () => {
       `a /blog/ cover is not the ?jsx WebP srcset: ${img.slice(0, 100)}`,
     );
   }
-  return `${imgs.length} cover(s)`;
+  return `${imgs.length} image(s) for ${covers} post(s)`;
 });
 
 /*
