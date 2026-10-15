@@ -423,6 +423,12 @@ export type Post = {
   /** Where the code the post is about lives, if anywhere. */
   repo?: string;
   /**
+   * Shown as "N min read": prose at 238 words a minute (Brysbaert, 2019, for
+   * non-fiction) plus 12 s a figure, rounded. Code blocks are not counted.
+   * `pnpm run verify` recounts the built post and fails with the right number.
+   */
+  minutes: number;
+  /**
    * 1200x630 JPEG under public/: the card image on /blog/ and the post's
    * og:image. `pnpm run verify` checks the size and that it exists.
    */
@@ -442,6 +448,7 @@ export const posts: Post[] = [
     summary:
       "A Claude Code status line that stays quiet until something can stop you: what it shows, what it refuses to show, and the bugs that decided both.",
     repo: "https://github.com/my-neme-eh-jeff/ai-experiments/tree/main/claude-statusline",
+    minutes: 8,
     // demo/states.png from that folder, cropped to 1200x630:
     //   sips -c 1680 3200 --cropOffset 60 0 states.png --out c.png
     //   sips -z 630 1200 c.png && sips -s format jpeg -s formatOptions 82 c.png --out cover.jpg

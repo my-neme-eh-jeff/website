@@ -78,9 +78,11 @@ export default component$(() => {
               class="hairline group has-[:focus-visible]:outline-accent relative items-center gap-x-10 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 sm:grid sm:grid-cols-[minmax(0,1fr)_14rem] lg:grid-cols-[minmax(0,1fr)_18rem]"
             >
               <div class="max-w-[32rem]">
-                <time dateTime={p.date} class="text-muted font-mono text-xs">
-                  {longDate(p.date)}
-                </time>
+                <p class="text-muted m-0 font-mono text-xs">
+                  <time dateTime={p.date}>{longDate(p.date)}</time>
+                  <span aria-hidden="true"> · </span>
+                  {p.minutes} min read
+                </p>
                 <h2 class="mt-1.5 mb-1.5 text-lg">
                   <Link
                     href={`/blog/${p.slug}/`}

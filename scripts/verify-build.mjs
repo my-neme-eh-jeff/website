@@ -700,6 +700,44 @@ check("every post's cover reaches /blog/ as a WebP srcset", () => {
 });
 
 /*
+ * A post's "N min read" is a number in profile.ts, so it goes stale when the
+ * post changes. Recounted here from the built article the way profile.ts
+ * describes: words outside figures, code blocks and the contents list, at 238
+ * a minute, plus 12 s a figure.
+ */
+check("every post's reading time matches its built text", () => {
+  const profile = read("src", "content", "profile.ts");
+  const posts = PAGES.filter((pg) => /^blog\/[^/]+\/index\.html$/.test(pg));
+  for (const page of posts) {
+    const slug = page.split("/")[1];
+    const entry = profile
+      .split(/\bslug: /)
+      .find((b) => b.startsWith(`"${slug}"`));
+    const stated = Number(entry?.match(/\bminutes: (\d+)/)?.[1]);
+    const html = read("dist", page);
+    const article = html.slice(
+      html.indexOf("<article"),
+      html.indexOf("</article>"),
+    );
+    const figures = (article.match(/<figure\b/g) ?? []).length;
+    const words = (
+      article
+        .replace(/<(figure|pre|details|script)\b[\s\S]*?<\/\1>/g, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&[a-z#0-9]+;/g, " ")
+        .match(/[\p{L}\p{N}][\p{L}\p{N}'’.-]*/gu) ?? []
+    ).length;
+    const minutes = Math.max(1, Math.round(words / 238 + (figures * 12) / 60));
+    assert(
+      stated === minutes,
+      `${slug}: profile.ts says minutes: ${stated}; ${words} words and ` +
+        `${figures} figures make it ${minutes}. Set minutes: ${minutes}.`,
+    );
+  }
+  return `${posts.length} post(s)`;
+});
+
+/*
  * Every image a page shows is WebP, from `?jsx` (CLAUDE.md, Invariants). An
  * og:image is not shown on a page, so it stays the JPEG the og check measures.
  */
