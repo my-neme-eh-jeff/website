@@ -29,10 +29,11 @@ const Cover = ({ src, ...props }: ImgProps & { src: string }) => {
 };
 
 /*
- * What stands behind the list on hover: src/content/backdrops/<slug>.png if
- * there is one, else the cover. Not under public/, because only the WebP is
- * ever shown. The status-line post's is its own Playground figure: the first
- * two lines of each state at 64px, cropped to 2100px wide.
+ * What tilts into a row's right-hand slot on hover:
+ * src/content/backdrops/<slug>.png if there is one, else the cover. Not under
+ * public/, because only the WebP is ever shown. The status-line post's is its
+ * own Playground figure: the first two lines of each state at 64px, cropped to
+ * 1280x807 from the brain emoji on.
  */
 const backdrops = import.meta.glob<FunctionComponent<ImgProps>>(
   "/src/content/backdrops/*.png",
@@ -49,8 +50,8 @@ const Backdrop = ({
 };
 
 /*
- * Where a mouse is over the list, the hovered row's cover stands behind it and
- * leans toward the pointer. Inline (sync$), so it follows from the first event
+ * Where a mouse is over the list, the hovered row's backdrop leans toward the
+ * pointer. Inline (sync$), so it follows from the first event
  * instead of after a bundle loads. It only writes custom properties, from -1
  * to 1 across the list; global.css draws the cover.
  */
@@ -88,7 +89,7 @@ export default component$(() => {
              */
             <li
               key={p.slug}
-              class="hairline group has-[:focus-visible]:outline-accent relative has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2"
+              class="hairline group has-[:focus-visible]:outline-accent relative gap-x-10 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 sm:grid sm:grid-cols-[minmax(0,1fr)_14rem] lg:grid-cols-[minmax(0,1fr)_17rem]"
             >
               <div class="max-w-[32rem]">
                 <p class="text-muted m-0 font-mono text-xs">
@@ -125,10 +126,10 @@ export default component$(() => {
                       slug={p.slug}
                       src={p.cover.src}
                       alt=""
-                      sizes="(min-width: 64rem) 47rem, 100vw"
+                      sizes="(min-width: 64rem) 17rem, 14rem"
                       loading="lazy"
                       decoding="async"
-                      class="block h-auto w-full"
+                      class="block"
                     />
                   </span>
                 </>
