@@ -767,26 +767,7 @@
   }
 }
 
-/*
- * The shell's busy line: three dots filling in, on their own row where the
- * output is about to land.
- *
- * `[data-busy]` is set by a sync$ handler on keydown rather than by a signal,
- * because the wait it covers is the one before any Qwik handler has been
- * fetched. See keyGuard in terminal.tsx.
- *
- * Middle dots (U+00B7), not braille or a block cursor: the @font-face blocks
- * above declare Fira Mono only for latin and latin-ext, and anything outside
- * them falls out to whatever system mono the visitor has, jittering on every
- * tick.
- *
- * The width is the box's, not the content's, so the note beside the dots
- * holds still. Trailing spaces in `content` used to pad it, but a CSS hex
- * escape eats the one space after it: the frames were 2, 2 and 3 characters
- * wide, and the note stepped 7.8px right and back every cycle. Check: set
- * `data-busy` on `[data-shell]` and sample the note's
- * `getBoundingClientRect().left` over 1.5s; it must not change.
- */
+/* Shown off `[data-busy]`, which keyGuard sets before Qwik has loaded. */
 .term-pending {
   display: none;
 }
@@ -795,35 +776,37 @@
   display: flex;
 }
 
-.term-dots {
+.term-wire {
   flex: none;
-  width: 3ch;
+  width: calc(var(--cols) * 1ch);
+  height: 1lh;
+  overflow: hidden;
 }
 
-.term-dots::after {
-  content: "\00b7";
-  animation: term-dots 1.2s steps(1, end) infinite;
+.term-wire > span {
+  display: block;
+  white-space: pre;
+  animation: term-wire calc(var(--n) * var(--ms)) steps(var(--n), end) infinite;
 }
 
-@keyframes term-dots {
-  0% {
-    content: "\00b7";
-  }
-  33% {
-    content: "\00b7\00b7";
-  }
-  66% {
-    content: "\00b7\00b7\00b7";
+.term-wire > .term-wire-asleep,
+[data-cold] .term-wire > .term-wire-awake {
+  display: none;
+}
+
+[data-cold] .term-wire > .term-wire-asleep {
+  display: block;
+}
+
+@keyframes term-wire {
+  to {
+    transform: translateY(calc(var(--n) * -1lh));
   }
 }
 
-/*
- * The global reduce block only shortens durations, which would cycle this at
- * 0.01ms per frame -- strobing, i.e. worse than the thing it is mitigating.
- */
+/* The global reduce block only shortens durations, which strobes a steps() loop. */
 @media (prefers-reduced-motion: reduce) {
-  .term-dots::after {
-    content: "\00b7\00b7\00b7";
+  .term-wire > span {
     animation: none;
   }
 }

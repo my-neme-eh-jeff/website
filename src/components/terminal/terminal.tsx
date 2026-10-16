@@ -13,6 +13,7 @@ import { sound, isMuted, setMuted, type Tone } from "./sounds";
 import { load as loadHistory, save as saveHistory } from "./history";
 import { run, completions, ASK, PICK, type Line } from "./commands";
 import { ThemePick, PICKS, type PickState } from "./theme-pick";
+import { Wire } from "./wire";
 import { abortChat, sendChat, type Outcome, type Turn } from "./chat";
 import {
   KNOWN_HREFS,
@@ -432,13 +433,16 @@ function followIfPinned() {
 }
 
 /**
- * Clear the busy flag that keyGuard set synchronously on Enter.
+ * Clear the busy flag that keyGuard set synchronously on Enter, and the
+ * cold-start flag the stream's timer sets.
  *
  * Plain DOM rather than a signal, because the thing that SET it could not use
  * a signal — see keyGuard.
  */
 function clearBusy() {
-  document.querySelector("[data-shell]")?.removeAttribute("data-busy");
+  const shell = document.querySelector("[data-shell]");
+  shell?.removeAttribute("data-busy");
+  shell?.removeAttribute("data-cold");
 }
 
 export const Terminal = component$(() => {
@@ -592,7 +596,7 @@ export const Terminal = component$(() => {
 
     /*
      * No empty answer line up front: it would sit as a blank row between the
-     * question and the pending dots. The line appears with its first word.
+     * question and the busy line. The line appears with its first word.
      */
     let answer: Line | null = null;
     let got = "";
@@ -605,6 +609,7 @@ export const Terminal = component$(() => {
      */
     const slow = setTimeout(() => {
       convo.note = "cold start, ~20s";
+      document.querySelector("[data-shell]")?.setAttribute("data-cold", "");
     }, SLOW_MS);
     let outcome: Outcome;
     try {
@@ -1277,8 +1282,8 @@ export const Terminal = component$(() => {
              * region above, which is aria-busy while an answer streams and
              * would hold the announcement until the wait was over.
              */}
-            <div class="term-pending text-muted items-baseline gap-3">
-              <span class="term-dots" aria-hidden="true" />
+            <div class="term-pending text-muted items-center gap-3">
+              <Wire />
               <span role="status" class="text-[0.6875rem] leading-snug">
                 {convo.note}
               </span>
