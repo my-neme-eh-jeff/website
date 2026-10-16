@@ -14,15 +14,24 @@ note — it makes a future session skip verification instead of doing it.
 command that re-verifies it.** No command, no trust. Read `node_modules`, not
 the docs, when they disagree.
 
-That rule covers facts, which carry numbers. Two things it kept missing:
+## Comments
 
-- **A comment describing structure or another file must be backed by a check,
-  or not written.** Every stale comment an audit has found here was that shape —
-  a layout that changed, a parity claim nothing compared, a guard described as
-  stricter than it is. None carried a number, so none attracted verification.
-- **Don't match the surrounding comment density.** The long blocks are
-  load-bearing measurements, not a house style. Default to none, and earn each
-  one: if removing it wouldn't confuse a future reader, don't write it.
+Default to none. Code is the source of truth; a comment is a second copy that
+nothing keeps in sync. The 2026-10-16 audit found ~50 false comments in ~3,200
+lines, nearly all long explanations, claims about other files, or history.
+
+- **Keep** a constraint from something we can't change (browser, Qwik,
+  Cloudflare, WCAG) in one line, two if the second is a new fact, dated per the
+  anti-rot rule. Also tool directives, and the config rationale the table
+  below points at.
+- **Check or delete** any claim about another file, a layout, or "must match
+  X": make it a shared constant or a `verify` check, then drop the prose.
+- **Delete** what the code already says, history, banners, and measurements
+  that justified a past decision (those belong in the commit message).
+- **Rename, don't explain** a surprise in our own code.
+
+Don't copy the density of the file you're in. Details, and the places a comment
+is not inert (Tailwind and `verify` read them): `.claude/skills/comments/`.
 
 ## Where things live
 
@@ -34,6 +43,7 @@ That rule covers facts, which carry numbers. Two things it kept missing:
 | SEO, structured data, AI-crawler policy                 | `.claude/skills/seo-geo/`                                                                   |
 | Colour palettes, light/dark, the shell's `theme` picker | `src/content/palettes.ts`, `src/content/theme.ts`, `src/components/terminal/theme-pick.tsx` |
 | Design tokens, shared patterns                          | `src/global.css` (read the header)                                                          |
+| Writing, trimming or deleting a comment                 | `.claude/skills/comments/`                                                                  |
 | **Accessibility bar for any UI work**                   | `.claude/skills/a11y-ui/`                                                                   |
 | Visual design direction for NEW surfaces                | `.claude/skills/frontend-design/` (upstream)                                                |
 | Favicon / og:image generation                           | `scripts/make-icons.mjs` (run it, don't hand-edit)                                          |
@@ -52,9 +62,8 @@ Most of these are **executed**, not just written down — `pnpm run verify` chec
 them against the real build output. Add new ones there, not here.
 
 - **Pin exact. No carets.** `^2.0.0-beta.38` silently installed beta.39 — carets
-  don't pin prereleases. Verify: `pnpm run verify` (the bare
-  `grep -c '\^' package.json` returns 1, not 0 — `engines.node` legitimately
-  uses carets, which is why the check parses the dependency blocks instead).
+  don't pin prereleases. Verify: `pnpm run verify`, which parses the
+  dependency blocks rather than grepping the whole file.
 - **Qwik 2 docs are `next.qwik.dev`.** `qwik.dev` is v1; its APIs aren't here.
 - **The Worker runs on `/api/*` only.** Asset requests are free and unlimited;
   a Worker invocation counts against 100k/day. `run_worker_first` is a list of
