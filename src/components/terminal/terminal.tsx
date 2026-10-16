@@ -6,6 +6,7 @@ import {
   $,
   sync$,
   Slot,
+  type Signal,
 } from "@qwik.dev/core";
 import { haptic } from "./haptics";
 import { sound, isMuted, setMuted, type Tone } from "./sounds";
@@ -104,17 +105,20 @@ function statsLine(o: Extract<Outcome, { ok: true }>): string {
 
 /** Styling per line kind, so the render stays a lookup rather than a branch. */
 const LINE_CLASS: Record<Line["kind"], string> = {
-  in: "text-text",
+  in: "text-text font-medium",
   out: "text-muted",
   // --sem-danger, not the raw #e0715c this used to carry. That hex is 3.01:1
   // on the light ground -- error text below the 4.5:1 bar, and invisible to
   // `pnpm run verify`, which can only see colours that are tokens.
   err: "text-danger",
-  hint: "text-accent",
+  // Muted, with the command it suggests in the accent: a hint drawn wholly in
+  // the accent read as an error wherever the accent sits near --sem-danger.
+  hint: "text-muted",
   // Diagrams must not wrap — a re-flowed box drawing is unreadable — so this
   // is the one kind that scrolls its container instead.
   art: "text-muted/85 scroll-cue whitespace-pre overflow-x-auto",
-  ai: "text-text",
+  // Prose, so it gets a measure. Tables and diagrams keep the full width.
+  ai: "text-text max-w-[76ch]",
   meta: "text-muted text-[0.6875rem] leading-snug",
 };
 
@@ -227,6 +231,100 @@ export function linkify(text: string, allow?: ReadonlySet<string>): Segment[] {
   return out;
 }
 
+const LINK_CLASS =
+  "text-accent underline decoration-dotted underline-offset-2 hover:decoration-solid";
+
+/*
+ * A new tab, which the rest of the site does not do -- every other external
+ * link here navigates in place. The shell is the exception because it is the
+ * only stateful thing on the site: leaving the page destroys the buffer, so
+ * following a repo link would silently throw away the session that produced
+ * it. No `↗` marker, unlike the nav: inside monospace output an extra glyph
+ * shifts every column after it, so the note is sr-only instead.
+ */
+function links(text: string, allow?: ReadonlySet<string>) {
+  return linkify(text, allow).map((seg, j) =>
+    seg.href ? (
+      <a
+        href={seg.href}
+        target={seg.href.startsWith("http") ? "_blank" : undefined}
+        rel="noopener noreferrer"
+        class={LINK_CLASS}
+        key={j}
+      >
+        {seg.text}
+        {seg.href.startsWith("http") && (
+          <span class="sr-only"> (opens in a new tab)</span>
+        )}
+      </a>
+    ) : (
+      <span key={j}>{seg.text}</span>
+    ),
+  );
+}
+
+/** A hint, with each `command` it suggests drawn in the accent. */
+function hintText(text: string) {
+  return text.split("`").map((part, j) =>
+    j % 2 ? (
+      <span class="text-accent" key={j}>
+        {part}
+      </span>
+    ) : (
+      <span key={j}>{links(part)}</span>
+    ),
+  );
+}
+
+/** An echoed command: the prompt in the accent, what was typed in ink. */
+function echo(text: string) {
+  if (!text.startsWith(PROMPT)) return text;
+  return [
+    <span class="text-accent font-normal" key="p">
+      {PROMPT}
+    </span>,
+    text.slice(PROMPT.length),
+  ];
+}
+
+/**
+ * A model's answer, a line per block. Blank lines become half a line, and a
+ * list item hangs its wrapped lines under its text rather than its marker.
+ * Still one <pre>: stickToBottom counts those.
+ */
+function prose(text: string, allow?: ReadonlySet<string>) {
+  return text.split("\n").map((line, j) => {
+    if (!line.trim()) return <span class="block h-2" key={j} />;
+    const lead = /^\s*(?:[-*\u2022]|\d+[.)])\s+/.exec(line)?.[0] ?? "";
+    return (
+      <span
+        class="block"
+        style={
+          lead
+            ? {
+                paddingLeft: `${lead.length}ch`,
+                textIndent: `-${lead.length}ch`,
+              }
+            : undefined
+        }
+        key={j}
+      >
+        {lead && <span class="text-muted">{lead}</span>}
+        {links(line.slice(lead.length), allow)}
+      </span>
+    );
+  });
+}
+
+/**
+ * The answer while it streams. Its own component, so each token re-renders
+ * this and not the whole shell: a call in the shell's JSX would subscribe the
+ * shell to the signal.
+ */
+const Streaming = component$<{ text: Signal<string> }>(({ text }) => (
+  <>{prose(text.value)}</>
+));
+
 /**
  * Retry `fn` on a short timer until it reports success, or the tries run out.
  *
@@ -303,7 +401,8 @@ function stickToBottom(lineCount: number) {
 function shellColumns(): number {
   const body = document.querySelector<HTMLElement>("[data-shell] label");
   if (body) {
-    const prompt = body.querySelector("#term-input")?.previousElementSibling;
+    const prompt =
+      document.getElementById("term-input")?.previousElementSibling;
     const ch = (prompt?.getBoundingClientRect().width ?? 0) / PROMPT.length;
     const cs = getComputedStyle(body);
     const inner =
@@ -960,7 +1059,7 @@ export const Terminal = component$(() => {
           <Slot name="idle" />
         </div>
         <label
-          class="absolute inset-0 block cursor-text overflow-y-auto overscroll-contain px-4 pt-2 pb-3"
+          class="term-log absolute inset-0 block cursor-text overflow-y-auto overscroll-contain px-4 pt-3 pb-3"
           for="term-input"
         >
           <span class="sr-only">Terminal input</span>
@@ -985,9 +1084,10 @@ export const Terminal = component$(() => {
                 g.live ? (
                   <pre
                     class={`m-0 wrap-anywhere whitespace-pre-wrap ${LINE_CLASS.ai}`}
+                    data-kind="ai"
                     key={i}
                   >
-                    {partial.value}
+                    <Streaming text={partial} />
                   </pre>
                 ) : g.kind === "art" ? (
                   /*
@@ -1021,7 +1121,8 @@ export const Terminal = component$(() => {
                 ) : (
                   <pre
                     class={`m-0 wrap-anywhere whitespace-pre-wrap ${LINE_CLASS[g.kind]}`}
-                    style={hang(g)}
+                    style={g.kind === "ai" ? undefined : hang(g)}
+                    data-kind={g.kind}
                     key={i}
                   >
                     {/*
@@ -1029,50 +1130,15 @@ export const Terminal = component$(() => {
                      * and `err` lines quote it back, so neither should turn a
                      * visitor's own text into a link.
                      */}
-                    {g.kind === "out" || g.kind === "hint" || g.kind === "ai"
-                      ? linkify(
-                          g.text,
-                          g.kind === "ai" ? KNOWN_HREFS : undefined,
-                        ).map((seg, j) =>
-                          seg.href ? (
-                            <a
-                              href={seg.href}
-                              /*
-                               * A new tab, which the rest of the site does not
-                               * do — every other external link here navigates
-                               * in place. The shell is the exception because it
-                               * is the only stateful thing on the site: leaving
-                               * the page destroys the buffer, so following a
-                               * repo link would silently throw away the session
-                               * that produced it.
-                               *
-                               * No `↗` marker, unlike the nav. This sits inside
-                               * monospace output where an extra glyph shifts
-                               * every column after it; the note is sr-only
-                               * instead, which costs no width at all.
-                               */
-                              target={
-                                seg.href.startsWith("http")
-                                  ? "_blank"
-                                  : undefined
-                              }
-                              rel="noopener noreferrer"
-                              class="text-accent underline decoration-dotted underline-offset-2 hover:decoration-solid"
-                              key={j}
-                            >
-                              {seg.text}
-                              {seg.href.startsWith("http") && (
-                                <span class="sr-only">
-                                  {" "}
-                                  (opens in a new tab)
-                                </span>
-                              )}
-                            </a>
-                          ) : (
-                            <span key={j}>{seg.text}</span>
-                          ),
-                        )
-                      : g.text}
+                    {g.kind === "ai"
+                      ? prose(g.text, KNOWN_HREFS)
+                      : g.kind === "hint"
+                        ? hintText(g.text)
+                        : g.kind === "out"
+                          ? links(g.text)
+                          : g.kind === "in"
+                            ? echo(g.text)
+                            : g.text}
                     {/* A new tab for the same reason as the links above:
                      * following it in place would end the session. */}
                     {g.link && (
@@ -1082,7 +1148,7 @@ export const Terminal = component$(() => {
                           href={g.link.href}
                           target="_blank"
                           rel="noopener"
-                          class="text-accent underline decoration-dotted underline-offset-2 hover:decoration-solid"
+                          class={LINK_CLASS}
                         >
                           {g.link.text}
                           <span class="sr-only"> (opens in a new tab)</span>
@@ -1110,61 +1176,74 @@ export const Terminal = component$(() => {
                 {convo.note}
               </span>
             </div>
-
-            <div class="mt-1 flex items-center gap-2">
-              <span class="text-accent shrink-0 font-mono text-[0.8125rem]">
-                {PROMPT}
-              </span>
-              <input
-                id="term-input"
-                type="text"
-                value={value.value}
-                spellcheck={false}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                /*
-                 * Full opacity, not /50. Placeholder is text and WCAG does not
-                 * exempt it: at /50 it measured 2.33:1 against the panel, taken
-                 * from rendered pixels rather than token arithmetic — which is a
-                 * measurement `pnpm run verify` structurally cannot make, since
-                 * it compares --sem-* against --sem-bg only.
-                 */
-                /*
-                 * The first thing a visitor reads, before any JavaScript. At
-                 * most 22 characters: it is 16px on a phone (see below), and
-                 * a 320px screen cut the 28-character version off mid-word.
-                 * The intro says `help`, so this does not have to.
-                 */
-                placeholder="Ask about Aman's work"
-                /*
-                 * 16px on phones, 13px from `sm` up, and that is not a taste
-                 * call. iOS Safari zooms the page whenever a focused input is
-                 * under 16px, so tapping the prompt would scale the whole site
-                 * and leave the visitor pinching their way back out. The other
-                 * fix — capping maximum-scale in the viewport meta — disables
-                 * pinch-zoom outright, which is a WCAG 1.4.4 failure and not
-                 * on the table.
-                 *
-                 * The cost is that the input reads a shade larger than the
-                 * output above it on a phone. It sits on its own row after the
-                 * prompt, so nothing misaligns.
-                 */
-                class="text-text placeholder:text-muted min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-base focus:outline-none sm:text-[0.8125rem]"
-                onInput$={(_, el) => (value.value = el.value)}
-                /* Sync guard first: it must run before the default, and before
-                 * the lazily-fetched async handler below. */
-                onKeyDown$={[keyGuard, onKeyDown]}
-              />
-            </div>
           </div>
         </label>
+      </div>
+
+      {/*
+       * The prompt sits in its own box under the log rather than as the log's
+       * last line, where it looked like one more command already sent. The
+       * box draws the focus ring, since the input inside draws none.
+       */}
+      <div class="px-3 pt-1 sm:px-4">
+        <div class="term-composer flex items-center gap-2 rounded-xl px-3 py-2.5">
+          <span class="text-accent shrink-0 font-mono text-[0.8125rem]">
+            {PROMPT}
+          </span>
+          <input
+            id="term-input"
+            type="text"
+            value={value.value}
+            spellcheck={false}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            /*
+             * Full opacity, not /50. Placeholder is text and WCAG does not
+             * exempt it: at /50 it measured 2.33:1 against the panel, taken
+             * from rendered pixels rather than token arithmetic — which is a
+             * measurement `pnpm run verify` structurally cannot make, since
+             * it compares --sem-* against --sem-bg only.
+             */
+            /*
+             * The first thing a visitor reads, before any JavaScript. At
+             * most 22 characters: it is 16px on a phone (see below), and
+             * a 320px screen cut the 28-character version off mid-word.
+             * The intro says `help`, so this does not have to.
+             */
+            placeholder="Ask about Aman's work"
+            /*
+             * 16px on phones, 13px from `sm` up, and that is not a taste
+             * call. iOS Safari zooms the page whenever a focused input is
+             * under 16px, so tapping the prompt would scale the whole site
+             * and leave the visitor pinching their way back out. The other
+             * fix — capping maximum-scale in the viewport meta — disables
+             * pinch-zoom outright, which is a WCAG 1.4.4 failure and not
+             * on the table.
+             *
+             * The cost is that the input reads a shade larger than the
+             * output above it on a phone. It sits on its own row after the
+             * prompt, so nothing misaligns.
+             */
+            class="text-text placeholder:text-muted min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-base focus:outline-none sm:text-[0.8125rem]"
+            onInput$={(_, el) => (value.value = el.value)}
+            /* Sync guard first: it must run before the default, and before
+             * the lazily-fetched async handler below. */
+            onKeyDown$={[keyGuard, onKeyDown]}
+          />
+          <span
+            class="text-muted hidden shrink-0 font-mono text-[0.6875rem] sm:inline"
+            aria-hidden="true"
+          >
+            enter ↵
+          </span>
+        </div>
       </div>
 
       <div
         role="group"
         aria-labelledby="term-suggest"
-        class="border-line/60 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t px-4 py-2.5"
+        class="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-3 pt-2 pb-3 sm:px-4"
       >
         <span id="term-suggest" class="text-muted font-mono text-[0.6875rem]">
           Try asking

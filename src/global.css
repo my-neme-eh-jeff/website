@@ -818,6 +818,40 @@
 }
 
 /*
+ * The shell's output, grouped by exchange. Every line is its own <pre>
+ * (stickToBottom counts them), so what separates one question and its answer
+ * from the next is a margin on each echoed command, not a wrapper.
+ */
+[data-shell] pre[data-kind="in"]:not(:first-child) {
+  margin-top: 1rem;
+}
+
+/*
+ * Output scrolls up under the shell's heading. Fading its top edge means a
+ * line leaves gradually instead of being sliced through by the panel.
+ */
+.term-log {
+  mask-image: linear-gradient(to bottom, transparent, #000 1rem);
+}
+
+/*
+ * The prompt's box. Its resting border is --sem-muted, which verify holds to
+ * 4.5:1 on the page, so the field is findable before it has focus. Focus is
+ * drawn here because the input inside draws none.
+ */
+.term-composer {
+  border: 1px solid var(--sem-muted);
+  background: color-mix(in oklab, var(--sem-bg) 35%, transparent);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+.term-composer:focus-within {
+  border-color: var(--sem-accent);
+  box-shadow: 0 0 0 1px var(--sem-accent);
+}
+
+/*
  * The page column. Wide pages sit right of the gradient (why: layout.tsx);
  * posts and the home page are centred. Set by the route's head, as
  * `data-column`, so a navigation never re-renders the layout.
