@@ -8,6 +8,15 @@ import { grad } from "../src/components/blog/statusline/model.ts";
 import { GRIDS, rasterize } from "../src/components/desk/desk.ts";
 import { DEFAULT_PALETTE, PALETTES, modesOf } from "../src/content/palettes.ts";
 import { SENTINEL, parse, splitter } from "../src/worker/follow-ups.ts";
+import {
+  MAX_ASSISTANT_CHARS,
+  MAX_TURNS,
+  MAX_USER_CHARS,
+  NUM_PREDICT,
+  SYSTEM_PROMPT,
+} from "../src/content/chat.ts";
+import { bestWork } from "../src/content/context.ts";
+import { projects } from "../src/content/profile.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const p = (...s) => join(ROOT, ...s);
@@ -109,6 +118,34 @@ check("wrangler.jsonc runs the Worker on /api/* only", () => {
   );
   return `Worker on ${first.join(", ")}`;
 });
+
+check("the best-work pick in context.ts names a project", () => {
+  if (!bestWork) return "none picked yet";
+  assert(
+    projects.some((p) => p.slug === bestWork.slug),
+    `bestWork.slug "${bestWork.slug}" is not a project slug in profile.ts`,
+  );
+  assert(bestWork.why.trim(), "bestWork.why is empty");
+  return bestWork.slug;
+});
+
+// `ollama show gpt-oss-16k:20b` on the desk: num_ctx 16384 (2026-10-16). The
+// prompt measured 4.1 characters a token there; 3.5 leaves room.
+check(
+  "the prompt and the longest conversation fit the desk model's context",
+  () => {
+    const NUM_CTX = 16_384;
+    const tokens = (chars) => Math.ceil(chars / 3.5);
+    const history = (MAX_TURNS / 2) * (MAX_USER_CHARS + MAX_ASSISTANT_CHARS);
+    const prompt = tokens(SYSTEM_PROMPT.length);
+    const used = prompt + tokens(history) + NUM_PREDICT;
+    assert(
+      used <= NUM_CTX,
+      `up to ${used} tokens against ${NUM_CTX}: trim src/content/context.ts`,
+    );
+    return `up to ${used} of ${NUM_CTX} tokens; the prompt is ${prompt}`;
+  },
+);
 
 check("the follow-up block is cut out of the answer at any token split", () => {
   const answer = "He works at Atlan, on:\n- Kubernetes\n- a < b";

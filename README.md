@@ -142,6 +142,7 @@ Only what a filename doesn't say; `ls` for the rest.
       content/profile.ts        every fact the pages render
       content/chat.ts           what the shell's model is told, which links it may print, and
                                 where its suggested next questions lead
+      content/context.ts        what the model knows beyond the CV, in Aman's own words
       content/seo.ts            meta tags + JSON-LD
       content/palettes.ts       every palette's values; theme.ts applies the saved one
       components/desk/          the home page desk, as text and as the WebGL light

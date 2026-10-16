@@ -2,6 +2,7 @@ import {
   MAX_ASSISTANT_CHARS,
   MAX_TURNS,
   MAX_USER_CHARS,
+  NUM_PREDICT,
   SYSTEM_PROMPT,
 } from "../content/chat";
 import { parse, splitter } from "./follow-ups";
@@ -91,7 +92,7 @@ function callDesk(
         stream: true,
         think: "low",
         keep_alive: "30m",
-        options: { num_predict: 700 },
+        options: { num_predict: NUM_PREDICT },
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...turns],
       }),
       signal,
