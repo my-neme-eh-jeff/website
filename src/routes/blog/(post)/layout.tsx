@@ -15,7 +15,7 @@ export default component$(() => {
   return (
     <div>
       <div class="relative">
-        <aside class="absolute inset-y-0 right-full mr-[clamp(3rem,5vw_-_1rem,5rem)] hidden w-44 xl:block">
+        <aside class="absolute inset-y-0 right-full mr-(--rail-gap) hidden w-(--rail-width) xl:block">
           {/*
            * Keyed from head, which the router updates only after capturing the
            * page being left, so that page keeps its rail in the transition.

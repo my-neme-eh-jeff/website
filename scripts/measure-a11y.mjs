@@ -7,6 +7,7 @@
  *   --only <ids>     palette-mode pairs, e.g. wada-light,amber-dark
  *   --widths <list>  default 320,1280 for axe and 390,1280 for --contrast
  *   --dist <dir>     measure another build
+ *   --port <n>       serve on another port, to run two at once
  *
  * Exits 1 if anything fails. Neither pass is in `pnpm run verify`, which has no
  * browser; this is what the a11y-ui skill's "what automation does NOT check"
@@ -30,8 +31,6 @@ import { fileURLToPath } from "node:url";
 import { PALETTES, modesOf } from "../src/content/palettes.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const PORT = 8261;
-const BASE = `http://127.0.0.1:${PORT}`;
 const CHROME =
   process.env.CHROME_PATH ??
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
@@ -41,6 +40,8 @@ const arg = (name, fallback) => {
   return i > 0 ? process.argv[i + 1] : fallback;
 };
 const CONTRAST = process.argv.includes("--contrast");
+const PORT = Number(arg("port", "8261"));
+const BASE = `http://127.0.0.1:${PORT}`;
 const DIST = resolve(arg("dist", join(ROOT, "dist")));
 const ONLY = arg("only", "")?.split(",").filter(Boolean);
 const widths = (fallback) => arg("widths", fallback).split(",").map(Number);
@@ -57,7 +58,10 @@ async function waitFor(url, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      if ((await fetch(url)).ok) return;
+      const res = await fetch(url);
+      // An unread body trips an assertion in Node's fetch when the socket ends.
+      await res.body?.cancel();
+      if (res.ok) return;
     } catch {
       /* not up yet */
     }

@@ -912,6 +912,31 @@ check("every sideways scroller gets a tab stop when it overflows", () => {
 });
 
 /*
+ * Over the field wash, muted and accent text measured 2.4–3.2:1, so global.css
+ * masks the wash out under the column (WHERE THE WASH STOPS). A page with a
+ * column that has no rule there would put its text back on the wash.
+ */
+check("the wash is masked under every column a page uses", () => {
+  const columns = new Set();
+  for (const page of [...PAGES, "404.html"]) {
+    const html = read("dist", page);
+    const col = html.match(/<div\b[^>]*class="site-column[^"]*"[^>]*>/)?.[0];
+    assert(col, `${page}: no .site-column.`);
+    const name = col.match(/data-column="([a-z]+)"/)?.[1];
+    const rule = name
+      ? `.field:has(~.site-column[data-column=${name}])`
+      : ".field:has(~.site-column:not([data-column]))";
+    assert(
+      html.includes(rule),
+      `${page}: column "${name ?? "wide"}" has no wash mask, so its text ` +
+        `sits on the field. Add a rule under WHERE THE WASH STOPS.`,
+    );
+    columns.add(name ?? "wide");
+  }
+  return [...columns].join(", ");
+});
+
+/*
  * A <label> takes its control's name from all of its text. The shell's log is
  * a label for its input, so its field was named by the whole transcript: 1716
  * characters after three commands, read out each time focus came back.

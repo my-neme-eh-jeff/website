@@ -310,6 +310,45 @@
 }
 
 /*
+ * The wash is masked out under the column of text and the post's side rail,
+ * so text sits on --sem-bg: over the wash, muted and accent text fell to
+ * 2.4:1. The grain is its own layer and stays. verify checks every column a
+ * page uses has a rule here.
+ */
+.field {
+  --wash-l: 0px;
+  --wash-r: 100%;
+  mask-image: linear-gradient(
+    to right,
+    #000 var(--wash-l),
+    transparent calc(var(--wash-l) + var(--column-gutter)),
+    transparent calc(var(--wash-r) - var(--column-gutter)),
+    #000 var(--wash-r)
+  );
+}
+/* The widths are .site-column's, from the same custom properties. */
+.field:has(~ .site-column:not([data-column])) {
+  --wash-l: max(0px, 100% - var(--column-wide));
+}
+.field:has(~ .site-column[data-column="stage"]) {
+  --wash-l: max(0px, 50% - var(--column-stage) / 2);
+  --wash-r: min(100%, 50% + var(--column-stage) / 2);
+}
+.field:has(~ .site-column[data-column="reading"]) {
+  --wash-l: max(0px, 50% - var(--column-reading) / 2);
+  --wash-r: min(100%, 50% + var(--column-reading) / 2);
+}
+/* xl, where the post's side rail is shown. */
+@media (width >= 80rem) {
+  .field:has(~ .site-column[data-column="reading"]) {
+    --wash-l: calc(
+      50% - var(--column-reading) / 2 - var(--rail-gap) - var(--rail-width) -
+        var(--column-gutter)
+    );
+  }
+}
+
+/*
  * Film grain. feTurbulence's alpha is noise too, so feFuncA pins it to 1. At
  * baseFrequency 1.0 the noise lines up with the pixel grid and vanishes.
  */
@@ -586,27 +625,41 @@
   color: var(--sem-accent);
 }
 
+/* Column sizes, read by .site-column and by the wash mask above. */
+:root {
+  --column-wide: 46rem;
+  --column-reading: 52rem;
+  --column-stage: 80rem;
+  --column-gutter: 1.25rem;
+  /* The post's side rail, from xl: src/routes/blog/(post)/layout.tsx. */
+  --rail-width: 11rem;
+  --rail-gap: clamp(3rem, 5vw - 1rem, 5rem);
+}
+@media (width >= 64rem) {
+  :root {
+    --column-wide: 52rem;
+  }
+}
 @layer components {
   .site-column {
     margin-left: auto;
-    max-width: 46rem;
-    padding-inline: 1.25rem;
+    max-width: var(--column-wide);
+    padding-inline: var(--column-gutter);
   }
   @media (width >= 64rem) {
     .site-column {
-      max-width: 52rem;
       padding-right: 4rem;
     }
   }
   .site-column[data-column="reading"] {
     margin-inline: auto;
-    max-width: 52rem;
-    padding-right: 1.25rem;
+    max-width: var(--column-reading);
+    padding-right: var(--column-gutter);
   }
   .site-column[data-column="stage"] {
     margin-inline: auto;
-    max-width: 80rem;
-    padding-right: 1.25rem;
+    max-width: var(--column-stage);
+    padding-right: var(--column-gutter);
   }
 }
 

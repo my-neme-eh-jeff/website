@@ -68,14 +68,15 @@ Do not read a green `verify` as "accessible". These need a person:
   1.78, acme light 1.29, computed 2026-10-16). `statusline/terminal.tsx` rings
   the frame instead, on the page's ground.
 - **Text over the field wash.** Every `--sem-*` check measures against flat
-  `--sem-bg`, but text on a phone, and the post's side rail and captions on
-  desktop, sits on the field gradient. Measured from rendered pixels on
-  2026-10-16, muted or accent text fell to 2.36:1 (amber dark), 2.98 (wada
-  light), 2.74 (paper light), 2.91 (paper dark) and 3.22 (kanagawa dark); modus
-  and acme passed. Only a screenshot can measure this: hide the text, sample
-  the pixels under it, compare with its colour. Re-measure:
-  `pnpm run build && node scripts/measure-a11y.mjs --contrast` (slow; narrow
-  it with `--only amber-dark --widths 390`).
+  `--sem-bg`, and the field gradient is not flat. Text used to sit on it:
+  muted and accent fell to 2.36–3.22:1 in five palette modes (rendered pixels,
+  2026-10-16). `src/global.css` now masks the wash out under the column of
+  text and the post's side rail (WHERE THE WASH STOPS), and verify checks every
+  column a page uses has a mask. Text placed outside the column, such as a new
+  rail, is back on the wash. Every palette passed at 390 and 1280 on
+  2026-10-16. Re-measure, slowly:
+  `pnpm run build && node scripts/measure-a11y.mjs --contrast`, or narrow it
+  with `--only amber-dark --widths 390`.
 - **Screen-reader announcement.** VoiceOver: `Cmd+F5`, then `Ctrl+Opt+U` for
   the rotor. Landmarks and headings should describe the page; link text should
   make sense out of context ("Source" in the footer is borderline).
