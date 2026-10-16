@@ -13,35 +13,10 @@ import {
   skills,
 } from "~/content/profile";
 
-/**
- * The command registry.
- *
- * ---------------------------------------------------------------------------
- * Everything reads from src/content/profile.ts, the same source the pages
- * render. That is the point: the shell is another view of the site's content,
- * not a second copy of it that can drift.
- *
- * Handlers are pure functions returning lines. No component imports, no
- * signals, no DOM — so adding a command never needs to know how the terminal
- * renders, and this whole module stays in a bundle that is only fetched once
- * somebody actually types.
- *
- * The grammar is kubectl's on purpose, because the audience already has it in
- * muscle memory: `k get <resource>`, `k describe <resource> <name>`, columns
- * padded into a table, and an unknown resource answered the way the real thing
- * answers it.
- * ---------------------------------------------------------------------------
- */
-
 export type Line = {
   /**
-   * `art` is ASCII diagram content. It renders monospaced and un-wrapped, as
-   * one labelled `role="img"`: box-drawing characters read aloud are noise, so
-   * the meaning is carried in the `detail` prose that accompanies it.
-   *
-   * `ai` is a model's answer. It differs from `out` in what may become a link.
-   *
-   * `meta` is the caption under an answer: where it ran and how fast.
+   * `art` is a text diagram, shown unwrapped as one image, so its meaning has
+   * to be in prose too. `ai` differs from `out` in what may become a link.
    */
   kind: "in" | "out" | "err" | "hint" | "art" | "ai" | "meta";
   text: string;
@@ -49,10 +24,7 @@ export type Line = {
   link?: { text: string; href: string };
   /** The answer still streaming: its text is in a signal, not here. */
   live?: boolean;
-  /**
-   * A colour change for the shell to apply (`theme`, `k config use-context`).
-   * Handlers stay pure: they say what should change, the shell changes it.
-   */
+  /** A colour change for the shell to apply; handlers only say what changes. */
   theme?: { name?: string; mode?: ModeChoice };
 };
 
@@ -61,12 +33,8 @@ const err = (text: string): Line => ({ kind: "err", text });
 const hint = (text: string): Line => ({ kind: "hint", text });
 const art = (text: string): Line => ({ kind: "art", text });
 
-/* --- formatting ---------------------------------------------------------- */
-
-/** The shell's width in characters, as a CLI reads $COLUMNS. Set by `run`. */
 let cols = 80;
 
-/** The palette and mode in use, as the theme script reports it. Set by `run`. */
 let current: { name: string; mode: ModeChoice } = {
   name: DEFAULT_PALETTE,
   mode: "auto",
@@ -79,12 +47,6 @@ let current: { name: string; mode: ModeChoice } = {
 const fits = (lastAt: number, width: number) =>
   width <= cols || lastAt <= cols / 2;
 
-/**
- * Pad columns to the widest cell, like kubectl.
- *
- * Two spaces of gutter, and the last column is never padded — trailing
- * whitespace is invisible until someone copies the output.
- */
 function table(header: string[], rows: string[][]): Line[] {
   const all = [header, ...rows];
   const widths = header.map((_, i) =>
@@ -92,7 +54,6 @@ function table(header: string[], rows: string[][]): Line[] {
   );
   const lastAt = widths.slice(0, -1).reduce((n, w) => n + w + 2, 0);
   if (!fits(lastAt, lastAt + (widths[widths.length - 1] ?? 0))) {
-    // Too narrow for columns: each row's first cell heads the rest.
     return rows.flatMap(([first = "", ...rest]) => [
       out(first),
       // A no-break space keeps each "·" off the start of a line.
@@ -107,7 +68,6 @@ function table(header: string[], rows: string[][]): Line[] {
   return [out(line(header)), ...rows.map((r) => out(line(r)))];
 }
 
-/** Wrap prose to the shell's width, so a paragraph never scrolls sideways. */
 function wrap(text: string, width = cols, indent = "  "): Line[] {
   width = Math.min(width, cols - indent.length);
   const words = text.split(/[^\S\u00a0]+/);
@@ -125,13 +85,6 @@ function wrap(text: string, width = cols, indent = "  "): Line[] {
   return lines.map((l) => out(indent + l));
 }
 
-/*
- * There was an `age()` helper here that rendered a kubectl-style relative age
- * ("3mo", "2y") for the AGE column and the Updated field. Both are gone, and
- * so is it — see the note on `updated` in profile.ts for why.
- */
-
-/** `key: value` block, aligned, as `kubectl describe` prints it. */
 function fields(pairs: Array<[string, string]>): Line[] {
   const w = Math.max(...pairs.map(([k]) => k.length)) + 1;
   return pairs
@@ -139,10 +92,7 @@ function fields(pairs: Array<[string, string]>): Line[] {
     .map(([k, v]) => out(`${(k + ":").padEnd(w + 1)} ${v}`));
 }
 
-/* --- resources ----------------------------------------------------------- */
-
 type Resource = {
-  /** Canonical plural, as typed. */
   name: string;
   aliases: string[];
   list: () => Line[];
@@ -172,7 +122,6 @@ const RESOURCES: Resource[] = [
           ["Title", p.title],
           ["Stack", p.stack.join(", ")],
           ["Repo", p.repo ?? "(private)"],
-          // Rendered as `out` lines, so the shell linkifies them for free.
           ...(p.links ?? []).map((l) => [l.label, l.href] as [string, string]),
         ]),
         out(""),
@@ -266,11 +215,8 @@ const RESOURCES: Resource[] = [
 const findResource = (word: string) =>
   RESOURCES.find((r) => r.name === word || r.aliases.includes(word));
 
-/* --- colours -------------------------------------------------------------- */
-
 const SAVED = out("Saved in this browser.");
 
-/** The palettes, as `kubectl config get-contexts` lists contexts. */
 function contexts(): Line[] {
   return table(
     ["CURRENT", "NAME", "LOOK", "FROM"],
@@ -335,7 +281,6 @@ function theme(args: string[]): Line[] {
   ];
 }
 
-/** `k config ...`: the palettes are this cluster's contexts. */
 function config(sub: string | undefined, rest: string[]): Line[] {
   if (sub === "get-contexts") return contexts();
   if (sub === "current-context") return [out(current.name)];
@@ -348,7 +293,6 @@ function config(sub: string | undefined, rest: string[]): Line[] {
       ];
     }
     const p = PALETTES.find((x) => x.id === name.toLowerCase());
-    // kubectl's own wording, both ways.
     if (!p) return [err(`error: no context exists with the name: "${name}"`)];
     return [
       {
@@ -368,8 +312,6 @@ function config(sub: string | undefined, rest: string[]): Line[] {
   ];
 }
 
-/* --- top-level commands -------------------------------------------------- */
-
 type Command = {
   name: string;
   usage: string;
@@ -381,14 +323,6 @@ type Command = {
 
 const KUBECTL = new Set(["k", "kubectl"]);
 
-/**
- * The contractions people actually have in their shell profile.
- *
- * `kgp` is kubectl-get-pods to anyone who runs a cluster; here it is
- * kubectl-get-projects. The whole point of borrowing the grammar is that it
- * pays off without being read first, so the aliases have to be the real ones —
- * `kgp`, `kgs`, `kd`, `kdp` — not invented shorthand.
- */
 const ALIASES: Record<string, string[]> = {
   kgp: ["get", "projects"],
   kgr: ["get", "roles"],
@@ -402,7 +336,6 @@ const ALIASES: Record<string, string[]> = {
   kdr: ["describe", "roles"],
 };
 
-/** `k <verb> ...` — the kubectl-shaped surface. */
 function kubectl(args: string[]): Line[] {
   const [verb, resourceWord, ...rest] = args;
 
@@ -428,7 +361,6 @@ function kubectl(args: string[]): Line[] {
     }
     const res = findResource(resourceWord.toLowerCase());
     if (!res) {
-      // The wording the real client uses, because that is the joke.
       return [
         err(`the server doesn't have a resource type "${resourceWord}"`),
         out(`Valid types: ${RESOURCES.map((r) => r.name).join(", ")}`),
@@ -526,8 +458,7 @@ function registry(): Command[] {
       name: "clear",
       usage: "clear",
       summary: "Start over: clears the screen and the conversation.",
-      // The buffer belongs to the shell; declared here so `help` lists it and
-      // so it never falls through to "command not found".
+      // Only so `help` lists it: `run` handles `clear` before the registry.
       run: () => [],
     },
   ];
@@ -544,19 +475,13 @@ const ABOUT_CHAT: Line[] = [
   hint("There is no mode to enter. Just type a question."),
 ];
 
-/**
- * Returned by `run` when the line is meant for the model rather than the
- * shell. The shell owns the conversation, so it does the asking.
- */
+/** Returned by `run` when the line is meant for the model, not the shell. */
 export const ASK = "ask";
 
 /** Returned by `run` for a bare `theme`: the shell opens its colour picker. */
 export const PICK = "pick";
 
-/**
- * Real shell commands this shell does not have. Typed as a command, they get
- * the shell's answer, "command not found", rather than a trip to the GPU.
- */
+/** Typed as a command, these get "command not found" rather than the model. */
 const SHELL_VERBS = new Set([
   "cat",
   "cd",
@@ -586,12 +511,8 @@ const SHELL_VERBS = new Set([
 const ARG = /^[-/.~]|\/|\w\.\w/;
 
 /**
- * Resolve a raw input line to output.
- *
- * Returns `null` for `clear` and `ASK` for anything that reads as a question,
- * both of which the shell handles: the registry has no access to the buffer
- * or the conversation and should not pretend otherwise. `width` is the shell's
- * width in characters, which tables and prose lay themselves out to.
+ * Returns `null` for `clear`, `ASK` for a question and `PICK` for a bare
+ * `theme`, all of which the shell handles. `width` is in characters.
  */
 export function run(
   input: string,
@@ -606,10 +527,9 @@ export function run(
   const [head, ...rest] = trimmed.split(/\s+/);
   const name = (head ?? "").toLowerCase();
 
-  // `/theme` too, for anyone coming from Claude Code or Gemini CLI.
   if ((name === "theme" || name === "/theme") && rest.length === 0) return PICK;
 
-  // `ollama run`'s own commands, for whoever types them out of habit.
+  // `ollama run`'s own commands.
   if (name === "/clear" || name === "/bye") return null;
   if (name === "/?" || name === "/help") return run("help", width) as Line[];
   if (name.startsWith("/")) {
@@ -621,28 +541,22 @@ export function run(
     if (rest[0] === "run" && rest[1]?.toLowerCase() === "aman") {
       return ABOUT_CHAT;
     }
-    // What the real client says for a model it has never pulled.
     return [err("Error: pull model manifest: file does not exist")];
   }
   if (KUBECTL.has(name)) return kubectl(rest);
 
-  // `kgp foo` expands to `k get projects foo`.
   const alias = ALIASES[name];
   if (alias) return kubectl([...alias, ...rest]);
 
-  // `theme` takes one word; anything longer is a sentence about it.
   if (name === "theme" && (rest.length > 1 || trimmed.endsWith("?")))
     return ASK;
 
   const cmd = registry().find((c) => c.name === name);
   if (cmd && (rest.length === 0 || cmd.takesArgs)) return cmd.run(rest);
 
-  /*
-   * Warp's rule: anything that is not a command goes to the model, and a word
-   * is a command only if the shell has it. `ls -la` and `cd ..` are commands;
-   * "top skills he has" starts with one and is not.
-   * https://docs.warp.dev/agents/cli/input-and-shell-commands/ (2026-10-14)
-   */
+  // Warp's rule: a word is a command only if the shell has it; the rest goes
+  // to the model (2026-10-14).
+  // https://docs.warp.dev/agents/cli/input-and-shell-commands/
   const command =
     !trimmed.endsWith("?") &&
     SHELL_VERBS.has(name) &&

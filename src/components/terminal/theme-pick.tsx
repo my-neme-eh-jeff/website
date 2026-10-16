@@ -35,17 +35,8 @@ const NAV = [
 ];
 
 /**
- * The shell's colour picker, opened by `theme` or the chip under the prompt.
- * It takes the prompt's place, as /theme does in Claude Code and Gemini CLI:
- * up and down (or j, k, a number) show each palette on the whole page, left
- * and right pick light or dark, Enter keeps it, Esc puts back what was there.
- * Nothing is saved until it is kept.
- *
- * A phone has no arrow keys, so a tap on a row keeps that row, and the mode
- * and both exits are buttons.
- *
- * Focus sits on the list, which names its highlighted row with
- * aria-activedescendant, so a screen reader reads each row as it is reached.
+ * Previews each palette on the whole page as it is reached. Nothing is saved
+ * until one is kept; Esc puts back what was there.
  */
 export const ThemePick = component$<{
   state: PickState;
@@ -58,7 +49,7 @@ export const ThemePick = component$<{
     window.siteTheme?.preview(PICKS[i]!.id, mode);
   });
 
-  /** The arrows and Space would scroll the log; see keyGuard in terminal.tsx. */
+  /** The arrows and Space would otherwise scroll the log. */
   const guard = sync$((e: KeyboardEvent) => {
     if ((e.target as Element).closest("button")) return;
     if (NAV.includes(e.key)) e.preventDefault();
@@ -101,10 +92,6 @@ export const ThemePick = component$<{
       id="theme-pick"
       class="term-composer rounded-xl px-3 py-2.5 font-mono text-[0.8125rem] leading-relaxed"
       onKeyDown$={[guard, onKey]}
-      /*
-       * Leaving it puts the saved colours back: a preview must not outlive
-       * the picker. Not when the window itself loses focus.
-       */
       onFocusOut$={(_, el) =>
         setTimeout(() => {
           if (

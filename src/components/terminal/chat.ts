@@ -1,12 +1,3 @@
-/**
- * The browser half of the shell's questions: POST /api/chat, then read the
- * NDJSON events back.
- *
- * Imported only from terminal handlers, so like commands.ts it downloads the
- * first time someone uses it. The in-flight request lives at module scope
- * because an AbortController cannot be serialised into a Qwik store.
- */
-
 export type Turn = { role: "user" | "assistant"; content: string };
 
 export type Stats = {
@@ -22,6 +13,7 @@ export type Outcome =
   | { ok: true; model: string; stats: Stats | null; firstTokenMs: number }
   | { ok: false; code: string };
 
+// Module scope: an AbortController can't be serialised into a Qwik store.
 let inflight: AbortController | null = null;
 
 /** Stop the answer being generated, if there is one. */
