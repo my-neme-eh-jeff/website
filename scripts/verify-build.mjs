@@ -15,6 +15,7 @@ import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { grad } from "../src/components/blog/statusline/model.ts";
+import { GRIDS, rasterize } from "../src/components/desk/desk.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const p = (...s) => join(ROOT, ...s);
@@ -1035,6 +1036,38 @@ check("every graphic has an accessible name or is hidden", () => {
  * A parity claim written in prose is one nothing re-checks. Asserted here
  * instead, so the claim and the check are the same object.
  */
+/*
+ * The desk is drawn twice: as text in the page, and over it by the worker
+ * that lights it. Both come from rasterize(), and this re-runs it here, so
+ * the text the page ships is the grid the light lands on.
+ */
+check("the desk in the page is the grid rasterize() draws", () => {
+  const html = read("dist", "index.html");
+  for (const [size, { cols, rows }] of Object.entries(GRIDS)) {
+    const m = new RegExp(
+      `<pre\\b[^>]*data-desk-grid="${size}"[^>]*>([\\s\\S]*?)</pre>`,
+    ).exec(html);
+    assert(m, `index.html: no ${size} desk grid`);
+    const shipped = m[1]
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, "&");
+    const desk = rasterize(cols, rows);
+    const want = Array.from({ length: rows }, (_, r) =>
+      desk.chars.slice(r * cols, (r + 1) * cols).join(""),
+    ).join("\n");
+    assert(
+      shipped === want,
+      `index.html: the ${size} desk differs from rasterize(${cols}, ${rows})`,
+    );
+  }
+  return Object.keys(GRIDS).join(", ");
+});
+
 check("OG card's grain matches grain-page in global.css", () => {
   const decls = (src, open) => {
     const i = src.indexOf(open);
@@ -1268,17 +1301,21 @@ check("no full-viewport layer carries a view-transition-name", () => {
  * says why. If that wiring breaks, posts still render — in the wide column —
  * so this is the only place it shows.
  */
-check("posts use the reading column, every other page the wide one", () => {
+check("posts use the reading column, home the stage, the rest the wide one", () => {
   for (const page of PAGES) {
     const html = read("dist", page);
     /* The column is the last <div> opened before the header. */
     const before = html.slice(0, html.indexOf("<header"));
     const column = [...before.matchAll(/<div\b[^>]*>/g)].at(-1)?.[0] ?? "";
-    const reading = /\bmx-auto\b/.test(column);
-    assert(
-      reading === (page.startsWith("blog/") && page !== "blog/index.html"),
-      `${page}: ${reading ? "reading" : "wide"} column, from ${column}`,
-    );
+    assert(/\bsite-column\b/.test(column), `${page}: no .site-column in ${column}`);
+    const got = /\bdata-column="([^"]*)"/.exec(column)?.[1] ?? "wide";
+    const want =
+      page === "index.html"
+        ? "stage"
+        : page.startsWith("blog/") && page !== "blog/index.html"
+          ? "reading"
+          : "wide";
+    assert(got === want, `${page}: ${got} column, expected ${want}`);
   }
   return `${PAGES.length} pages`;
 });

@@ -1,10 +1,11 @@
-import { component$, useSignal, useStore, $, sync$ } from "@qwik.dev/core";
+import { component$, useSignal, useStore, $, sync$, Slot } from "@qwik.dev/core";
 import { haptic } from "./haptics";
 import { sound, isMuted, setMuted, type Tone } from "./sounds";
 import { load as loadHistory, save as saveHistory } from "./history";
 import { run, completions, ASK, type Line } from "./commands";
 import { abortChat, sendChat, type Outcome, type Turn } from "./chat";
 import { KNOWN_HREFS } from "~/content/chat";
+import { profile } from "~/content/profile";
 
 /**
  * An interactive shell. The command registry lives in `commands.ts`.
@@ -35,17 +36,20 @@ import { KNOWN_HREFS } from "~/content/chat";
 /** The only line before the first question, which removes it. */
 const INTRO: Line = {
   kind: "hint",
-  text: "Ask anything about Aman's work — a model on his desktop answers. Or type `help`.",
+  text: "Type a question, or `help` for the commands.",
 };
 
 const PROMPT = "~ $";
 
-/** Shown under the shell until it is closed, so nobody has to guess. */
+/** Shown under the shell, so nobody has to guess. */
 const SUGGESTIONS = [
   "What is he working on?",
   "What's his stack?",
   "How does this chat work?",
 ];
+
+/** Under the h1: who, and the tagline's first sentence. */
+const BYLINE = `${profile.name} · ${profile.tagline.slice(0, profile.tagline.indexOf(".") + 1)}`;
 
 /** Matches the Worker's cap, so the visitor hears it here first. */
 const MAX_CHAT_CHARS = 800;
@@ -105,47 +109,6 @@ const LINE_CLASS: Record<Line["kind"], string> = {
   meta: "text-muted text-[0.6875rem] leading-snug",
 };
 
-/**
- * Window state. The traffic lights are real controls, so they need somewhere
- * to put the result.
- *
- * ---------------------------------------------------------------------------
- * MAXIMISE IS A NATIVE <dialog> RUN WITH showModal(), AND THAT IS THE WHOLE
- * REASON IT CAN BE FULLSCREEN AT ALL
- *
- * A hand-rolled `position: fixed; inset: 0` overlay is a WCAG 2.2 AA failure
- * under 2.4.11 Focus Not Obscured: with nothing containing focus, Tab walks
- * straight out of the panel into page content the overlay is now covering, so
- * the focused element ends up entirely hidden. Fixing that by hand means
- * trapping Tab, and trapping Tab means preventDefault — which an async Qwik
- * handler cannot do (see the note on onKeyDown below; `sync$` can, but a sync
- * QRL is serialised standalone and cannot reach `view` or any other signal
- * here).
- *
- * `showModal()` sidesteps all of it, because the browser supplies:
- *
- *   - focus containment, so Tab cannot leave
- *   - Escape to dismiss, firing `close`
- *   - inertness for everything behind it, so background controls are removed
- *     from the tab order rather than merely hidden
- *   - the top layer, so no z-index arithmetic against the gradient or grain
- *   - `role="dialog"` and modal semantics, without asserting aria-modal on a
- *     div that would not have earned it
- *
- * The cost is that the panel is REPARENTED when maximising. State survives
- * because it lives in signals, not the DOM; focus does not, because the button
- * that was clicked no longer exists — so `close` restores it. See
- * restoreFocusToMax.
- * ---------------------------------------------------------------------------
- */
-type View = "open" | "min" | "max" | "closed";
-
-/** The dialog and the maximise button, addressed by id because both are found
- *  from handlers after a render that has no synchronous completion hook. */
-const DIALOG_ID = "term-dialog";
-const CLOSE_BTN_ID = "term-close";
-const MIN_BTN_ID = "term-min";
-const MAX_BTN_ID = "term-max";
 const MUTE_BTN_ID = "term-mute";
 
 /**
@@ -256,61 +219,6 @@ export function linkify(text: string, allow?: ReadonlySet<string>): Segment[] {
 }
 
 /**
- * The glyph inside a lamp, as macOS draws it.
- *
- * Hidden until the cluster is hovered or holds focus, which is what a Mac
- * does — at rest the lights are just colour. `group-focus-within` rather than
- * `group-hover` alone so the glyphs are not pointer-only; tabbing to a lamp
- * reveals them too.
- *
- * aria-hidden throughout: the button already has an sr-only name that says
- * what pressing it will do, and "times" announced next to "Close shell" is
- * noise. That name is also why the glyph never has to carry meaning on its
- * own — it is a visual affordance, not the label.
- *
- * No colour class. `currentColor` picks up the glyph shade from the `lamp-*`
- * utility, so the symbol is tinted into its own button the way Apple does it —
- * a dark red x on red, not a black one. A neutral black glyph is the most
- * obvious tell that traffic lights have been reimplemented rather than copied.
- *
- * SIZED TO FILL, which the first version got wrong twice over. The dash in a
- * real 12px light spans about 8px — two thirds of the button. This svg is 8px,
- * but the artwork inside it was drawn across the middle 9 units of a 16 unit
- * box, so it rendered at ~4.5px and the glyphs read as smudges. The paths
- * below use nearly the whole viewBox.
- */
-const Glyph = ({ d, fill = false }: { d: string[]; fill?: boolean }) => (
-  <svg
-    viewBox="0 0 16 16"
-    class="size-2 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100"
-    fill={fill ? "currentColor" : "none"}
-    stroke={fill ? "none" : "currentColor"}
-    stroke-width="2.2"
-    stroke-linecap="round"
-    aria-hidden="true"
-  >
-    {d.map((path) => (
-      <path d={path} key={path} />
-    ))}
-  </svg>
-);
-
-/**
- * Two triangles hugging opposite corners — outward to zoom, inward to restore.
- *
- * Each triangle nearly fills its half — legs of 11 units in a 16 unit box —
- * leaving a diagonal gap that renders at roughly 1.4px. The first attempt used
- * legs of 6.6 set at opposite corners, which put a 4.5px void between two 3px
- * triangles: at 8px that reads as one smudge, not as a pair of arrowheads.
- *
- * Restore flips WHICH diagonal they hug rather than trying to reverse where
- * they point. At this size an arrowhead's direction is not legible, but the
- * diagonal swapping from ↘ to ↗ plainly is.
- */
-const ZOOM_OUT = ["M1.5 1.5h11L1.5 12.5z", "M14.5 14.5h-11L14.5 3.5z"];
-const ZOOM_IN = ["M14.5 1.5v11L3.5 1.5z", "M1.5 14.5v-11L12.5 14.5z"];
-
-/**
  * Retry `fn` on a short timer until it reports success, or the tries run out.
  *
  * Qwik schedules rendering, so after a signal write there is no synchronous
@@ -319,24 +227,9 @@ const ZOOM_IN = ["M14.5 1.5v11L3.5 1.5z", "M1.5 14.5v-11L12.5 14.5z"];
  * fires on load and would defeat the lazy-loading design. So the new node has
  * to be waited for.
  *
- * TIMERS, NOT requestAnimationFrame, and that is not a style preference. The
- * first version of this polled with rAF and maximise silently did nothing:
- * the dialog stayed 0x0 with `:modal` false, while calling showModal() by hand
- * on the very same element worked immediately. rAF does not fire while the tab
- * is not visible, so every retry was simply never running. A control whose
- * behaviour depends on whether the tab happens to be foregrounded is a bug
- * even when the user is usually looking at it.
- *
- * ZERO DELAY, NOT 16ms, AND THAT IS THE FIX FOR THE MAXIMISE FLASH. The delay
- * used to be 16 -- one frame, chosen because it looked like the right unit
- * next to a render. But nothing here is synchronised to a frame: the loop is
- * waiting on Qwik's render flush, which lands on a task, not on a repaint. A
- * 16ms floor meant the panel had already left the flow while the dialog was
- * still unopened and therefore `display: none`, so the page visibly collapsed
- * and then a modal appeared a beat later. `setTimeout(0)` is clamped to ~1ms
- * (4ms once nested past five levels), which puts the flush and the showModal()
- * in the same visual instant while keeping the background-tab guarantee that
- * rAF cannot give.
+ * Timers, not requestAnimationFrame: rAF does not fire in a background tab,
+ * so a rAF loop silently never retries there. Zero delay, because the wait
+ * is on Qwik's render flush, which lands on a task, not on a repaint.
  *
  * `fn` returns true when it has done its job, so a found-and-handled element
  * stops the loop rather than burning every attempt.
@@ -351,8 +244,7 @@ function untilDone(fn: () => boolean, tries = 30) {
 /**
  * Keep the prompt in view after output is appended.
  *
- * The body is a capped scroller in either view, so output always has an edge to
- * fall past. Measured before this existed: `k describe projects gpu-autoscaler`
+ * The body is a scroller, so output always has an edge to fall past. Measured before this existed: `k describe projects gpu-autoscaler`
  * left scrollHeight 931 against clientHeight 517 with scrollTop still 0,
  * putting the prompt 378px below the bottom edge — typing somewhere you cannot
  * see.
@@ -386,16 +278,6 @@ function stickToBottom(lineCount: number) {
   untilDone(() => {
     const body = document.querySelector<HTMLElement>("[data-shell] label");
     if (!body) return false;
-    /*
-     * Skip the copy inside a CLOSED dialog. During the max->open handover both
-     * exist for a tick, and the stale one satisfies the count check below —
-     * every line is present, it is merely `display: none`. Settling on it
-     * leaves the real, freshly mounted body at scrollTop 0, which is the same
-     * "measured the wrong thing and stopped early" failure the count check
-     * exists to prevent. A dialog that is OPEN is the live one, so it passes.
-     */
-    const dialog = body.closest("dialog");
-    if (dialog && !dialog.open) return false;
     // The render has not landed until every line in the buffer is a node.
     if (body.querySelectorAll("pre").length < lineCount) return false;
     body.scrollTop = body.scrollHeight;
@@ -410,11 +292,8 @@ function stickToBottom(lineCount: number) {
  * phone is about 40, so output padded for 68 would otherwise wrap mid-column.
  */
 function shellColumns(): number {
-  for (const body of document.querySelectorAll<HTMLElement>(
-    "[data-shell] label",
-  )) {
-    const dialog = body.closest("dialog");
-    if (dialog && !dialog.open) continue;
+  const body = document.querySelector<HTMLElement>("[data-shell] label");
+  if (body) {
     const prompt = body.querySelector("#term-input")?.previousElementSibling;
     const ch = (prompt?.getBoundingClientRect().width ?? 0) / PROMPT.length;
     const cs = getComputedStyle(body);
@@ -433,37 +312,12 @@ function shellColumns(): number {
  * streaming answer grows one <pre> without adding any.
  */
 function followIfPinned() {
-  for (const body of document.querySelectorAll<HTMLElement>(
-    "[data-shell] label",
-  )) {
-    const dialog = body.closest("dialog");
-    if (dialog && !dialog.open) continue;
-    if (body.scrollHeight - body.scrollTop - body.clientHeight > 32) return;
-    setTimeout(() => (body.scrollTop = body.scrollHeight), 0);
-    return;
-  }
+  const body = document.querySelector<HTMLElement>("[data-shell] label");
+  if (!body) return;
+  if (body.scrollHeight - body.scrollTop - body.clientHeight > 32) return;
+  setTimeout(() => (body.scrollTop = body.scrollHeight), 0);
 }
 
-/**
- * Put focus back on a named chrome button after the dialog goes away.
- *
- * The browser normally restores focus itself, but it restores it to the
- * element that held focus when showModal() was called — and that element was
- * inside the panel, which has since been re-rendered in a different place.
- * Without this, focus lands on <body> and a keyboard user has to tab in from
- * the top of the document again.
- *
- * Which button depends on how the dialog was left: the green one for a plain
- * restore, but minimise and close are also reachable while maximised and each
- * should hand focus to its own control, not to a third one.
- *
- * THE `closest("dialog")` GUARD IS LOAD-BEARING. Both copies of the chrome
- * carry the same ids, and for the tick or two between `close()` and Qwik
- * dropping the dialog from the DOM, BOTH exist. `getElementById` returns the
- * first in document order, which is the one inside the dialog — so without
- * this the focus would land on a node that is about to be removed, and end up
- * back on <body>: the exact bug this function exists to prevent.
- */
 /**
  * Clear the busy flag that keyGuard set synchronously on Enter.
  *
@@ -474,53 +328,11 @@ function clearBusy() {
   document.querySelector("[data-shell]")?.removeAttribute("data-busy");
 }
 
-function restoreFocusTo(id: string) {
-  untilDone(() => {
-    const b = document.getElementById(id);
-    if (!b || b.closest("dialog")) return false;
-    // Only when focus has genuinely been dropped, so a retry cannot yank it
-    // off something the user has since tabbed to.
-    const active = document.activeElement;
-    if (!active || active === document.body) b.focus();
-    return true;
-  });
-}
-
-/** The open dialog, if the panel is currently living inside one. */
-const shellDialog = () =>
-  document.getElementById(DIALOG_ID) as HTMLDialogElement | null;
-
 export const Terminal = component$(() => {
   const lines = useStore<{ items: Line[] }>({ items: [INTRO] });
   /** The answer while it streams; see converseInner. */
   const partial = useSignal("");
   const value = useSignal("");
-  const view = useSignal<View>("open");
-
-  /*
-   * The panel's height in normal flow, captured the instant before maximising.
-   *
-   * Maximising REPARENTS the panel into a <dialog>, which is out of flow
-   * whether it is closed (`display: none`) or open (top layer). So the space
-   * the panel occupied collapses, and everything below it on the page jumps up
-   * by the panel's full height — then jumps back down on restore. That is the
-   * larger half of what read as jitter; the other half was the 16ms poll, see
-   * untilDone.
-   *
-   * A spacer of the measured height holds the gap open, so the page behind the
-   * modal does not move at all.
-   */
-  const flowHeight = useSignal(0);
-
-  /*
-   * Whether a chrome control has been pressed yet.
-   *
-   * Gates the body's entry animation. Without it the shell would fade in on
-   * every page load — including the server-rendered first paint, which is
-   * supposed to be plain text with no motion — and it would fight the route
-   * view transition. False on the server, so the SSG output is unchanged.
-   */
-  const stirred = useSignal(false);
 
   /*
    * Whether the shell is muted, for the toggle's ICON only.
@@ -633,177 +445,6 @@ export const Terminal = component$(() => {
     muted.value = await sound(tone);
     await haptic(tone === "chrome" ? "key" : tone);
   });
-
-  /*
-   * Every control RELABELS ITSELF rather than being replaced.
-   *
-   * Close does not swap in a separate "reopen" control; the red button stays
-   * put and its accessible name becomes "Reopen shell". The button the user
-   * just activated therefore keeps focus, and the name change is announced on
-   * the spot. Minimise works the same way, plus aria-expanded.
-   *
-   * The payoff is that close and minimise need no focus management at all.
-   * Maximise is the one exception, and only because showModal() reparents the
-   * panel and destroys the button that was clicked — see restoreFocusToMax.
-   */
-  const toggleMin = $(async () => {
-    stirred.value = true;
-    if (view.value === "max") {
-      /*
-       * Minimise is reachable while maximised, and it used to leak focus.
-       * Flipping straight to "min" unmounts the <dialog> without closing it:
-       * the browser drops it from the top layer but fires no `close` event, so
-       * nothing put focus back and it fell to <body>.
-       *
-       * Closing first is synchronous — it leaves the top layer immediately —
-       * while `close` is dispatched as a queued task, by which point the write
-       * below has already moved `view` off "max" and onDialogClose's guard
-       * declines to overwrite it.
-       */
-      shellDialog()?.close();
-      view.value = "min";
-      restoreFocusTo(MIN_BTN_ID);
-    } else if (view.value === "min") {
-      view.value = "open";
-      // The body remounts at scrollTop 0, which leaves a long buffer's prompt
-      // below the fold — the same reason restore re-sticks.
-      stickToBottom(renderGroups(lines.items).length);
-    } else {
-      view.value = "min";
-    }
-    await feedback("chrome");
-  });
-
-  const toggleMax = $(async () => {
-    stirred.value = true;
-    if (view.value === "max") {
-      /*
-       * Close the dialog AND apply the state here, rather than closing and
-       * waiting for `close` to come back and do it.
-       *
-       * This used to route through the event so that the button and Escape
-       * could not drift apart. The cost of that was a single point of failure
-       * for the only exit a pointer user has: if the event does not arrive,
-       * the dialog is shut but `view` is still "max", so Qwik keeps rendering
-       * the panel inside a closed — and therefore `display: none` — dialog.
-       * The shell does not return; it disappears, measured at 0px tall, with
-       * the spacer still holding its place. There is no way back from that
-       * without a reload.
-       *
-       * And the event genuinely does not always arrive: a dialog in a hidden
-       * tab dispatches no `close` at all. That is a browser behaviour, not a
-       * Qwik one — reproduced here on a hand-built dialog with no framework
-       * involved, which is also why it cannot be tested from a backgrounded
-       * automation tab.
-       *
-       * Escape still comes back through onDialogClose. The two paths cannot
-       * conflict because that handler is guarded on `view` still being "max",
-       * so whichever runs first wins and the other is a no-op.
-       */
-      shellDialog()?.close();
-      view.value = "open";
-      restoreFocusTo(MAX_BTN_ID);
-      stickToBottom(renderGroups(lines.items).length);
-    } else {
-      // Measured BEFORE the state write, because that write is what destroys
-      // the element being measured.
-      const el = document.querySelector<HTMLElement>("[data-shell]");
-      flowHeight.value = el ? Math.round(el.getBoundingClientRect().height) : 0;
-
-      view.value = "max";
-      untilDone(() => {
-        const d = shellDialog();
-        if (!d) return false;
-        // showModal() throws if the dialog is already open, so the guard also
-        // covers a double-fire, not just the retry.
-        if (!d.open) d.showModal();
-        /*
-         * The dialog gets a FRESH scroller, so the buffer arrives at scrollTop
-         * 0 and a long transcript hides the prompt behind it — measured 931px
-         * of content against a 640px body, leaving the prompt 291px below the
-         * fold the moment you maximise. Re-stick after the reparent, the same
-         * way an append does.
-         */
-        stickToBottom(renderGroups(lines.items).length);
-        return true;
-      });
-    }
-    await feedback("chrome");
-  });
-
-  /**
-   * The single exit from maximised, however it was triggered — the green
-   * button, or Escape, which the browser handles itself and will not let a
-   * modal refuse. Both arrive as the dialog's `close` event, so the state
-   * change lives here and the two cannot drift apart.
-   *
-   * `onClose$` works even though `close` does not bubble, because qwikloader
-   * delegates with CAPTURE-phase listeners and a non-bubbling event still
-   * traverses the capture phase down to its target. Verified twice over: every
-   * delegation call site in the loader passes capture=true (rc.3: prints 3,
-   * `grep -c ', true, passive)' node_modules/@qwik.dev/core/dist/qwikloader.debug.js`), and a
-   * trusted Escape driven over CDP against a real page restores the panel and
-   * puts focus back on the maximise button.
-   *
-   * That second check was not optional. A hidden tab does not dispatch `close`
-   * at all — confirmed with a dialog built by hand, no Qwik involved — so
-   * testing this through a backgrounded browser reports a handler that looks
-   * broken when it is fine, and would have justified replacing it with a
-   * hand-rolled listener for no reason.
-   */
-  const onDialogClose = $(() => {
-    /*
-     * In practice this is Escape's path. Every button that closes the dialog
-     * now applies its own state first, precisely so that none of them depends
-     * on this event arriving — see toggleMax.
-     *
-     * Hence the guard: by the time `close` lands, `view` has usually already
-     * been moved somewhere deliberate, and re-asserting "open" over it would
-     * undo a minimise or a close and make the button look dead. Whichever path
-     * runs first wins; this one does the work only when nothing else has.
-     */
-    if (view.value !== "max") return;
-    view.value = "open";
-    restoreFocusTo(MAX_BTN_ID);
-    stickToBottom(renderGroups(lines.items).length);
-  });
-
-  /**
-   * Close ends the session; reopening starts a new one.
-   *
-   * That is the difference between this and minimise, which keeps the buffer.
-   * Without it the two buttons would do the same thing and only look
-   * different, which is worse than having one button.
-   */
-  const toggleClose = $(async () => {
-    stirred.value = true;
-    if (view.value === "closed") {
-      convo.turns = [];
-      lines.items = [INTRO];
-      cmdHistory.past = [];
-      cmdHistory.cursor = -1;
-      value.value = "";
-      view.value = "open";
-      // Close ends the session, and that has to include what it remembered —
-      // otherwise the next ArrowUp resurrects the buffer that was just reset.
-      recalled.value = true;
-      await saveHistory([]);
-    } else {
-      abortChat();
-      // Same reparenting hazard as minimise — see the note there.
-      const wasMax = view.value === "max";
-      if (wasMax) shellDialog()?.close();
-      view.value = "closed";
-      if (wasMax) restoreFocusTo(CLOSE_BTN_ID);
-    }
-    await feedback("chrome");
-  });
-
-  /*
-   * No Escape handler. The dialog gives it for free while maximised, and in
-   * the other views there is nothing for Escape to dismiss. Writing one anyway
-   * would mean two things racing to own the same key.
-   */
 
   /** One question, streamed into an `ai` line created by the first token. */
   const converseInner = $(async (text: string) => {
@@ -1227,118 +868,18 @@ export const Terminal = component$(() => {
     el.closest("[data-shell]")?.setAttribute("data-busy", "");
   });
 
-  const maxed = view.value === "max";
-
-  const panel = (
+  return (
     <div
-      class={
-        maxed
-          ? "glass flex h-full flex-col overflow-hidden rounded-2xl"
-          : "glass overflow-hidden rounded-2xl"
-      }
+      class="glass flex h-[max(30rem,calc(100svh_-_8rem))] flex-col overflow-hidden rounded-2xl"
       data-shell
     >
-      {/*
-       * Chrome. The dots ARE the controls — close, minimise, maximise — so
-       * this bar is no longer aria-hidden and each dot is a real <button>
-       * with a name that states what pressing it will do.
-       *
-       * TARGET SIZE IS WHY THE BUTTONS ARE BIGGER THAN THE DOTS, AND IT SETS
-       * A FLOOR ON HOW TIGHT THE CLUSTER CAN GET. WCAG 2.5.8 wants 24x24 CSS
-       * px, and the spacing exception does not buy anything back: it requires
-       * 24px between the centres of undersized targets, which is the same
-       * spread as simply making the targets 24px. The buttons already sit flush
-       * against each other, so 24px is the pitch and there is no legal way to
-       * pull them closer.
-       *
-       * What IS adjustable is how much of that pitch the dot fills. The dots
-       * are 12px, which IS the macOS diameter; macOS then sets them on a 20px
-       * pitch and this has to use 24px. That 4px is the one dimension of these
-       * controls that is not native, and it is not recoverable — the
-       * alternative is targets a pointer user can miss.
-       *
-       * Everything else is: measured fills, a rim a step darker, and glyphs
-       * tinted in each button's own hue, revealed on hover of the cluster the
-       * way a Mac does. See the `lamp` utility in global.css.
-       *
-       * The hover wash and the press scale are on the button, not the dot, so
-       * the real 24px target is what responds — otherwise a pointer inside the
-       * target but outside the dot appears to have missed.
-       *
-       * The visible dot is aria-hidden; the name lives in the sr-only span.
-       */}
-      <div class="border-line/60 flex items-center gap-2 border-b px-3 py-1.5">
-        <span class="group flex">
-          <button
-            type="button"
-            id={CLOSE_BTN_ID}
-            onClick$={toggleClose}
-            class="hover:bg-text/10 grid size-6 place-items-center rounded-full transition duration-150 active:scale-90"
-          >
-            <span class="sr-only">
-              {view.value === "closed" ? "Reopen shell" : "Close shell"}
-            </span>
-            <span class="lamp lamp-close" aria-hidden="true">
-              <Glyph d={["M2.6 2.6l10.8 10.8", "M13.4 2.6L2.6 13.4"]} />
-            </span>
-          </button>
-
-          {/*
-           * Hidden rather than disabled while closed. A disabled minimise
-           * button on a closed shell is still announced, and "dimmed,
-           * Minimise shell" is noise about a thing that cannot happen.
-           */}
-          {view.value !== "closed" && (
-            <>
-              <button
-                type="button"
-                id={MIN_BTN_ID}
-                onClick$={toggleMin}
-                aria-expanded={view.value !== "min"}
-                class="hover:bg-text/10 grid size-6 place-items-center rounded-full transition duration-150 active:scale-90"
-              >
-                <span class="sr-only">
-                  {view.value === "min" ? "Expand shell" : "Minimise shell"}
-                </span>
-                <span class="lamp lamp-min" aria-hidden="true">
-                  <Glyph d={["M1.4 8h13.2"]} />
-                </span>
-              </button>
-
-              <button
-                type="button"
-                id={MAX_BTN_ID}
-                onClick$={toggleMax}
-                class="hover:bg-text/10 grid size-6 place-items-center rounded-full transition duration-150 active:scale-90"
-              >
-                <span class="sr-only">
-                  {view.value === "max" ? "Restore shell" : "Maximise shell"}
-                </span>
-                <span class="lamp lamp-max" aria-hidden="true">
-                  <Glyph d={maxed ? ZOOM_IN : ZOOM_OUT} fill />
-                </span>
-              </button>
-            </>
-          )}
+      <div class="border-line/60 flex items-center gap-2 border-b py-1.5 pr-3 pl-4">
+        <span class="text-muted font-mono text-xs" aria-hidden="true">
+          aman@desk: ~
         </span>
         {/*
-         * No title while the shell is open. The section this panel sits in is
-         * already headed "Shell", so a title bar reading "shell" said the same
-         * word twice, three lines apart.
-         *
-         * The closed state still needs saying: a collapsed panel with nothing
-         * in it is otherwise indistinguishable from a broken one. A screen
-         * reader gets this from the red button's name flipping to "Reopen
-         * shell"; this is the sighted equivalent.
-         */}
-        {view.value === "closed" && (
-          <span class="text-muted ml-1 font-mono text-xs">closed</span>
-        )}
-
-        {/*
          * Mute. Sound ships ON, so the control that turns it off has to be
-         * findable without hunting — hence a permanent button in the chrome
-         * rather than something revealed on hover like the lamp glyphs.
+         * findable without hunting — hence a permanent button in the chrome.
          *
          * It relabels itself rather than toggling aria-pressed, matching every
          * other control here: the name states what pressing it will do.
@@ -1373,57 +914,24 @@ export const Terminal = component$(() => {
         </button>
       </div>
 
-      {/*
-       * Clicking anywhere in the body focuses the input, which is what people
-       * expect from a terminal. The <label> is what makes that accessible: it
-       * gives the input a name and makes the whole body a legitimate click
-       * target, rather than a div with an onClick that a screen reader cannot
-       * describe.
-       */}
-      {/*
-       * The body renders only when the shell is open or maximised; minimise
-       * and close both drop it, which is what collapses the panel to its bar.
-       * State lives in signals, so the buffer survives being unmounted — that
-       * is what lets minimise keep the session while close resets it.
-       *
-       * Maximised it is `flex-1` inside a full-height panel, so it takes
-       * whatever the dialog gives it and scrolls internally. An earlier
-       * attempt used `max-h-[70vh]`, which does nothing at all when the buffer
-       * is short — measured 146px before and after pressing maximise.
-       *
-       * NORMAL VIEW IS NOW CAPPED TOO, WHICH IS WHAT MAKES IT A TERMINAL. It
-       * used to have no height of its own, so every command appended to a
-       * strip that just got taller: `k describe projects` pushed the rest of
-       * the page down by roughly 900px and left the prompt somewhere below the
-       * fold, and the panel never came back down. That is a transcript, not a
-       * shell. The cap is `min(55svh,24rem)` — 24rem is what fits comfortably
-       * inside the page's rhythm, and the viewport term stops it eating a
-       * short screen. `max-h` rather than `h` so a one-line intro still
-       * renders as one line instead of a mostly-empty box.
-       *
-       * `svh`, NOT `vh` OR `dvh`. On a phone `vh` is the layout viewport and
-       * ignores browser chrome, so 55vh can exceed what is actually on screen;
-       * `dvh` tracks the URL bar and therefore RESIZES THE PANEL WHILE YOU
-       * SCROLL, which is precisely the jitter this component spent a day
-       * removing. `svh` is the small viewport — the conservative, stable one —
-       * so the panel always fits and never moves on its own.
-       *
-       * `overscroll-contain` keeps a flick at the bottom of the buffer from
-       * chaining into the page scroll, which is the thing that makes a nested
-       * scroller feel broken on a trackpad.
-       */}
-      {(view.value === "open" || maxed) && (
+      <div class="px-4 pt-4 font-mono text-[0.8125rem] leading-relaxed">
+        <h1 class="text-text m-0 font-mono text-[0.8125rem] leading-relaxed font-normal tracking-normal">
+          {profile.motd}
+        </h1>
+        <p class="text-muted m-0">{BYLINE}</p>
+      </div>
+
+      <div class="relative min-h-0 flex-1">
+        <div class="desk-slot">
+          <Slot name="idle" />
+        </div>
         <label
-          class={[
-            "block cursor-text overflow-y-auto overscroll-contain px-4 py-4",
-            maxed ? "min-h-0 flex-1" : "max-h-[min(55svh,24rem)]",
-            stirred.value && !maxed ? "animate-shell-in" : "",
-          ]}
+          class="absolute inset-0 block cursor-text overflow-y-auto overscroll-contain px-4 pt-2 pb-3"
           for="term-input"
         >
           <span class="sr-only">Terminal input</span>
 
-          <div class="flex flex-col gap-1 font-mono text-[0.8125rem] leading-relaxed">
+          <div class="flex min-h-full flex-col justify-end gap-1 font-mono text-[0.8125rem] leading-relaxed">
             {/*
              * The live region wraps the OUTPUT only. It used to wrap the prompt
              * row as well, which put an editable text field inside a region the
@@ -1617,16 +1125,8 @@ export const Terminal = component$(() => {
             </div>
           </div>
         </label>
-      )}
+      </div>
 
-      {/*
-       * Example questions, so nobody has to guess that the shell takes plain
-       * English. Server-rendered, so they are there before any JavaScript.
-       *
-       * Outside the <label>: a button is labelable, and a label may not
-       * contain a labelable element other than its own control.
-       */}
-      {(view.value === "open" || maxed) && (
         <div
           role="group"
           aria-labelledby="term-suggest"
@@ -1646,52 +1146,6 @@ export const Terminal = component$(() => {
             </button>
           ))}
         </div>
-      )}
     </div>
-  );
-
-  /*
-   * Maximised, the same panel is rendered inside a <dialog> instead of in
-   * flow, and toggleMax calls showModal() on it once it exists.
-   *
-   * Sizing: `w-[min(96vw,80rem)] h-[92svh]` rather than a literal inset-0.
-   * Edge-to-edge would put the shell's own rounded corners flush against the
-   * viewport corners and lose the sense that this is a window that popped out;
-   * a small margin keeps the backdrop visible around it, which is what makes
-   * it read as fullscreen-over-the-page rather than as a new page.
-   *
-   * `p-0` and `max-w-none` override UA dialog styles, which otherwise impose
-   * padding, a border, and a max-width of calc(100% - 6px - 2em).
-   *
-   * The backdrop is dimmed and blurred so the gradient behind does not compete
-   * with terminal text for attention.
-   *
-   * `data-shell-dialog` is what global.css hangs the entry transition off —
-   * @starting-style plus a fade and a 0.97 scale, so the modal grows into
-   * place instead of appearing. See the note there for why there is no exit
-   * animation to match.
-   *
-   * THE SPACER IS NOT DECORATIVE. A dialog is out of flow in both states —
-   * `display: none` while closed, top layer while open — so the moment the
-   * panel moves inside one, the space it held in the page collapses and
-   * everything below it jumps up by the panel's height. The spacer holds that
-   * gap open at the height measured in toggleMax, so the page behind the
-   * modal stays exactly where it was and restoring puts the panel back into
-   * its own footprint.
-   */
-  return maxed ? (
-    <>
-      <div style={{ height: `${flowHeight.value}px` }} aria-hidden="true" />
-      <dialog
-        id={DIALOG_ID}
-        data-shell-dialog
-        onClose$={onDialogClose}
-        class="m-auto h-[92svh] w-[min(96vw,80rem)] max-w-none border-0 bg-transparent p-0 backdrop:bg-black/70 backdrop:backdrop-blur-sm"
-      >
-        {panel}
-      </dialog>
-    </>
-  ) : (
-    panel
   );
 });

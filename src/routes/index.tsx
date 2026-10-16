@@ -1,6 +1,7 @@
 import { component$ } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
 import { CircledChoice } from "~/components/circled-choice/circled-choice";
+import { DeskArt } from "~/components/desk/desk-art";
 import { Terminal } from "~/components/terminal/terminal";
 import { CopyEmail } from "~/components/copy-email";
 import { profile, projects, roles } from "~/content/profile";
@@ -9,45 +10,27 @@ import { homeGraph, ld, seoMeta } from "~/content/seo";
 const current = roles[0];
 
 /**
- * Two sections, and the gradient behind them is the same element.
- *
- * Section one is nothing but the wash and the name — no card, no eyebrow, no
- * boxed panel. Section two is the shell. Between them the background shifts
- * hue, driven by scroll position in CSS (see `.field` in global.css), so the
- * change reads as one continuous surface moving rather than two backgrounds
- * swapping.
- *
- * There is no <GradientPanel> any more. The gradient used to be a rounded card
- * inside the content column, which made it a widget; as the page background it
- * is the thing the content sits on.
+ * The first screen is the shell, with the desk drawn inside it. Who this is
+ * and how to reach him come straight after, for anyone who scrolls instead.
  */
 export default component$(() => {
   return (
     <>
-      {/* Section 1 — gradient and name only. */}
-      <section class="flex min-h-[62vh] flex-col justify-center lg:min-h-[68vh]">
-        <h1 class="max-w-[20ch]">{profile.name}</h1>
-        <p class="max-w-measure text-muted mt-4 text-xl leading-snug">
-          {profile.tagline}
-        </p>
-        <div class="mt-7 flex flex-wrap items-center gap-3">
+      <Terminal>
+        <DeskArt q:slot="idle" />
+      </Terminal>
+
+      <section class="max-w-measure mt-16">
+        <p class="text-xl leading-snug font-medium">{profile.name}</p>
+        <p class="text-muted mt-2 text-lg leading-snug">{profile.tagline}</p>
+        <div class="mt-6 flex flex-wrap items-center gap-3">
           {/*
            * The address itself, not the word "Email" — a mailto: link is a
-           * no-op on any machine with no mail handler registered, and this
-           * used to be the only place the address appeared. See CopyEmail.
+           * no-op on any machine with no mail handler registered. See CopyEmail.
            */}
           <CopyEmail email={profile.email} />
           <CircledChoice label="say hi" />
         </div>
-      </section>
-
-      {/* Section 2 — the shell. */}
-      <section class="pt-8">
-        <div class="mb-3 flex items-baseline justify-between gap-4">
-          <p class="eyebrow">Shell</p>
-          <span class="text-muted font-mono text-xs">ask it anything</span>
-        </div>
-        <Terminal />
       </section>
 
       {current && (
@@ -168,6 +151,7 @@ const title = `${profile.name} — ${profile.jobTitle}`;
 
 export const head: DocumentHead = {
   title,
+  frontmatter: { column: "stage" },
   meta: seoMeta({
     path: "/",
     title,

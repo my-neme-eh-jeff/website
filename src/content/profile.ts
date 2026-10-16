@@ -42,6 +42,9 @@ export const profile = {
   tagline:
     "Platform engineer at Atlan. I build the Kubernetes and Terraform machinery that provisions enterprise infrastructure, and the agents that operate it.",
 
+  /** The homepage's h1: the first line the shell prints, before any prompt. */
+  motd: "I build infrastructure, and a small box on my desk will tell you about it.",
+
   bio: "I work on internal platform and infrastructure at Atlan — Kubernetes, Terraform, Crossplane, Temporal — making provisioning reliable enough that nobody has to think about it. Lately most of my time goes to agentic tooling: MCP servers, upgrade agents, and the plumbing that lets a model touch production safely. Outside work I build MLOps systems, like a GPU-aware autoscaler for vLLM and a training loop that promotes its own models.",
 
   /**

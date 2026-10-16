@@ -8,7 +8,7 @@ import { profile } from "~/content/profile";
  * rest is derived for every page by this layout's own `head`, below.
  */
 export type Frontmatter = {
-  column?: "reading";
+  column?: "reading" | "stage";
   navHref?: string;
   navCurrent?: "page" | "true";
   transitionName?: string;
@@ -70,18 +70,14 @@ export const head: DocumentHead = ({ url }) => {
  * No sidebar, no rule, no navbar.
  *
  * ---------------------------------------------------------------------------
- * The left of the page is deliberately EMPTY — just the grainy gradient
- * showing through. Everything readable lives in a column on the right.
+ * On the wide pages the left of the page is deliberately EMPTY — just the
+ * grainy gradient showing through — and everything readable lives in a
+ * column on the right. A link rail there once turned that space into a
+ * sidebar; it is meant as the artwork, so the column is offset into it with
+ * `margin-inline-start: auto` rather than framed by a grid. Below `lg` the
+ * offset collapses, because a phone has no room to give away.
  *
- * A previous attempt put a link rail and a glowing divider on the left, which
- * turned that emptiness into a sidebar. That is the opposite of the intent: the
- * space is not a container for navigation, it is the artwork, and the content
- * is offset into it rather than framed by it.
- *
- * Hence `margin-inline-start: auto` on a max-width column, not a grid with a
- * named left cell. Nothing occupies the left; the column simply does not extend
- * into it. Below `lg` the offset collapses, because a phone has no room to give
- * away.
+ * The home page is the exception: its first screen is the shell, centred.
  * ---------------------------------------------------------------------------
  */
 export default component$(() => {
@@ -132,7 +128,9 @@ export default component$(() => {
       </a>
 
       {/*
-       * A post is read, not browsed, so it gets a centred column.
+       * A post is read, not browsed, so it gets a centred column; the home
+       * page is the shell, so it gets a wide centred one. `.site-column` in
+       * global.css draws each.
        *
        * Which column comes from the route's head (src/routes/blog/(post)/layout.tsx),
        * not the URL. Qwik Router notifies `useLocation()` readers only after
@@ -142,12 +140,8 @@ export default component$(() => {
        *   grep -n 'const headUpdated\|forceStoreEffects(routeLocation, "url")' node_modules/@qwik.dev/router/lib/index.qwik.mjs
        */}
       <div
-        class={[
-          "flex min-h-dvh w-full flex-col px-5",
-          doc.frontmatter.column === "reading"
-            ? "mx-auto max-w-[52rem]"
-            : "ml-auto max-w-[46rem] lg:max-w-[52rem] lg:pr-16",
-        ]}
+        class="site-column flex min-h-dvh w-full flex-col"
+        data-column={doc.frontmatter.column}
       >
         {/*
          * Links sit inline at the top of the column, not in a rail. Small,
@@ -205,7 +199,7 @@ export default component$(() => {
         <main
           id="main"
           tabIndex={-1}
-          class="min-w-0 flex-1 pt-14 pb-16 focus:outline-none"
+          class="min-w-0 flex-1 pt-14 pb-16 focus:outline-none in-data-[column=stage]:pt-6"
           style={{
             viewTransitionName: doc.frontmatter.transitionName,
             viewTransitionClass: "page",
