@@ -25,6 +25,7 @@ writing a new doc.
 | `--sem-text` / `--sem-muted` on `--sem-bg`, every palette and mode        | ≥ 4.5:1 (WCAG 1.4.3) |
 | `--sem-accent` on `--sem-bg`, every palette and mode (the focus ring)     | ≥ 3:1 (WCAG 1.4.11)  |
 | `--sem-accent` / `--sem-danger` on `--sem-bg` and `--sem-surface` (text)  | ≥ 4.5:1 (WCAG 1.4.3) |
+| Core tokens are six-digit hex (the desk's WebGL light parses them)        | every palette        |
 | Skip link present, first focusable, target exists and has `tabindex="-1"` | per page             |
 | `lang` attribute, exactly one `<h1>`, no skipped heading levels           | per page             |
 | Every `<img>` has `alt`; every `<svg>` is named or `aria-hidden`          | per page             |
@@ -62,8 +63,13 @@ Do not read a green `verify` as "accessible". These need a person:
 - **Screen-reader announcement.** VoiceOver: `Cmd+F5`, then `Ctrl+Opt+U` for
   the rotor. Landmarks and headings should describe the page; link text should
   make sense out of context ("Source" in the footer is borderline).
-- **400% zoom and 320px reflow** (WCAG 1.4.10). No horizontal page scroll, no
-  clipped content. The two-column hero must collapse.
+- **400% zoom and 320px reflow** (WCAG 1.4.10). No sideways page scroll at any
+  width from 320px up, and no clipped content. Wide content scrolls inside its
+  own box, which needs `relative` (an `sr-only` child escapes one that isn't)
+  and `scroll-cue` (phones show no scrollbar); verify checks it gets a tab
+  stop. Checked 2026-10-14 at 25 widths, 320–3440px. Re-check in device mode
+  at 320, 390, 768, 1440 and 1920: `document.documentElement.scrollWidth` must
+  equal `clientWidth` on every page.
 - **Motion.** Set macOS Reduce Motion and reload. `StreamText` and the mesh
   must go static, not merely faster.
 - **Target size** (WCAG 2.5.8, 24x24 CSS px minimum). The `pill` utility is
@@ -134,7 +140,9 @@ The keys and the selectors they drive are in `src/content/palettes.ts`.
    aesthetic risk", "reject templated proposals". `src/global.css` is a settled
    system, and there is still an undecided visual direction on file, so treat
    that skill as input for NEW surfaces, not licence to restyle what exists.
-3. Colours come from `--sem-*` via Tailwind utilities, never a raw hex.
+3. Colours come from `--sem-*` via Tailwind utilities, never a raw hex. One
+   attribute on `<html>` retints the whole site, and a hardcoded colour opts
+   out of it (`src/global.css` header).
 
 ## If deeper coverage is wanted
 

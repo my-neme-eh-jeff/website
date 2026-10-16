@@ -108,12 +108,9 @@ Qwik bump: `pnpm exec tsc --noEmit --skipLibCheck false`.
 `scripts/verify-build.mjs`. It holds **no Cloudflare credentials** and cannot
 publish — deploys stay with Workers Builds watching `main`.
 
-`pnpm run verify` is the interesting part: it executes the invariants that are
-otherwise only prose in `CLAUDE.md`, against real build output. Today it
-asserts `dist/404.html` exists where `not_found_handling` looks for it, that the
-sitemap excludes the 404, that the Worker runs on `/api/*` only, that every
-dependency is pinned exact, and that each page emits exactly one JSON-LD block
-and one canonical tag. Add invariants there rather than to a doc.
+`pnpm run verify` is the interesting part: it executes the repo's invariants
+against real build output, and prints each one it checks. Add invariants there
+rather than to a doc.
 
 It also _warns_, without failing, that the homepage's `description` and
 `og:description` currently contain `TODO` text. That is real — it is what a
@@ -128,17 +125,26 @@ request, which is exactly what the point above avoids.
 
 ## Layout
 
-    wrangler.jsonc              Worker config, apex Custom Domain, assets dir
+Only what a filename doesn't say; `ls` for the rest.
+
+    wrangler.jsonc              Worker config, apex Custom Domain; free-tier rationale in its comments
     adapters/ssg/vite.config.ts SSG adapter (origin must match the real domain)
     scripts/verify-build.mjs    post-build invariant checks (pnpm run verify)
-    scripts/make-icons.mjs      favicon + apple-touch-icon, one geometry source
+    scripts/make-icons.mjs      favicon + touch icon (pnpm run icons); never hand-edit the output
+    scripts/make-og.mjs         og:image (pnpm run og)
+    desk/                       runs on Aman's desk, not the site: the chat log proxy
     public/                     copied verbatim into dist/
-      _headers                  cache policy + security headers
+      _headers                  cache + security headers, rationale in its comments
+      robots.txt                crawler allow/deny, rationale in its comments
     src/
-      global.css                design tokens, theme swap, shared patterns
-      content/profile.ts        ALL site content lives here
-      components/               terminal, circled-choice, copy-email, blog
-      routes/                   layout + index + blog + privacy + 404
+      worker/                   the one Worker, /api/* only
+      global.css                design tokens, theme swap, shared patterns (read the header)
+      content/profile.ts        every fact the pages render
+      content/chat.ts           what the shell's model is told, and which links it may print
+      content/seo.ts            meta tags + JSON-LD
+      content/palettes.ts       every palette's values; theme.ts applies the saved one
+      components/desk/          the home page desk, as text and as the WebGL light
+      components/terminal/      the shell; theme-pick.tsx is its `theme` picker
 
 ### Content
 
