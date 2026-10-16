@@ -256,11 +256,11 @@
 
 /*
  * ---------------------------------------------------------------------------
- * THE SCROLL MORPH
+ * THE DRIFT
  *
  * The stop colours belong to the active palette: `field` in
- * src/content/palettes.ts sets --field-{1-4}{a,b,c} for the top, middle and
- * bottom of the page. Paper is the palette the notes below were measured on
+ * src/content/palettes.ts sets --field-{1-4}{a,b,c}, the three sets the field
+ * drifts between. Paper is the palette the notes below were measured on
  * (ember -> plum -> teal). Most palettes hold one set of stops, so only the
  * blobs drift, and a palette with no field leaves the page flat.
  *
@@ -360,9 +360,8 @@
 
   /*
    * These repeat the 0% keyframe, and `pnpm run verify` compares them. Not a
-   * duplicate: they are what renders when the animation never runs — no
-   * scroll-timeline support, or reduced motion — so this is the static
-   * fallback: the top of the page's stops, held.
+   * duplicate: they are what renders under reduced motion, when the animation
+   * never runs, so this is the static fallback: the first stops, held.
    */
   --f1: color-mix(in oklab, var(--field-1a) 30%, transparent);
   --f2: color-mix(in oklab, var(--field-2a) 24%, transparent);
@@ -389,53 +388,21 @@
 }
 
 /*
- * The gradient shifts as you scroll, so section one and section two do not sit
- * on the same wash.
+ * The field drifts through its stops on a clock, a minute each way, easing
+ * into and out of every stop, so it is always settling rather than moving.
  *
- * CSS scroll-driven animation, not JavaScript: `animation-timeline: scroll()`
- * ties progress to the scroller instead of to a clock, so there is no
- * listener, no rAF loop, and nothing to hydrate. It also runs off the main
- * thread, which a scroll handler cannot.
+ * It used to follow the page's scroll. Once the home page became the shell
+ * alone it scrolled about 125px, and ember -> teal ran in a flick of the
+ * wheel. A clock keeps every page at the same slow pace, whatever its length.
  *
- * Guarded twice, and both guards matter. `@supports` because Safari and
- * Firefox do not ship scroll timelines yet — without it they would apply the
- * keyframes as a normal time-based animation and the gradient would swing
- * through its whole range on load. `prefers-reduced-motion` because a
- * full-viewport colour shift tied to scrolling is exactly the kind of thing
- * that causes trouble.
- *
- * Comparison with the mechanism this replaced is in the SCROLL MORPH note
- * above: hue-rotate needed no @property support but could only tint, and it
- * filtered the element rather than the palette.
+ * While it runs it costs about 35ms of main-thread time a second: Chrome
+ * recalculates the field's style every frame, and holds or steps() measured
+ * no cheaper (headless Chrome, 1440x900, 2026-10-16). A background tab runs
+ * no animations. Reduced motion holds the first stops, the fallback above.
  */
 @media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: scroll()) {
-    .field {
-      animation: field-shift linear both;
-      animation-timeline: scroll(root block);
-      /*
-       * No animation-range, deliberately. A scroll timeline already defaults
-       * to the scroller's full range, so 100% lands exactly at the bottom of
-       * whatever page it is on.
-       *
-       * It used to say `0 200vh`, which made the endpoint UNREACHABLE on a
-       * tall window. The homepage is roughly 1786px of content plus a 68vh
-       * hero, so the scrollable distance is about 1786 - 0.32vh while the
-       * range asks for 2vh; those cross at vh = 770. Below that the journey
-       * finishes, above it the page bottoms out mid-plum and the teal
-       * keyframe is never seen. A maximised browser clears 770 easily.
-       *
-       * That did not matter when this was a hue-rotate sweep, because any
-       * point along it looked deliberate. It matters now that the endpoint is
-       * an authored palette.
-       *
-       * Verify at any window size by scrolling to the bottom and sampling the
-       * left of the viewport — it must be teal. Note that getComputedStyle is
-       * NO USE here: Chrome does not report scroll-timeline-animated custom
-       * properties through it, and returns the 0% value at every position.
-       * Measure pixels.
-       */
-    }
+  .field {
+    animation: field-shift 60s ease-in-out infinite alternate;
   }
 }
 
@@ -447,8 +414,8 @@
  * keyframe makes the midpoint a palette somebody chose, so the journey reads
  * as ember -> plum -> teal rather than as ember dissolving into teal.
  *
- * 55% rather than 50%: the first section is the one every visitor sees, so
- * its stops hold a little longer than an even split would give them.
+ * 55% rather than 50%: every visit starts on the first stops, so they hold a
+ * little longer than an even split would give them.
  */
 @keyframes field-shift {
   0% {

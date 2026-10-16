@@ -6,7 +6,7 @@
  * by reading the CSS:
  *
  *   1. GRAIN — can you actually see the film grain, and by how much.
- *   2. FIELD — as the scroll morph runs, does the background under the text
+ *   2. FIELD — as the field drifts, does the background under the text
  *      column move enough to change body-text contrast.
  *
  * Both exist because a plausible-sounding CSS value was measurably wrong. See
@@ -109,7 +109,11 @@ async function waitFor(url, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      if ((await fetch(url)).ok) return;
+      // Read the body: left unread, Node 24's fetch asserts when python's
+      // server closes the socket under it, and the run dies.
+      const res = await fetch(url);
+      await res.arrayBuffer();
+      if (res.ok) return;
     } catch {
       /* not up yet */
     }
@@ -223,12 +227,9 @@ const ratio = (a, b) => {
 };
 
 /**
- * Freeze the scroll-driven animation at a chosen progress.
- *
- * `animation-timeline: scroll()` cannot be sampled by a screenshot, because a
- * headless capture has no scroll position to drive it. Swapping the timeline
- * back to `auto` with a paused, negatively-delayed time-based animation lands
- * on exactly the same computed keyframe, and does it deterministically.
+ * Freeze the field's drift at a chosen progress. A running animation lands
+ * wherever the clock happens to be when the screenshot is taken; a paused,
+ * negatively-delayed linear one lands on exactly that keyframe progress.
  */
 const freezeAt = (pct) =>
   `\n.field{animation:field-shift 10s linear both!important;` +

@@ -1154,9 +1154,9 @@ check("every plain @theme token reaches the built CSS", () => {
  * comment there says they must stay in sync. Nothing compared them.
  *
  * Drift here is close to invisible: the static values are what paints when the
- * animation never runs -- no scroll-timeline support, or reduced motion -- so a
- * mismatch ships the wrong opening palette to exactly the visitors least likely
- * to be the one reviewing it.
+ * animation never runs -- under reduced motion -- so a mismatch ships the wrong
+ * opening palette to exactly the visitors least likely to be the one reviewing
+ * it.
  */
 check("field's static fallback matches the 0% keyframe", () => {
   const css = read("src", "global.css");
@@ -1192,8 +1192,8 @@ check("field's static fallback matches the 0% keyframe", () => {
             `${n}: field has ${fallback[n] ?? "(nothing)"}, 0% has ${start[n]}`,
         )
         .join("\n    ") +
-      `\n    The fallback is what paints without a scroll timeline or under ` +
-      `reduced motion, so a mismatch is a wrong opening palette.`,
+      `\n    The fallback is what paints under reduced motion, so a mismatch ` +
+      `is a wrong opening palette.`,
   );
   return `${names.length} declarations identical`;
 });
