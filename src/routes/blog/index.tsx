@@ -6,15 +6,8 @@ import { longDate } from "~/components/blog/date";
 import { posts, profile } from "~/content/profile";
 import { blogGraph, ld, seoMeta } from "~/content/seo";
 
-// Sorted once at module scope, not per render — see Qwik best practices.
 const sorted = [...posts].sort((a, b) => (a.date < b.date ? 1 : -1));
 
-/*
- * Each row's cover through Qwik's `?jsx` image import: WebP at five widths
- * with a srcset, from the same public/ JPEG that stays the og:image. The
- * thumbnail is at most 18rem wide, so browsers take a 6 or 11 kB file where
- * they used to download the 98 kB, 1200px JPEG.
- */
 type ImgProps = Omit<
   QwikIntrinsicElements["img"],
   "src" | "width" | "height" | "srcSet"
@@ -28,13 +21,7 @@ const Cover = ({ src, ...props }: ImgProps & { src: string }) => {
   return Img ? <Img {...props} /> : null;
 };
 
-/*
- * What tilts into a row's right-hand slot on hover:
- * src/content/backdrops/<slug>.png if there is one, else the cover. Not under
- * public/, because only the WebP is ever shown. The status-line post's is its
- * own Playground figure: each state's first line from the brain emoji to the
- * cost, at 72px.
- */
+// Not under public/, which would ship the PNG too; only its WebP is shown.
 const backdrops = import.meta.glob<FunctionComponent<ImgProps>>(
   "/src/content/backdrops/*.png",
   { query: "?jsx", import: "default", eager: true },
@@ -49,12 +36,7 @@ const Backdrop = ({
   return Img ? <Img {...props} /> : null;
 };
 
-/*
- * Where a mouse is over the list, the hovered row's backdrop leans toward the
- * pointer. Inline (sync$), so it follows from the first event
- * instead of after a bundle loads. It only writes custom properties, from -1
- * to 1 across the list; global.css draws the cover.
- */
+// Inline (sync$), so the lean follows the first pointer move, not a bundle load.
 const lean = sync$((e: PointerEvent, list: HTMLElement) => {
   if (e.pointerType !== "mouse") return;
   const r = list.getBoundingClientRect();
@@ -83,9 +65,8 @@ export default component$(() => {
         <ul class="covers border-line border-b" onPointerMove$={lean}>
           {sorted.map((p) => (
             /*
-             * One link per row, named by the title alone. Its ::after covers
-             * the row, so the date and summary click through too, without a
-             * screen reader announcing the whole row as the link text.
+             * One link per row, named by the title alone; its ::after covers
+             * the row, so the rest clicks through without becoming link text.
              */
             <li
               key={p.slug}

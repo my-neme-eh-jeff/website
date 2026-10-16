@@ -6,30 +6,19 @@ import {
 } from "../content/chat";
 
 /**
- * The only server code on the site: `POST /api/chat`.
- *
- * wrangler.jsonc routes `/api/*` here and nothing else, so page views never
- * invoke this. It relays a conversation to a model running on Aman's desk and
- * streams the answer back as NDJSON events:
+ * `POST /api/chat`, streamed back as NDJSON events:
  *
  *   {"type":"token","text":"..."}
  *   {"type":"done","model":"...","stats":{...}}
  *   {"type":"error","code":"..."}
  *
- * Errors before streaming starts are a JSON body with a non-200 status instead.
- *
- * The visitor controls only message text. The path, model, sampling and
- * prompt are fixed here. The desk's proxy also refuses every path but
- * /api/chat (desk/chat-log-proxy.mjs), so Ollama's pull and delete endpoints
- * are unreachable twice over.
- *
- * The desk logs each chat for 30 days. The only fact about the visitor sent
- * with it is their country: /privacy/ promises exactly that, so adding a
- * header here means changing that page too.
+ * Errors before the stream starts are a JSON body with a non-200 status. The
+ * visitor controls only message text; path, model, sampling and prompt are
+ * fixed here.
  */
 
 interface Env {
-  /** Workers VPC binding to Ollama on the desk, via Cloudflare Tunnel. */
+  /** Workers VPC binding to the desk's log proxy, through a Cloudflare Tunnel. */
   DESK: { fetch(input: Request): Promise<Response> };
   CHAT_LIMIT: {
     limit(options: { key: string }): Promise<{ success: boolean }>;
@@ -42,10 +31,8 @@ type Turn = { role: "user" | "assistant"; content: string };
 const MAX_BODY_BYTES = 16_000;
 
 /**
- * How long to wait for Ollama's response headers. They arrive only after the
- * model is loaded and the prompt is read: a cold start measured 13.6 s of
- * loading alone on 2026-10-13, and a queued request waits for the one ahead.
- * The stream itself is not timed out.
+ * For response headers only, which Ollama sends after loading the model and
+ * reading the prompt. The stream itself is not timed out.
  */
 const HEADERS_TIMEOUT_MS = 90_000;
 
@@ -74,23 +61,18 @@ function parseTurns(body: unknown): Turn[] | null {
     if (content.length > cap) return null;
     turns.push({ role, content });
   }
-  // The model answers the last message, so it has to be the visitor's.
   if (turns.at(-1)?.role !== "user" || !turns.at(-1)?.content.trim()) {
     return null;
   }
   return turns;
 }
 
-/** What the desk's log is told about the visitor: the country, nothing else. */
+/** The only visitor fact the desk's log gets. /privacy/ promises exactly this. */
 function visitorHeaders(request: Request): Record<string, string> {
   const country = (request as { cf?: { country?: string } }).cf?.country;
   return country ? { "x-visitor-country": country } : {};
 }
 
-/**
- * The single place that knows how the desk is reached. Swapping transport
- * (VPC binding today) touches only this function.
- */
 function callDesk(
   env: Env,
   turns: Turn[],
@@ -98,8 +80,8 @@ function callDesk(
   visitor: Record<string, string>,
 ) {
   return env.DESK.fetch(
-    // The VPC service decides where this goes: the log proxy on the desk,
-    // which forwards to Ollama itself. The host only fills the Host header.
+    // The VPC service, not this URL, decides where it goes: the desk's log
+    // proxy. The host only fills the Host header.
     new Request("http://127.0.0.1:11434/api/chat", {
       method: "POST",
       headers: { "content-type": "application/json", ...visitor },
@@ -231,8 +213,6 @@ async function chat(request: Request, env: Env): Promise<Response> {
       visitorHeaders(request),
     );
   } catch {
-    // Tunnel down, desk off, or the wait above ran out. Which one is not the
-    // visitor's business, and the internals are not either.
     return json({ error: "offline" }, 503);
   } finally {
     clearTimeout(timer);

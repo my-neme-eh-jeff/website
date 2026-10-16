@@ -2,7 +2,6 @@ import { component$ } from "@qwik.dev/core";
 import { posts } from "~/content/profile";
 import { longDate } from "./date";
 
-/** The date, reading time and source under a post's standfirst. */
 export const Byline = component$<{ slug: string }>(({ slug }) => {
   const post = posts.find((p) => p.slug === slug);
   if (!post) return null;

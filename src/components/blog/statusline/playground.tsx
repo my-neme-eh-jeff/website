@@ -48,8 +48,8 @@ export const Playground = component$(() => {
     <div>
       <div class="mb-4 flex flex-wrap gap-2" role="group" aria-label="Presets">
         {PRESETS.map((p) => {
-          // Only the label in the handler, as in Anatomy: closing over `p`
-          // serialised every preset's whole state into the page.
+          // Only the label in the handler: Qwik serialises what it closes
+          // over, and `p` is a preset's whole state.
           const label = p.label;
           return (
             <button

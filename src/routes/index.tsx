@@ -5,7 +5,6 @@ import { Terminal } from "~/components/terminal/terminal";
 import { profile } from "~/content/profile";
 import { homeGraph, ld, seoMeta } from "~/content/seo";
 
-/** The home page is the shell, with the desk drawn inside it. */
 export default component$(() => (
   <Terminal>
     <DeskArt q:slot="idle" />

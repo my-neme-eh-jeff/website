@@ -1,26 +1,14 @@
-# Parsed by Cloudflare Workers static assets. Lives in public/ so Qwik's build
-# copies it into dist/ alongside the assets it describes.
-#
-# Workers defaults every asset to `max-age=0, must-revalidate`, which is safe
-# but means a revalidation round trip for files that can never change.
-#
-# Every rule whose path matches applies, in file order, and a header that two
-# rules both set is joined with a comma. So Cache-Control never goes under the
-# catch-all `/*`: it would be appended to every immutable asset above. Asserted
-# by `pnpm run verify`.
+# Cloudflare applies every matching rule and comma-joins a header two rules
+# set, so Cache-Control stays out of the `/*` catch-all. `pnpm run verify` checks.
 
-# Qwik emits content-hashed filenames here, so the content is immutable by
-# construction: a change produces a new filename.
+# Content-hashed by Qwik, so immutable.
 /build/*
   Cache-Control: public, max-age=31556952, immutable
 
 /assets/*
   Cache-Control: public, max-age=31556952, immutable
 
-# Icons and social cards are NOT content-hashed — the filename is referenced
-# from markup and must stay stable — so `immutable` would be wrong: a favicon
-# change could never propagate. A week of caching with revalidation after is
-# the compromise, and it still removes the round trip from the common case.
+# Not content-hashed (markup names them), so a week rather than immutable.
 /favicon.ico
   Cache-Control: public, max-age=604800
 /favicon.svg
@@ -30,29 +18,23 @@
 /og/*
   Cache-Control: public, max-age=604800
 
-# Fonts CAN be immutable, unlike the icons above: their filenames carry the
-# upstream Google Fonts version (v12, v16), so a font update produces a new
-# URL rather than needing an old one to expire. See scripts/fetch-fonts.mjs.
+# Immutable: each filename carries its Google Fonts version.
 /fonts/*.woff2
   Cache-Control: public, max-age=31556952, immutable
   Access-Control-Allow-Origin: *
 
-# HTML keeps the safe default so a deploy is visible immediately.
+# HTML keeps Cloudflare's default, `max-age=0, must-revalidate`, so a deploy
+# shows at once.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
 
-  # Nothing on this site reads a camera, mic, or location. Denying them by
-  # default means a future dependency cannot quietly start asking.
+  # Nothing here uses these; denying them stops a future dependency asking.
   Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
 
-  # The apex is served over TLS only and the domain is Cloudflare-registered,
-  # so there is no plaintext host to break. `preload` is deliberately omitted:
-  # submitting to the preload list is effectively irreversible, and it would
-  # commit every future subdomain to HTTPS as well.
+  # No `preload`: submitting to the preload list is effectively irreversible.
   Strict-Transport-Security: max-age=31536000; includeSubDomains
 
-  # No CSP here on purpose. Each page gets its own, allowing its inline
-  # scripts by hash, appended to dist/_headers by scripts/csp.mjs after the
-  # build. One here would apply on top of those, and a page must satisfy both.
+  # No CSP here: scripts/csp.mjs appends one per page to dist/_headers, and a
+  # page must satisfy every CSP it is sent.

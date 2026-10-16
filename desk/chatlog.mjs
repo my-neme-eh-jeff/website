@@ -1,6 +1,5 @@
 /**
- * Read what visitors asked the shell. Runs on the desk, against the logs
- * that chat-log-proxy.mjs writes.
+ * Read what visitors asked the shell. Runs on the desk.
  *
  *   chatlog              the last 20 exchanges, one block each
  *   chatlog -n 50        the last 50
@@ -30,7 +29,7 @@ for (const f of files) {
     try {
       entries.push(JSON.parse(line));
     } catch {
-      // A line cut short by a crash; skip it rather than refuse to print.
+      // A line cut short by a crash.
     }
   }
 }

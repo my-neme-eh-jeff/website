@@ -4,26 +4,21 @@ node_modules/
 .DS_Store
 .claude/settings.local.json
 
-# --- Qwik / Vite ---
-# Build
 /dist
 /lib
 /lib-types
 /server
 
-# Development
 node_modules
 .env
 .planning
 *.local
 
-# Cache
 .cache
 .mf
 .rollup.cache
 tsconfig.tsbuildinfo
 
-# Logs
 logs
 *.log
 npm-debug.log*
@@ -32,7 +27,6 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Editor
 .vscode/*
 !.vscode/launch.json
 !.vscode/*.code-snippets
@@ -44,7 +38,6 @@ lerna-debug.log*
 *.sln
 *.sw?
 
-# Yarn
 .yarn/*
 !.yarn/releases
 dist/
@@ -52,6 +45,5 @@ dist/
 tmp/
 server/
 
-# Personal, per-developer Claude Code preferences.
-# `*.local` above does not match this, since it ends in .md.
+# `*.local` doesn't match this: it ends in .md.
 CLAUDE.local.md

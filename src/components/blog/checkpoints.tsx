@@ -8,16 +8,7 @@ import {
 } from "@qwik.dev/core";
 import { useContent } from "@qwik.dev/router";
 
-/*
- * The section being read is the last one whose heading has reached the top
- * third of the window. At the very bottom it is the last section, which is
- * too short to scroll that far up.
- *
- * Inline (sync$), so neither loading a post nor scrolling it wakes Qwik.
- * Below xl the rail is not displayed, and this returns before measuring. A
- * sync$ cannot write a signal, so it marks the items itself: data-state for
- * the drawing, aria-current for screen readers.
- */
+// A sync$ can't write a signal, so it marks the items itself.
 const mark = sync$((_: Event, nav: Element) => {
   if (!(nav as HTMLElement).offsetParent) return;
   const items = [...nav.querySelectorAll("li")];
@@ -42,14 +33,7 @@ const mark = sync$((_: Event, nav: Element) => {
   });
 });
 
-/**
- * The post's sections as checkpoints in the left margin. Sections already
- * read fill in, and the one being read is lit. Shown from `xl`, the first
- * width where the centred column leaves room for it.
- */
 export const Checkpoints = component$(() => {
-  // Untracked, as in contents.tsx, which says why. The post layout keys
-  // this per page, so a new post mounts a new rail.
   const content = useContent();
   const sections = untrack(() =>
     (content.headings ?? [])

@@ -22,24 +22,6 @@ export const ICONS: Record<string, string> = {
   X: "M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z",
 };
 
-/**
- * A hand-drawn circle around a label that opens the ways to reach him.
- *
- * The annotation is an SVG path, not a font or an image. A rough ellipse is
- * three cubic curves with deliberately uneven control points and a small
- * overshoot past the start — the overshoot is what reads as "drawn by a person"
- * rather than "border-radius: 999px". `vector-effect: non-scaling-stroke` keeps
- * the ink one weight while the ellipse stretches to fit the label.
- *
- * It is a real disclosure widget, not a hover trick:
- *   - a <button> with aria-expanded and aria-controls, so a screen reader
- *     announces the state rather than the popover appearing silently;
- *   - Escape closes and returns focus, which hover-only menus cannot do;
- *   - a click outside closes it.
- *
- * Hover alone would make this unusable by keyboard and invisible to touch,
- * where there is no hover state to enter.
- */
 export const CircledChoice = component$<{ label?: string }>(
   ({ label = "say hi" }) => {
     const open = useSignal(false);
@@ -47,13 +29,8 @@ export const CircledChoice = component$<{ label?: string }>(
     const id = useId();
     const panelId = `choice-${id}`;
 
-    /*
-     * Escape and an outside click can only be heard on the document, where
-     * every keypress and click on the page arrives. A plain handler there woke
-     * this component on the first of them, whatever it was for. This one is a
-     * sync$: it runs inline with no fetch and no resume, and only while the
-     * panel is open does it pass the event on, to the handler below.
-     */
+    // Inline, so document-wide keys and clicks don't wake Qwik; it passes one
+    // on only while the panel is open.
     const dismiss = sync$((e: Event, el: HTMLElement) => {
       const panel = el.querySelector<HTMLElement>("[data-choice-panel]");
       if (!panel || panel.hidden) return;
@@ -69,9 +46,8 @@ export const CircledChoice = component$<{ label?: string }>(
     useOnDocument("keydown", dismiss, { passive: true });
     useOnDocument("click", dismiss, { passive: true });
 
-    // Escape is the expected way out of any transient overlay. Hiding the
-    // panel under a focused link would drop focus on <body>, so hand it back
-    // to the button first.
+    // Hiding the panel under a focused link would drop focus on <body>, so
+    // hand it back to the button first.
     useOn(
       "choicedismiss",
       $((e: Event) => {
@@ -98,10 +74,6 @@ export const CircledChoice = component$<{ label?: string }>(
           class="text-text relative inline-flex cursor-pointer items-center border-0 bg-transparent px-3 py-1 text-sm"
         >
           {label}
-          {/*
-           * aria-hidden: the circle is emphasis, not information. The button's
-           * own text already carries the meaning.
-           */}
           <svg
             class="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
             viewBox="0 0 120 40"
@@ -120,11 +92,7 @@ export const CircledChoice = component$<{ label?: string }>(
           </svg>
         </button>
 
-        {/*
-         * `hidden` rather than conditional rendering: the panel is three
-         * links, so keeping it in the DOM costs nothing, and rel="me" stays in
-         * the HTML for anything verifying the profiles.
-         */}
+        {/* Hidden, not unrendered, so its rel="me" links stay in the HTML. */}
         <div
           id={panelId}
           data-choice-panel

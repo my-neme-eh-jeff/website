@@ -1,15 +1,8 @@
 import { component$, useSignal, $ } from "@qwik.dev/core";
 
 /**
- * "Email" in the "say hi" menu: a mailto: link, and a button that copies the
- * address. A mailto: link does nothing on a machine with no mail handler,
- * which is most Macs whose owner reads mail in a browser, so the copy button
- * is the way through there. The link's title shows the address on hover.
- *
- * The button relabels itself rather than showing a toast, like the shell's
- * mute button: the control that was activated is the thing that reports
- * back, so focus never moves and a screen reader hears the change on the
- * element it is already on.
+ * A mailto: link does nothing without a mail handler (most Macs whose owner
+ * reads mail in a browser), so the address can be copied too.
  */
 export const CopyEmail = component$<{ email: string }>(({ email }) => {
   const copied = useSignal(false);
@@ -18,15 +11,9 @@ export const CopyEmail = component$<{ email: string }>(({ email }) => {
     try {
       await navigator.clipboard.writeText(email);
       copied.value = true;
-      // Long enough to read, short enough that the button does not look stuck.
       setTimeout(() => (copied.value = false), 2000);
     } catch {
-      /*
-       * Clipboard access is refused on insecure origins and in some embedded
-       * webviews. The address is visible next to this button either way, which
-       * is the entire reason it is visible — so a failure here costs nothing
-       * and must not be reported as an error.
-       */
+      // Refused on insecure origins and in some webviews; not an error.
     }
   });
 

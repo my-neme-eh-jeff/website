@@ -1,21 +1,7 @@
 /**
- * Runs on Aman's desk, between the Cloudflare Tunnel and Ollama.
- *
- * The Workers VPC service points here instead of at Ollama, which does two
- * things:
- *
- *   - Only POST /api/chat gets through. Pointed at Ollama directly, the
- *     binding could reach every endpoint, including the ones that pull and
- *     delete models.
- *   - Every exchange is appended to a JSON Lines log, one file per UTC day,
- *     so Aman can read what visitors ask. `chatlog.mjs` prints it. Files
- *     older than RETENTION_DAYS are deleted, because /privacy/ promises it.
- *
- * The response is forwarded byte for byte as it arrives; the log is built
- * from a copy. If the visitor hangs up, the upstream request is aborted so
- * the GPU stops, exactly as it did without this in the way.
- *
- * Node's standard library only: there is nothing to install on the desk.
+ * Runs on Aman's desk, between the Cloudflare Tunnel and Ollama. Only
+ * POST /api/chat gets through, so the tunnel can't reach the endpoints that
+ * pull and delete models. Node's standard library only: nothing to install.
  */
 import http from "node:http";
 import { appendFile, mkdir, readdir, unlink } from "node:fs/promises";
@@ -27,23 +13,17 @@ const PORT = Number(process.env.PORT ?? 11500);
 const OLLAMA = process.env.OLLAMA_URL ?? "http://127.0.0.1:11434";
 const LOG_DIR =
   process.env.LOG_DIR ?? join(homedir(), ".local/share/portfolio-chat");
-// The Worker caps a request at 16 kB; this only has to stop abuse.
 const MAX_BODY = 64_000;
 
 /** What the privacy page promises. Change both together. */
 const RETENTION_DAYS = 30;
 const DAY_MS = 86_400_000;
 
-/** The only fact about the visitor the Worker passes on. */
 const COUNTRY_HEADER = "x-visitor-country";
 
 /**
- * Delete day files older than the retention window. Runs at startup and
- * hourly, so it holds even on days nobody asks anything.
- *
- * A file goes as soon as its day STARTED more than RETENTION_DAYS ago: early
- * rather than late, so no entry outlives the promise by more than the hour
- * between runs.
+ * A day file goes once its day began RETENTION_DAYS ago, so no entry outlives
+ * the promise by more than the hour between runs.
  */
 async function prune() {
   const cutoff = Date.now() - RETENTION_DAYS * DAY_MS;
@@ -96,9 +76,6 @@ async function relay(req, res) {
     country: req.headers[COUNTRY_HEADER] ?? null,
     model: body.model ?? null,
     question: turns.at(-1)?.content ?? "",
-    // Earlier turns of the same conversation, as the visitor's browser sent
-    // them. The system prompt is large and the same every time, so only a
-    // fingerprint of it is kept: enough to tell which version answered.
     history: turns.slice(0, -1),
     systemPrompt: system
       ? createHash("sha256").update(system).digest("hex").slice(0, 12)
@@ -165,7 +142,6 @@ async function relay(req, res) {
     };
 
     for await (const bytes of upstream.body) {
-      // Forward first; the copy for the log never delays the visitor.
       if (!res.write(bytes)) {
         await new Promise((resolve) => res.once("drain", resolve));
       }

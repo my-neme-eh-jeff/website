@@ -4,12 +4,7 @@ import { AnalyticsChoice } from "~/components/analytics-choice";
 import { profile } from "~/content/profile";
 import { ld, privacyGraph, seoMeta } from "~/content/seo";
 
-/*
- * Every sentence here is a claim about how the site behaves. If the behaviour
- * changes — analytics (src/content/analytics.ts), the shell's storage
- * (src/components/terminal/), the chat Worker or the desk log — this page
- * changes in the same commit.
- */
+// Each sentence states how the site behaves: change it with that behaviour.
 const UPDATED = "2026-10-14";
 
 export default component$(() => {

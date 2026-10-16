@@ -1,30 +1,10 @@
 {
-  // Cloudflare Workers static assets.
-  // Docs: https://developers.cloudflare.com/workers/static-assets/
+  // Asset requests are free and unlimited; a Worker invocation counts against
+  // the 100k/day free tier, so run_worker_first lists /api/* paths, never `true`.
   //
-  // One Worker script (src/worker/), and it runs ONLY on /api/*.
-  //
-  // Requests served straight from ./dist are free and unlimited; a Worker
-  // invocation counts against the 100k/day free tier. run_worker_first is
-  // therefore a list scoped to /api/*, never `true` -- that would route every
-  // page view through the script. scripts/verify-build.mjs enforces this.
-  // Custom build step. `wrangler deploy` runs this before deploying, and
-  // Workers Builds' default deploy command is already `npx wrangler deploy` --
-  // so the build lives here in the repo instead of in dashboard-only config
-  // that cannot be version-controlled or reviewed.
-  //
-  // Leave the Workers Builds "build command" field EMPTY. Setting it as well
-  // would build twice.
-  //
-  // `--frozen-lockfile` first because the CI container's install step is not
-  // guaranteed to have run before the deploy command, and because it fails
-  // loudly if pnpm-lock.yaml and package.json disagree rather than quietly
-  // resolving something new.
-  //
-  // pnpm is pre-installed in the Workers Builds image (10.11.1 at the time of
-  // writing; this repo develops on 10.12.1). Both read lockfileVersion 9.0, so
-  // no `packageManager` field is pinned -- adding one would route the install
-  // through corepack for no benefit and one more way to fail.
+  // `wrangler deploy` runs build.command, and Workers Builds deploys with
+  // `npx wrangler deploy`, so the build is versioned here. Leave the dashboard's
+  // build command empty, or it builds twice.
   "build": {
     "command": "pnpm install --frozen-lockfile && pnpm run build",
   },
@@ -32,29 +12,18 @@
   "main": "src/worker/index.ts",
   "compatibility_date": "2026-08-22",
   "assets": {
-    // Qwik SSG output, produced by `npm run build`. Not ./public any more:
-    // public/ is now Qwik's source for static files and gets copied into dist.
     "directory": "./dist",
-    // Serves dist/404.html for any unmatched path. That file is emitted
-    // directly by SSG because src/routes/404.tsx is a FILE route -- a
-    // directory route would produce dist/404/index.html instead and this
-    // setting would find nothing. Asserted by scripts/verify-build.mjs.
+    // Serves dist/404.html for unmatched paths, so src/routes/404.tsx stays a
+    // file route: a directory route emits dist/404/index.html.
     "not_found_handling": "404-page",
-    // Explicit rather than relying on the default. Qwik SSG emits
-    // blog/index.html and the canonical URLs and sitemap both use a
-    // trailing slash, so /blog and /blog/ must resolve to one page and
-    // one canonical. Naming it here means a change to Cloudflare's default
-    // cannot silently split them.
+    // Explicit, so a change to Cloudflare's default can't split /blog from
+    // /blog/, the form the canonical URLs use.
     "html_handling": "auto-trailing-slash",
     "run_worker_first": ["/api/*"],
   },
-  // Aman's desk, reached privately through a Cloudflare Tunnel: the desk has
-  // no public hostname. Workers VPC is in beta and free on all plans while in
-  // beta (developers.cloudflare.com/workers-vpc, read 2026-10-13). Created
-  // 2026-10-13 on wrangler 4.147.0 with `wrangler vpc service create
-  // portfolio-desk --type http --tunnel-id <id> --ipv4 127.0.0.1`, and on
-  // 2026-10-14 pointed at --http-port 11500, the log proxy in desk/, not at
-  // Ollama's 11434. Check it with `wrangler vpc service get <service_id>`.
+  // The log proxy in desk/ (port 11500), through a Cloudflare Tunnel. Workers
+  // VPC is beta and free on all plans (developers.cloudflare.com/workers-vpc,
+  // read 2026-10-13). Check: `wrangler vpc service get <service_id>`.
   "vpc_services": [
     { "binding": "DESK", "service_id": "01a13600-e2dd-7483-83a1-5560fe691686" },
   ],

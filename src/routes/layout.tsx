@@ -9,10 +9,7 @@ import {
 import { ThemePicker } from "~/components/theme-picker";
 import { profile } from "~/content/profile";
 
-/**
- * `column` is what a route tells this layout through `head.frontmatter`; the
- * rest is derived for every page by this layout's own `head`, below.
- */
+/** Routes set `column`; this layout's `head` sets the rest. */
 export type Frontmatter = {
   column?: "reading" | "stage";
   navHref?: string;
@@ -21,14 +18,8 @@ export type Frontmatter = {
 };
 
 /**
- * A view-transition name for the content that is different on every page, so
- * the old page always leaves from where it is and the new one arrives where it
- * lands. A shared name made the two morph into each other: from the bottom of
- * a long page that slid the old content thousands of pixels, because the
- * router scrolls the new page to the top only after the transition starts.
- *
- * Keyed on the path, which `head` below receives before the router captures
- * the new page.
+ * Unique per page, so the old and new pages never morph into each other:
+ * @qwik.dev/router rc.3 scrolls to the top only after the transition starts.
  */
 const pageTransitionName = (path: string) => {
   let hash = 0;
@@ -45,21 +36,15 @@ const pages = [
 ];
 
 /**
- * Everything this layout shows that differs per page is worked out here, once
- * per navigation, and the component below only reads it. Two reasons:
- *
- * - Head is updated before the view transition captures the new page, and
- *   `useLocation()` readers only after (see the column note below), so the lit
- *   link and the transition name are right in the captured snapshot.
- * - Read straight from head in JSX, each becomes a signal binding, so a click
- *   updates a few attributes and never re-runs this layout. rc.3's optimizer
- *   only makes a binding of an expression with no call, nothing from module
- *   scope and at most 150 characters; anything else is evaluated in the render
- *   and subscribes the whole component. `pnpm run verify` checks the bindings.
+ * Everything that differs per page comes from head, which @qwik.dev/router
+ * rc.3 updates before the view transition captures the new page, and
+ * `useLocation()` readers only after:
+ *   grep -n 'const headUpdated\|forceStoreEffects(routeLocation, "url")' node_modules/@qwik.dev/router/lib/index.qwik.mjs
+ * Read from head in JSX, each value is a signal binding (`pnpm run verify`
+ * checks), so a click never re-runs this layout.
  */
 export const head: DocumentHead = ({ url }) => {
   const path = url.pathname;
-  // A post is inside the blog, so the blog link stays lit there.
   const lit = pages.find(
     (p) => p.href === path || (p.href !== "/" && path.startsWith(p.href)),
   );
@@ -72,33 +57,16 @@ export const head: DocumentHead = ({ url }) => {
   };
 };
 
-/**
- * No sidebar, no rule, no navbar.
- *
- * ---------------------------------------------------------------------------
- * On the wide pages the left of the page is deliberately EMPTY — just the
- * grainy gradient showing through — and everything readable lives in a
- * column on the right. A link rail there once turned that space into a
- * sidebar; it is meant as the artwork, so the column is offset into it with
- * `margin-inline-start: auto` rather than framed by a grid. Below `lg` the
- * offset collapses, because a phone has no room to give away.
- *
- * The home page is the exception: its first screen is the shell, centred.
- * ---------------------------------------------------------------------------
- */
 export default component$(() => {
   const loc = useLocation();
-  // Not `head`: this module exports that name, and the optimizer then counts
-  // every expression using it as module scope, so none becomes a binding.
+  // Not `head`: the optimizer counts that name as this module's export, so
+  // nothing reading it would become a binding.
   const doc = useDocumentHead<Frontmatter>();
 
   /*
-   * Qwik Router takes over every same-page `#` link: it cancels the click and
-   * scrolls the target into view, so focus stays on the link and the next Tab
-   * starts from the top again. That broke the skip link and the post's
-   * contents list. This moves focus to the target as well, inline from the
-   * HTML, so no click on the page waits on a bundle for it. The router's own
-   * handler: `grep -n 'scrollIntoView' node_modules/@qwik.dev/router/lib/index.qwik.mjs`
+   * @qwik.dev/router rc.3 cancels every same-page `#` click and scrolls
+   * instead, leaving focus on the link. This moves it to the target, inline:
+   *   grep -n 'scrollIntoView' node_modules/@qwik.dev/router/lib/index.qwik.mjs
    */
   useOnDocument(
     "click",
@@ -116,14 +84,7 @@ export default component$(() => {
 
   return (
     <div class="min-h-dvh">
-      {/* Never named either: see the view-transition note in global.css. */}
       <div class="field" aria-hidden="true" />
-      {/*
-       * No view-transition-name here, deliberately — `pnpm run verify` asserts
-       * it. A named element is snapshotted into the transition's own layer,
-       * where mix-blend-mode has no backdrop to blend against, so the grain
-       * painted as raw grey noise over the whole page for one frame.
-       */}
       <div class="grain-page" aria-hidden="true" />
 
       <a
@@ -133,26 +94,10 @@ export default component$(() => {
         Skip to content
       </a>
 
-      {/*
-       * A post is read, not browsed, so it gets a centred column; the home
-       * page is the shell, so it gets a wide centred one. `.site-column` in
-       * global.css draws each.
-       *
-       * Which column comes from the route's head (src/routes/blog/(post)/layout.tsx),
-       * not the URL. Qwik Router notifies `useLocation()` readers only after
-       * the view transition has captured the new page, so a URL-driven column
-       * is captured wrong and then jumps; head updates land before the
-       * capture. The order, in the router's commit step:
-       *   grep -n 'const headUpdated\|forceStoreEffects(routeLocation, "url")' node_modules/@qwik.dev/router/lib/index.qwik.mjs
-       */}
       <div
         class="site-column flex min-h-dvh w-full flex-col"
         data-column={doc.frontmatter.column}
       >
-        {/*
-         * Links sit inline at the top of the column, not in a rail. Small,
-         * horizontal, no border — an index line rather than a chrome band.
-         */}
         {/* Above main, so the "say hi" panel is not drawn under the shell. */}
         <header class="relative z-10 flex flex-wrap items-baseline gap-x-5 gap-y-2 pt-6 lg:pt-8">
           <nav
@@ -193,7 +138,6 @@ export default component$(() => {
                   rel="me noopener"
                   class="text-muted hover:text-text text-sm no-underline"
                 >
-                  {/* Inline, not flex, so the row still aligns on the text. */}
                   {ICONS[l.label] && (
                     <svg
                       viewBox="0 0 24 24"
@@ -242,11 +186,9 @@ export default component$(() => {
         </footer>
 
         {/*
-         * Announces the new title after a client-side navigation, which a
-         * screen reader otherwise does not hear at all: the router has no live
-         * region of its own (`grep -c aria-live` on its index.qwik.mjs is 0).
-         * Empty until the first navigation — `prevUrl` is unset on a full page
-         * load — so it never duplicates the title for someone reading the page.
+         * @qwik.dev/router rc.3 has no live region (`grep -c aria-live` on its
+         * index.qwik.mjs prints 0), so this announces the title after a
+         * client-side navigation. `prevUrl` is unset on a full load.
          */}
         <p aria-live="assertive" aria-atomic="true" class="sr-only">
           {loc.prevUrl ? doc.title : ""}

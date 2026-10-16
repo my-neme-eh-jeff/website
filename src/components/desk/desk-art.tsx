@@ -1,7 +1,6 @@
 import { GRIDS, rasterize, segments } from "./desk";
 
 /**
- * The desk as text, for the first paint and wherever the light never starts.
  * Rendered by the route and projected into the shell, so the shell's own
  * re-renders never run the rasteriser on the client.
  */

@@ -37,14 +37,13 @@ export const Anatomy = component$(() => {
       <Statusline state={heating} highlight={hl.value} />
       <ul class="mt-5 grid gap-1">
         {ROWS.map((r) => {
-          // Only the key in the handlers: closing over `r` serialised the whole
-          // row into the page (destructuring the parameter does not help).
+          // Only the key in the handlers: Qwik serialises what they close over,
+          // and `r` is the whole row (destructuring the parameter doesn't help).
           const key = r.key;
           return (
             <li
               key={key}
-              // Pointer, not mouse, events: iOS sends no mouse events to a plain
-              // <li>, so a tap did nothing. A tap's highlight stays until the next.
+              // Pointer, not mouse, events: iOS sends no mouse events to a plain <li>.
               onPointerEnter$={() => (hl.value = key)}
               onPointerLeave$={(e) => {
                 if (e.pointerType === "mouse") hl.value = "";

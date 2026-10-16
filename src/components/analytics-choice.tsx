@@ -11,13 +11,11 @@ const text: Record<State, string> = {
   off: "Analytics is off in this browser. If it had already loaded on this visit, the change applies from your next page load.",
 };
 
-/** The opt-out switch on /privacy/. Reads browser-only state, so it has to run on the client. */
 export const AnalyticsChoice = component$(() => {
   const state = useSignal<State>("nojs");
 
-  // localStorage and navigator only exist in the browser, so this runs once,
-  // when the switch scrolls into view: the event useVisibleTask$ compiles to,
-  // without the task.
+  // Browser-only state, read on `qvisible`: the event useVisibleTask$ compiles
+  // to, without the task.
   useOn(
     "qvisible",
     $(() => {

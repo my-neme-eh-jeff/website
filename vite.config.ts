@@ -1,7 +1,3 @@
-/**
- * This is the base config for vite.
- * When building, the adapter config is used which loads this file and extends it.
- */
 import tailwindcss from "@tailwindcss/vite";
 import { qwikVite } from "@qwik.dev/core/optimizer";
 import { qwikRouter } from "@qwik.dev/router/vite";
@@ -16,82 +12,41 @@ const { dependencies = {}, devDependencies = {} } = pkg as any as {
 };
 errorOnDuplicatesPkgDeps(devDependencies, dependencies);
 
-/**
- * Note that Vite normally starts from `index.html` but the qwikRouter plugin makes start at `src/entry.ssr.tsx` instead.
- */
 export default defineConfig((): UserConfig => {
   return {
-    /**
-     * Tailwind v4 needs no config file and no PostCSS chain -- the vite plugin
-     * is the whole integration. Wiring taken from the starter Qwik itself
-     * ships, which is version-matched to the installed beta:
-     *   node_modules/@qwik.dev/core/dist/starters/features/tailwind/package.json
-     */
     plugins: [
       tailwindcss(),
       qwikRouter({
-        /*
-         * Autolink puts an empty, aria-hidden link and an unstyled
-         * `icon icon-link` span inside every MDX heading. Headings keep their
-         * ids without it.
-         */
+        // @qwik.dev/router rc.3 turns autolink on by default, which puts an
+        // empty aria-hidden link in every MDX heading. Ids stay without it.
         mdxPlugins: {
           remarkGfm: true,
           rehypeSyntaxHighlight: true,
           rehypeAutolinkHeadings: false,
         },
       }),
-      /*
-       * Inline the stylesheet into every page rather than link it. It is
-       * 45 kB (9 kB brotli) against a default limit of 20,000: inlined,
-       * first paint on slow 4G came ~290 ms sooner for 8.4 kB more per page
-       * (rc.3, 2026-10-14). `pnpm run verify` fails if it outgrows this.
-       */
+      // Inlines the stylesheet (default limit 20,000 bytes) instead of linking
+      // it. `pnpm run verify` fails once it outgrows this.
       qwikVite({ optimizerOptions: { inlineStylesUpToBytes: 60_000 } }),
     ],
     resolve: { tsconfigPaths: true },
-    // This tells Vite which dependencies to pre-build in dev mode.
     optimizeDeps: {
-      // Put problematic deps that break bundling here, mostly those with binaries.
-      // For example ['better-sqlite3'] if you use that in server functions.
       exclude: [],
     },
 
-    /**
-     * This is an advanced setting. It improves the bundling of your server code. To use it, make sure you understand when your consumed packages are dependencies or dev dependencies. (otherwise things will break in production)
-     */
-    // ssr:
-    //   command === "build" && mode === "production"
-    //     ? {
-    //         // All dev dependencies should be bundled in the server build
-    //         noExternal: Object.keys(devDependencies),
-    //         // Anything marked as a dependency will not be bundled
-    //         // These should only be production binary deps (including deps of deps), CLI deps, and their module graph
-    //         // If a dep-of-dep needs to be external, add it here
-    //         // For example, if something uses `bcrypt` but you don't have it as a dep, you can write
-    //         // external: [...Object.keys(dependencies), 'bcrypt']
-    //         external: Object.keys(dependencies),
-    //       }
-    //     : undefined,
-
     server: {
       headers: {
-        // Don't cache the server response in dev mode
         "Cache-Control": "public, max-age=0",
       },
     },
     preview: {
       headers: {
-        // Do cache the server response in preview (non-adapter production build)
         "Cache-Control": "public, max-age=600",
       },
     },
   };
 });
 
-// *** utils ***
-
-/** Throws if a package is listed in both devDependencies and dependencies. */
 function errorOnDuplicatesPkgDeps(
   devDependencies: PkgDep,
   dependencies: PkgDep,

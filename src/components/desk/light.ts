@@ -1,16 +1,7 @@
 /**
- * The light on the desk: one file that runs twice.
- *
- * In the page it is a classic <script>, injected by the shell's `qidle`
- * sync$ once the page is idle, so it never wakes Qwik. It hands a canvas to a
- * worker started from this same URL, and from then on only forwards what the
- * page knows: layout, theme, and what the shell is doing.
- *
- * In the worker it draws the desk with WebGL2, over the same grid the page
- * shipped as text (rasterize() in ./desk), so the switch moves no character.
- * Everything that animates is in the shader; the grid itself is static.
- *
- * Built by Vite as `?worker&url`: one file, content-hashed under /assets/.
+ * One file that runs twice: as a classic <script> in the page, which starts a
+ * worker from its own URL, and in that worker, which draws the desk's grid
+ * with WebGL2 cell for cell over the text the page shipped.
  */
 import { GRIDS, KIND, rasterize } from "./desk";
 
@@ -38,8 +29,6 @@ const COUNT = 95;
 
 if (typeof document === "undefined") worker();
 else page();
-
-/* ------------------------------------------------------------------ page */
 
 function page() {
   const script = document.currentScript as HTMLScriptElement | null;
@@ -83,7 +72,6 @@ function page() {
     const { cols, rows } = GRIDS[size];
     const sr = shell.getBoundingClientRect();
     const pr = pre.getBoundingClientRect();
-    // Squeezed to nothing, as on a short phone with the theme picker open.
     if (!pr.width || !pr.height) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const cellW = (pr.width / cols) * dpr;
@@ -121,7 +109,6 @@ function page() {
     });
   };
 
-  /* The same condition the stylesheet clears the text desk on. */
   const IN_USE = ':has(#term-input:focus, [aria-live] > pre[data-kind="in"])';
   const state = () => post({ type: "state", clear: shell.matches(IN_USE) });
 
@@ -139,8 +126,7 @@ function page() {
   let onScreen = true;
   const run = () => post({ type: "run", on: shown && onScreen });
   const io = new IntersectionObserver(([e]) => {
-    // A client-side navigation away removes the shell; the next visit starts
-    // its own light, so this one ends rather than idling in the background.
+    // Gone after a client-side navigation away; the next visit starts its own.
     if (!shell.isConnected) {
       io.disconnect();
       w.terminate();
@@ -155,10 +141,7 @@ function page() {
     run();
   });
 
-  // Fired by src/content/theme.ts for a new palette or mode, and for the OS
-  // switching light/dark while the visitor follows it.
   document.addEventListener("themechange", colors);
-  // The slot as well: it grows when the shell's intro folds away.
   const ro = new ResizeObserver(() => void layout());
   ro.observe(shell);
   const slot = shell.querySelector(".desk-slot");
@@ -188,8 +171,6 @@ async function atlas(fontPx: number, cellW: number, cellH: number) {
   }
   return createImageBitmap(c);
 }
-
-/* ---------------------------------------------------------------- worker */
 
 const VERT = `#version 300 es
 in vec2 aPos;

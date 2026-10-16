@@ -1,12 +1,7 @@
 /**
- * A TypeScript port of the render path in claude-statusline/statusline.sh
- * (my-neme-eh-jeff/ai-experiments, e179f9c), so the post's figures are drawn
- * by the same rules the script runs rather than by a mock-up of them.
- *
- * Checked against the script's own demo: every scenario in demo/render.sh,
- * ANSI stripped, matches `plain()` below character for character. Re-check
- * after changing either side with scripts/statusline-parity.mjs (see its
- * header for the one-line invocation).
+ * A port of the render path in claude-statusline/statusline.sh
+ * (my-neme-eh-jeff/ai-experiments, e179f9c). Re-check `plain()` against the
+ * script's demo with scripts/statusline-parity.mjs.
  */
 
 export type Limit = { used: number; resetsIn: number };

@@ -18,21 +18,10 @@ const options = PALETTES.map((p) => {
 });
 
 /**
- * The footer's colour picker, on every page.
- *
- * It never wakes Qwik. The panel is a native popover, so opening and closing
- * it (Esc, a click outside) needs no script, and every handler is a sync$
- * that calls `window.siteTheme` from src/content/theme.ts. A sync$ is
- * serialised into the HTML, so it can import nothing and close over nothing:
- * what it needs is in the radios' values and data attributes.
- *
- * The radios start unchecked because the stored choice is unknown at build
- * time. Opening the panel asks the theme script to repaint, which fires
- * `themechange`, and that listener ticks the radios. The same listener keeps
- * them right when the shell, another tab or the OS changes the theme.
- *
- * Hidden until the theme script has run (`data-js` on <html>): without
- * JavaScript the radios could not do anything.
+ * Every handler is a sync$, which is serialised into the HTML and so can
+ * import and close over nothing. The radios start unchecked, since the saved
+ * choice is unknown at build time: opening the panel asks the theme script to
+ * repaint, and its `themechange` ticks them.
  */
 export const ThemePicker = component$(() => {
   useOnDocument(
@@ -42,7 +31,6 @@ export const ThemePicker = component$(() => {
         e as CustomEvent<{ name: string; mode: string; preview: boolean }>
       ).detail;
       const panel = document.getElementById("theme-picker");
-      // The shell's picker previews; only a saved choice ticks a radio.
       if (!t || t.preview || !panel) return;
       let only = "";
       let name = "";

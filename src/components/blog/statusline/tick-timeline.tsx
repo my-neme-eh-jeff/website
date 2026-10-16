@@ -16,10 +16,7 @@ const RUNS = [
   { ms: 40000, label: "40 s" },
 ];
 
-/**
- * Drawn twice, at two widths. Text in an SVG scales with its viewBox, so the
- * 600-wide drawing put 10px labels at about 5px on a phone.
- */
+/** Drawn at two widths: SVG text scales with the viewBox, so one is unreadable on a phone. */
 const Chart = ({
   W,
   every,

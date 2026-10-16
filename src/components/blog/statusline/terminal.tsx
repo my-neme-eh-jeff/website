@@ -64,7 +64,7 @@ export const Terminal = ({
         <span class="bg-term-dim/40 size-2.5 rounded-full" />
         <span class="bg-term-dim/40 size-2.5 rounded-full" />
       </div>
-      {/* `relative` so the sr-only spans in Segment are clipped here, not by the page. */}
+      {/* Positioned, so Segment's screen-reader-only spans are clipped here, not by the page. */}
       <div class="scroll-cue relative overflow-x-auto">
         <div class="w-max min-w-full px-4 py-3 font-mono text-[0.75rem] leading-[1.75]">
           {lines.length === 0 && (

@@ -1,10 +1,8 @@
 /**
- * The desk on the homepage, drawn as a grid of characters.
- *
- * The SSG page and the WebGL worker both call `rasterize`, and the page must
- * match the worker cell for cell, so it uses only + - * / and comparisons:
- * those are exactly rounded in every JS engine, so Node and each browser get
- * the same grid. `pnpm run verify` re-rasterises and compares the built page.
+ * The SSG page and the WebGL worker both call `rasterize` and must agree cell
+ * for cell, so it avoids every Math function ECMA-262 lets engines approximate
+ * (sin, exp, pow...): arithmetic, Math.sqrt and rounding are exact everywhere.
+ * `pnpm run verify` re-rasterises and compares the built page.
  */
 
 /** Paths from the "Desk" artboard of the Portfolio Directions canvas. */
@@ -253,11 +251,9 @@ class Canvas {
 }
 
 /**
- * Lines are traced, not covered: each segment steps through the grid and
- * marks the cell it is in, so every line is one character wide. The character
- * comes from the segment's direction on screen, where a cell is 0.6em by
- * 1.25em. Directions are summed as doubled angles, so a line drawn either way
- * adds up, and where two paths cross at an angle the sum cancels to a joint.
+ * Each segment marks the cells it passes through, so lines are one character
+ * wide. Directions are summed as doubled angles, so a line counts the same
+ * drawn either way, and where two paths cross the sum cancels to a joint.
  */
 function trace(paths: string[], cols: number, rows: number): string[] {
   const n = cols * rows;
