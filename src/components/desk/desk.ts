@@ -49,7 +49,11 @@ const STEAM = [
   "M422 194 C 416 182, 428 174, 422 160 C 416 148, 428 140, 422 128",
 ];
 const LED = { x: 294, y: 248, r: 5 };
-const NOTE = { x: 18, y: 44, lines: ["# this box on my desk", "# answers your questions"] };
+const NOTE = {
+  x: 18,
+  y: 44,
+  lines: ["# this box on my desk", "# answers your questions"],
+};
 
 export const GRIDS = {
   wide: { cols: 144, rows: 44 },
@@ -94,11 +98,23 @@ function parse(d: string): { pts: Pt[]; closed: boolean }[] {
       pts.push([num(), num()]);
     } else if (c === "C") {
       const [x0, y0] = pts[pts.length - 1]!;
-      const x1 = num(), y1 = num(), x2 = num(), y2 = num(), x3 = num(), y3 = num();
+      const x1 = num(),
+        y1 = num(),
+        x2 = num(),
+        y2 = num(),
+        x3 = num(),
+        y3 = num();
       for (let s = 1; s <= 24; s++) {
-        const t = s / 24, u = 1 - t;
-        const a = u * u * u, b = 3 * u * u * t, e = 3 * u * t * t, f = t * t * t;
-        pts.push([a * x0 + b * x1 + e * x2 + f * x3, a * y0 + b * y1 + e * y2 + f * y3]);
+        const t = s / 24,
+          u = 1 - t;
+        const a = u * u * u,
+          b = 3 * u * u * t,
+          e = 3 * u * t * t,
+          f = t * t * t;
+        pts.push([
+          a * x0 + b * x1 + e * x2 + f * x3,
+          a * y0 + b * y1 + e * y2 + f * y3,
+        ]);
       }
     } else if (c === "Z") {
       out.push({ pts, closed: true });
@@ -149,18 +165,31 @@ class Canvas {
       for (let k = 0; k < n; k++) {
         const [ax, ay] = pts[k]!;
         const [bx, by] = pts[(k + 1) % pts.length]!;
-        const x0 = ax + dx, y0 = ay + dy, x1 = bx + dx, y1 = by + dy;
-        const vx = x1 - x0, vy = y1 - y0;
+        const x0 = ax + dx,
+          y0 = ay + dy,
+          x1 = bx + dx,
+          y1 = by + dy;
+        const vx = x1 - x0,
+          vy = y1 - y0;
         const len2 = vx * vx + vy * vy;
-        const [i0, i1] = this.range(this.col(Math.min(x0, x1) - hw), this.col(Math.max(x0, x1) + hw), this.w);
-        const [j0, j1] = this.range(this.row(Math.min(y0, y1) - hw), this.row(Math.max(y0, y1) + hw), this.h);
+        const [i0, i1] = this.range(
+          this.col(Math.min(x0, x1) - hw),
+          this.col(Math.max(x0, x1) + hw),
+          this.w,
+        );
+        const [j0, j1] = this.range(
+          this.row(Math.min(y0, y1) - hw),
+          this.row(Math.max(y0, y1) + hw),
+          this.h,
+        );
         for (let j = j0; j <= j1; j++) {
           const py = this.sy(j);
           for (let i = i0; i <= i1; i++) {
             const px = this.sx(i);
             let t = len2 > 0 ? ((px - x0) * vx + (py - y0) * vy) / len2 : 0;
             t = t < 0 ? 0 : t > 1 ? 1 : t;
-            const ex = x0 + t * vx - px, ey = y0 + t * vy - py;
+            const ex = x0 + t * vx - px,
+              ey = y0 + t * vy - py;
             if (ex * ex + ey * ey <= hw2) this.hit[j * this.w + i] = 1;
           }
         }
@@ -176,12 +205,17 @@ class Canvas {
         for (let k = 0; k < pts.length; k++) {
           const [ax, ay] = pts[k]!;
           const [bx, by] = pts[(k + 1) % pts.length]!;
-          if (ay <= py !== by <= py) xs.push(ax + ((py - ay) * (bx - ax)) / (by - ay));
+          if (ay <= py !== by <= py)
+            xs.push(ax + ((py - ay) * (bx - ax)) / (by - ay));
         }
       }
       xs.sort((a, b) => a - b);
       for (let k = 0; k + 1 < xs.length; k += 2) {
-        const [i0, i1] = this.range(this.col(xs[k]!) - 0.5, this.col(xs[k + 1]!) - 0.5, this.w);
+        const [i0, i1] = this.range(
+          this.col(xs[k]!) - 0.5,
+          this.col(xs[k + 1]!) - 0.5,
+          this.w,
+        );
         for (let i = i0; i <= i1; i++) {
           const px = this.sx(i);
           if (px >= xs[k]! && px <= xs[k + 1]!) this.hit[j * this.w + i] = 1;
@@ -195,7 +229,8 @@ class Canvas {
     const [j0, j1] = this.range(this.row(y - r), this.row(y + r), this.h);
     for (let j = j0; j <= j1; j++) {
       for (let i = i0; i <= i1; i++) {
-        const ex = this.sx(i) - x, ey = this.sy(j) - y;
+        const ex = this.sx(i) - x,
+          ey = this.sy(j) - y;
         if (ex * ex + ey * ey <= r2) this.hit[j * this.w + i] = 1;
       }
     }

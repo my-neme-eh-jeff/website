@@ -968,8 +968,7 @@
 }
 
 /* The shell takes the space once it is in use: focused, or past its intro. */
-[data-shell]:has(#term-input:focus, [aria-live] > pre:nth-child(2))
-  .desk-slot {
+[data-shell]:has(#term-input:focus, [aria-live] > pre:nth-child(2)) .desk-slot {
   opacity: 0;
 }
 

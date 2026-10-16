@@ -52,7 +52,7 @@ import { $ } from "@qwik.dev/core";
 const SPEC = {
   /** Per keystroke. Highest and shortest — it has to disappear under typing. */
   key: { freq: 1720, drop: 0.72, decay: 0.026, gain: 0.026, type: "triangle" },
-  /** Window chrome: minimise, maximise, mute. A softer, rounder tap. */
+  /** Window chrome: the mute button. A softer, rounder tap. */
   chrome: { freq: 880, drop: 0.7, decay: 0.05, gain: 0.032, type: "sine" },
   /** Command submitted. Lower and longer, so it reads as a commit. */
   enter: { freq: 540, drop: 0.62, decay: 0.075, gain: 0.038, type: "sine" },

@@ -22,8 +22,8 @@ import { component$, useSignal, $ } from "@qwik.dev/core";
  * page load — this only makes it legible to humans as well as to scrapers.
  *
  * ---------------------------------------------------------------------------
- * The button relabels itself rather than showing a toast, matching the shell's
- * traffic lights: the control that was activated is the thing that reports
+ * The button relabels itself rather than showing a toast, like the shell's
+ * mute button: the control that was activated is the thing that reports
  * back, so focus never moves and a screen reader hears the change on the
  * element it is already on.
  */

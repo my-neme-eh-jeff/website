@@ -1301,24 +1301,30 @@ check("no full-viewport layer carries a view-transition-name", () => {
  * says why. If that wiring breaks, posts still render — in the wide column —
  * so this is the only place it shows.
  */
-check("posts use the reading column, home the stage, the rest the wide one", () => {
-  for (const page of PAGES) {
-    const html = read("dist", page);
-    /* The column is the last <div> opened before the header. */
-    const before = html.slice(0, html.indexOf("<header"));
-    const column = [...before.matchAll(/<div\b[^>]*>/g)].at(-1)?.[0] ?? "";
-    assert(/\bsite-column\b/.test(column), `${page}: no .site-column in ${column}`);
-    const got = /\bdata-column="([^"]*)"/.exec(column)?.[1] ?? "wide";
-    const want =
-      page === "index.html"
-        ? "stage"
-        : page.startsWith("blog/") && page !== "blog/index.html"
-          ? "reading"
-          : "wide";
-    assert(got === want, `${page}: ${got} column, expected ${want}`);
-  }
-  return `${PAGES.length} pages`;
-});
+check(
+  "posts use the reading column, home the stage, the rest the wide one",
+  () => {
+    for (const page of PAGES) {
+      const html = read("dist", page);
+      /* The column is the last <div> opened before the header. */
+      const before = html.slice(0, html.indexOf("<header"));
+      const column = [...before.matchAll(/<div\b[^>]*>/g)].at(-1)?.[0] ?? "";
+      assert(
+        /\bsite-column\b/.test(column),
+        `${page}: no .site-column in ${column}`,
+      );
+      const got = /\bdata-column="([^"]*)"/.exec(column)?.[1] ?? "wide";
+      const want =
+        page === "index.html"
+          ? "stage"
+          : page.startsWith("blog/") && page !== "blog/index.html"
+            ? "reading"
+            : "wide";
+      assert(got === want, `${page}: ${got} column, expected ${want}`);
+    }
+    return `${PAGES.length} pages`;
+  },
+);
 
 /*
  * Qwik loads nothing and runs no component code until a handler that names a

@@ -266,8 +266,8 @@ function untilDone(fn: () => boolean, tries = 30) {
  * is pinned at 0, so setting it to scrollHeight leaves it at 0 — "unchanged",
  * and the loop declares success against an empty buffer. That only ever looked
  * correct because the poll interval happened to be 16ms, which was usually
- * longer than Qwik's flush. Dropping the interval to 0 for the maximise fix
- * exposed it immediately: `k describe projects gpu-autoscaler` came back with
+ * longer than Qwik's flush. Dropping the interval to 0 exposed it
+ * immediately: `k describe projects gpu-autoscaler` came back with
  * scrollHeight 931 against clientHeight 384 and scrollTop still 0.
  *
  * The caller knows exactly how many elements the buffer should render as, via
@@ -1158,25 +1158,25 @@ export const Terminal = component$(() => {
         </label>
       </div>
 
-        <div
-          role="group"
-          aria-labelledby="term-suggest"
-          class="border-line/60 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t px-4 py-2.5"
-        >
-          <span id="term-suggest" class="text-muted font-mono text-[0.6875rem]">
-            Try asking
-          </span>
-          {SUGGESTIONS.map((q) => (
-            <button
-              type="button"
-              key={q}
-              onClick$={[clickGuard, $(() => suggest(q))]}
-              class="border-line text-muted hover:text-text hover:border-muted min-h-6 rounded-full border px-2.5 font-mono text-[0.6875rem] transition-colors duration-150"
-            >
-              {q}
-            </button>
-          ))}
-        </div>
+      <div
+        role="group"
+        aria-labelledby="term-suggest"
+        class="border-line/60 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t px-4 py-2.5"
+      >
+        <span id="term-suggest" class="text-muted font-mono text-[0.6875rem]">
+          Try asking
+        </span>
+        {SUGGESTIONS.map((q) => (
+          <button
+            type="button"
+            key={q}
+            onClick$={[clickGuard, $(() => suggest(q))]}
+            class="border-line text-muted hover:text-text hover:border-muted min-h-6 rounded-full border px-2.5 font-mono text-[0.6875rem] transition-colors duration-150"
+          >
+            {q}
+          </button>
+        ))}
+      </div>
     </div>
   );
 });

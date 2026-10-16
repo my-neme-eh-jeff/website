@@ -370,13 +370,18 @@ function worker() {
       e.preventDefault();
       fail();
     });
-    gl = c.getContext("webgl2", { alpha: true, premultipliedAlpha: true, antialias: false });
+    gl = c.getContext("webgl2", {
+      alpha: true,
+      premultipliedAlpha: true,
+      antialias: false,
+    });
     if (!gl) return fail();
     const compile = (type: number, src: string) => {
       const sh = gl!.createShader(type)!;
       gl!.shaderSource(sh, src);
       gl!.compileShader(sh);
-      if (!gl!.getShaderParameter(sh, gl!.COMPILE_STATUS)) throw new Error(gl!.getShaderInfoLog(sh) ?? "");
+      if (!gl!.getShaderParameter(sh, gl!.COMPILE_STATUS))
+        throw new Error(gl!.getShaderInfoLog(sh) ?? "");
       return sh;
     };
     try {
@@ -385,17 +390,26 @@ function worker() {
       gl.attachShader(p, compile(gl.FRAGMENT_SHADER, FRAG));
       gl.bindAttribLocation(p, 0, "aPos");
       gl.linkProgram(p);
-      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p) ?? "");
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS))
+        throw new Error(gl.getProgramInfoLog(p) ?? "");
       prog = p;
     } catch {
       return fail();
     }
     gl.useProgram(prog);
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 3, -1, -1, 3]),
+      gl.STATIC_DRAW,
+    );
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-    for (let i = 0, n = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS); i < n; i++) {
+    for (
+      let i = 0, n = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS);
+      i < n;
+      i++
+    ) {
       const name = gl.getActiveUniform(prog, i)!.name;
       U.set(name, gl.getUniformLocation(prog, name)!);
     }
@@ -417,7 +431,17 @@ function worker() {
   function upload(unit: number, w: number, h: number, data: Uint8Array) {
     gl!.activeTexture(gl!.TEXTURE0 + unit);
     gl!.bindTexture(gl!.TEXTURE_2D, tex[unit]!);
-    gl!.texImage2D(gl!.TEXTURE_2D, 0, gl!.RGBA, w, h, 0, gl!.RGBA, gl!.UNSIGNED_BYTE, data);
+    gl!.texImage2D(
+      gl!.TEXTURE_2D,
+      0,
+      gl!.RGBA,
+      w,
+      h,
+      0,
+      gl!.RGBA,
+      gl!.UNSIGNED_BYTE,
+      data,
+    );
   }
 
   /** The mask and its glow, rebuilt only when the grid changes. */
@@ -469,7 +493,13 @@ function worker() {
     const set1 = (n: string, v: number) => gl!.uniform1f(U.get(n) ?? null, v);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniform2f(U.get("uRes") ?? null, canvas.width, canvas.height);
-    gl.uniform4f(U.get("uArt") ?? null, art[0] * dpr, art[1] * dpr, art[2] * dpr, art[3] * dpr);
+    gl.uniform4f(
+      U.get("uArt") ?? null,
+      art[0] * dpr,
+      art[1] * dpr,
+      art[2] * dpr,
+      art[3] * dpr,
+    );
     gl.uniform2f(U.get("uCell") ?? null, cell[0], cell[1]);
     gl.uniform2f(U.get("uGrid") ?? null, cols, rows);
     gl.uniform2f(U.get("uSlot") ?? null, slot[0], slot[1]);
@@ -507,7 +537,14 @@ function worker() {
     else if (m.type === "atlas") {
       gl.activeTexture(gl.TEXTURE2);
       gl.bindTexture(gl.TEXTURE_2D, tex[2]!);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, m.bitmap);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        m.bitmap,
+      );
       cell = [m.cellW, m.cellH];
       slot = [m.cellW / m.bitmap.width, m.cellH / m.bitmap.height];
       m.bitmap.close();
