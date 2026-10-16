@@ -98,6 +98,7 @@ export const ThemePick = component$<{
 
   return (
     <div
+      id="theme-pick"
       class="term-composer rounded-xl px-3 py-2.5 font-mono text-[0.8125rem] leading-relaxed"
       onKeyDown$={[guard, onKey]}
       /*

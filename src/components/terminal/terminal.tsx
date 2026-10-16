@@ -679,6 +679,9 @@ export const Terminal = component$(() => {
   /** Keep the highlighted palette, or put the saved one back. */
   const closePick = $(async (keep: boolean) => {
     if (!pick.open) return;
+    // Focus goes back only from the picker: someone who tabbed away keeps it.
+    const at = document.activeElement;
+    const ours = !at || at === document.body || !!at.closest("#theme-pick");
     pick.open = false;
     const p = PICKS[pick.i]!;
     if (keep) window.siteTheme?.set(p.id, pick.mode);
@@ -700,12 +703,13 @@ export const Terminal = component$(() => {
     lines.items = [...lines.items, said];
     stickToBottom(renderGroups(lines.items).length);
     const back = pick.from === "chip" ? "term-theme-chip" : "term-input";
-    untilDone(() => {
-      const el = document.getElementById(back);
-      if (!el || el.offsetParent === null) return false;
-      el.focus();
-      return true;
-    });
+    if (ours)
+      untilDone(() => {
+        const el = document.getElementById(back);
+        if (!el || el.offsetParent === null) return false;
+        el.focus();
+        return true;
+      });
     await feedback(keep ? "enter" : "key");
   });
 
