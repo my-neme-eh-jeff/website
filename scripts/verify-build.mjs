@@ -728,6 +728,8 @@ check("every palette meets WCAG AA in every mode it has", () => {
         "text",
         "muted",
         "accent",
+        "alt",
+        "cta",
         "danger",
       ]) {
         assert(
@@ -768,6 +770,18 @@ check("every palette meets WCAG AA in every mode it has", () => {
             `(WCAG 1.4.3). The shell renders links and hint text in this ` +
             `colour, so it is body text and not just the focus ring.`,
         );
+      }
+      // Commands in the shell (--sem-alt) and "say hi" (--sem-cta) are text
+      // too, and the shell's sits on the panel.
+      for (const key of ["alt", "cta"]) {
+        for (const ground of ["bg", "surface"]) {
+          const r = contrast(t[key], t[ground]);
+          assert(
+            r >= 4.5,
+            `${name}: ${key} on ${ground} is ${r.toFixed(2)}:1, needs 4.5:1 ` +
+              `(WCAG 1.4.3).`,
+          );
+        }
       }
       results.push(`${name} ${focus.toFixed(2)}`);
     }

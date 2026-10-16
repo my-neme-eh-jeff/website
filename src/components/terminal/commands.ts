@@ -240,7 +240,7 @@ function theme(args: string[]): Line[] {
     return [
       {
         kind: "out",
-        text: `Back to ${DEFAULT_PALETTE}, following your system's light or dark setting.`,
+        text: `Back to the default: ${PALETTES.find((p) => p.id === DEFAULT_PALETTE)?.from}.`,
         theme: { name: DEFAULT_PALETTE, mode: "auto" },
       },
       SAVED,

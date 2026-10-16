@@ -26,6 +26,7 @@ writing a new doc.
 | `--sem-accent` on `--sem-bg`, every palette and mode (the focus ring)     | ≥ 3:1 (WCAG 1.4.11)  |
 | `--sem-accent` / `--sem-danger` on `--sem-bg` and `--sem-surface` (text)  | ≥ 4.5:1 (WCAG 1.4.3) |
 | Core tokens are six-digit hex (the desk's WebGL light parses them)        | every palette        |
+| `--sem-alt` / `--sem-cta` on `--sem-bg` and `--sem-surface` (text)        | ≥ 4.5:1 (WCAG 1.4.3) |
 | Skip link present, first focusable, target exists and has `tabindex="-1"` | per page             |
 | `lang` attribute, exactly one `<h1>`, no skipped heading levels           | per page             |
 | Every `<img>` has `alt`; every `<svg>` is named or `aria-hidden`          | per page             |

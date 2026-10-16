@@ -77,7 +77,8 @@ function statsLine(o: Extract<Outcome, { ok: true }>): string {
 }
 
 const LINE_CLASS: Record<Line["kind"], string> = {
-  in: "text-text font-medium",
+  // What was typed, in the colour commands have everywhere (--sem-alt).
+  in: "text-alt font-medium",
   out: "text-muted",
   err: "text-danger",
   hint: "text-muted",
@@ -189,11 +190,11 @@ function links(text: string, allow?: ReadonlySet<string>) {
   );
 }
 
-/** A hint, with each `command` it suggests drawn in the accent. */
+/** A hint, with each `command` it suggests drawn as commands are. */
 function hintText(text: string) {
   return text.split("`").map((part, j) =>
     j % 2 ? (
-      <span class="text-accent" key={j}>
+      <span class="text-alt" key={j}>
         {part}
       </span>
     ) : (

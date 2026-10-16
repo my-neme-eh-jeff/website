@@ -71,7 +71,7 @@ export const CircledChoice = component$<{ label?: string }>(
           aria-expanded={open.value}
           aria-controls={panelId}
           onClick$={() => (open.value = !open.value)}
-          class="text-text relative inline-flex cursor-pointer items-center border-0 bg-transparent px-3 py-1 text-sm"
+          class="text-cta relative inline-flex cursor-pointer items-center border-0 bg-transparent px-3 py-1 text-sm"
         >
           {label}
           <svg
@@ -83,7 +83,7 @@ export const CircledChoice = component$<{ label?: string }>(
             <path
               d="M18 21 C16 10, 44 4, 72 5 C102 6, 114 13, 113 23 C112 34, 84 39, 54 38 C24 37, 8 31, 10 21 C11 12, 30 7, 50 5"
               fill="none"
-              stroke="var(--sem-accent)"
+              stroke="var(--sem-cta)"
               stroke-width="2"
               stroke-linecap="round"
               vector-effect="non-scaling-stroke"

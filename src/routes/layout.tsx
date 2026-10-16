@@ -142,7 +142,7 @@ export default component$(() => {
                 }
                 class={
                   doc.frontmatter.navHref === p.href
-                    ? "decoration-accent text-text underline underline-offset-4"
+                    ? "decoration-accent text-accent underline underline-offset-4"
                     : "text-muted hover:text-text no-underline"
                 }
               >
