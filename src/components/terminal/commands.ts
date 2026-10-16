@@ -4,14 +4,17 @@ import {
   modesOf,
   type ModeChoice,
 } from "~/content/palettes";
+import { longDate } from "~/components/blog/date";
 import {
   achievements,
   education,
+  posts,
   profile,
   projects,
   roles,
   skills,
 } from "~/content/profile";
+import { ORIGIN } from "~/content/seo";
 
 export type Line = {
   /**
@@ -133,6 +136,37 @@ const RESOURCES: Resource[] = [
           : []),
         out("Detail:"),
         ...p.detail.flatMap((d, i) => (i ? [out(""), ...wrap(d)] : wrap(d))),
+      ];
+    },
+  },
+  {
+    name: "posts",
+    aliases: ["post", "blog", "writing"],
+    list: () =>
+      table(
+        ["NAME", "DATE", "TITLE"],
+        posts.map((p) => [p.slug, p.date, p.title]),
+      ),
+    describe: (key) => {
+      const p = posts.find((x) => x.slug === key);
+      if (!p) {
+        return [
+          err(`posts "${key}" not found`),
+          out(`Known: ${posts.map((x) => x.slug).join(", ")}`),
+        ];
+      }
+      return [
+        ...fields([
+          ["Name", p.slug],
+          ["Title", p.title],
+          ["Published", longDate(p.date)],
+          ["Read", `${p.minutes} min`],
+          ["Link", `${ORIGIN}/blog/${p.slug}/`],
+          ["Code", p.repo ?? ""],
+        ]),
+        out(""),
+        out("Summary:"),
+        ...wrap(p.summary),
       ];
     },
   },
@@ -467,7 +501,7 @@ function registry(): Command[] {
 
 const ABOUT_CHAT: Line[] = [
   out("Talking to a model running on a GPU on Aman's desk, at home."),
-  out("It answers from his CV and can be wrong."),
+  out("It answers from his CV and his posts, and can be wrong."),
   {
     kind: "out",
     text: "Chats are kept for 30 days.",
@@ -583,6 +617,7 @@ export function completions(): string[] {
     "k describe",
     ...RESOURCES.map((r) => `k get ${r.name}`),
     ...projects.map((p) => `k describe projects ${p.slug}`),
+    ...posts.map((p) => `k describe posts ${p.slug}`),
     "theme",
     ...["light", "dark", "auto", "reset"].map((w) => `theme ${w}`),
     ...PALETTES.map((p) => `theme ${p.id}`),

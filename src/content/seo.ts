@@ -2,7 +2,7 @@
  * Meta tags and JSON-LD, built only from profile.ts: Google's structured-data
  * policy forbids describing content the page doesn't show.
  */
-import { profile, posts, type Post } from "./profile";
+import { profile, posts, type Post } from "./profile.ts";
 
 /** Also `origin` in adapters/ssg/vite.config.ts. Change both together. */
 export const ORIGIN = "https://amannambisan.com";
