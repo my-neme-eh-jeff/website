@@ -877,6 +877,27 @@
 }
 
 /*
+ * The shell's colour picker (terminal/theme-pick.tsx). The cursor is drawn
+ * here, so moving it changes an attribute rather than any text. The box's
+ * focus ring (.term-composer) stands for the list's, as the input's does.
+ */
+.term-pick-list:focus-visible {
+  outline: none;
+}
+.term-pick-row::before {
+  content: "";
+  flex: none;
+  width: 1ch;
+}
+.term-pick-row[aria-selected="true"] {
+  background: var(--sem-line);
+}
+.term-pick-row[aria-selected="true"]::before {
+  content: "\203a";
+  color: var(--sem-accent);
+}
+
+/*
  * The page column. Wide pages sit right of the gradient (why: layout.tsx);
  * posts and the home page are centred. Set by the route's head, as
  * `data-column`, so a navigation never re-renders the layout.

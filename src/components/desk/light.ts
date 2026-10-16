@@ -83,6 +83,8 @@ function page() {
     const { cols, rows } = GRIDS[size];
     const sr = shell.getBoundingClientRect();
     const pr = pre.getBoundingClientRect();
+    // Squeezed to nothing, as on a short phone with the theme picker open.
+    if (!pr.width || !pr.height) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const cellW = (pr.width / cols) * dpr;
     const cellH = (pr.height / rows) * dpr;

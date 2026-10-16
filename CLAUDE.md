@@ -26,25 +26,25 @@ That rule covers facts, which carry numbers. Two things it kept missing:
 
 ## Where things live
 
-| Looking for                                             | Go to                                              |
-| ------------------------------------------------------- | -------------------------------------------------- |
-| Commands, local dev, deploy flow                        | `README.md`                                        |
-| Qwik 2 API names, adapters, build config                | `.claude/skills/qwik2-beta/`                       |
-| Why Qwik UI / any Qwik 1 component lib can't be used    | `.claude/skills/qwik2-beta/`                       |
-| SEO, structured data, AI-crawler policy                 | `.claude/skills/seo-geo/`                          |
-| Colour palettes, light/dark, the `theme` picker         | `src/content/palettes.ts`, `src/content/theme.ts`  |
-| Design tokens, shared patterns                          | `src/global.css` (read the header)                 |
-| **Accessibility bar for any UI work**                   | `.claude/skills/a11y-ui/`                          |
-| Visual design direction for NEW surfaces                | `.claude/skills/frontend-design/` (upstream)       |
-| Favicon / og:image generation                           | `scripts/make-icons.mjs` (run it, don't hand-edit) |
-| Every fact the pages render                             | `src/content/profile.ts` (and its comments)        |
-| What the shell's model is told, what links it may print | `src/content/chat.ts`                              |
-| The home page desk, as text and as the WebGL light      | `src/components/desk/` (verify checks they match)  |
-| What runs on Aman's desk: the chat log proxy            | `desk/README.md`                                   |
-| Meta tags + JSON-LD generation                          | `src/content/seo.ts`                               |
-| Hosting + free-tier config, with rationale              | `wrangler.jsonc` comments                          |
-| Cache + security headers, with rationale                | `public/_headers` comments                         |
-| Crawler allow/deny, with rationale                      | `public/robots.txt` comments                       |
+| Looking for                                             | Go to                                                                                       |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Commands, local dev, deploy flow                        | `README.md`                                                                                 |
+| Qwik 2 API names, adapters, build config                | `.claude/skills/qwik2-beta/`                                                                |
+| Why Qwik UI / any Qwik 1 component lib can't be used    | `.claude/skills/qwik2-beta/`                                                                |
+| SEO, structured data, AI-crawler policy                 | `.claude/skills/seo-geo/`                                                                   |
+| Colour palettes, light/dark, the shell's `theme` picker | `src/content/palettes.ts`, `src/content/theme.ts`, `src/components/terminal/theme-pick.tsx` |
+| Design tokens, shared patterns                          | `src/global.css` (read the header)                                                          |
+| **Accessibility bar for any UI work**                   | `.claude/skills/a11y-ui/`                                                                   |
+| Visual design direction for NEW surfaces                | `.claude/skills/frontend-design/` (upstream)                                                |
+| Favicon / og:image generation                           | `scripts/make-icons.mjs` (run it, don't hand-edit)                                          |
+| Every fact the pages render                             | `src/content/profile.ts` (and its comments)                                                 |
+| What the shell's model is told, what links it may print | `src/content/chat.ts`                                                                       |
+| The home page desk, as text and as the WebGL light      | `src/components/desk/` (verify checks they match)                                           |
+| What runs on Aman's desk: the chat log proxy            | `desk/README.md`                                                                            |
+| Meta tags + JSON-LD generation                          | `src/content/seo.ts`                                                                        |
+| Hosting + free-tier config, with rationale              | `wrangler.jsonc` comments                                                                   |
+| Cache + security headers, with rationale                | `public/_headers` comments                                                                  |
+| Crawler allow/deny, with rationale                      | `public/robots.txt` comments                                                                |
 
 ## Invariants
 

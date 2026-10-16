@@ -38,9 +38,12 @@ export const ThemePicker = component$(() => {
   useOnDocument(
     "themechange",
     sync$((e: Event) => {
-      const t = (e as CustomEvent<{ name: string; mode: string }>).detail;
+      const t = (
+        e as CustomEvent<{ name: string; mode: string; preview: boolean }>
+      ).detail;
       const panel = document.getElementById("theme-picker");
-      if (!t || !panel) return;
+      // The shell's picker previews; only a saved choice ticks a radio.
+      if (!t || t.preview || !panel) return;
       let only = "";
       let name = "";
       for (const i of panel.querySelectorAll<HTMLInputElement>(

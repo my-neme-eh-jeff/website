@@ -286,17 +286,10 @@ function contexts(): Line[] {
   );
 }
 
+/** With no word, `run` returns PICK and the shell opens its picker. */
 function theme(args: string[]): Line[] {
   const word = args[0]?.toLowerCase();
-  if (!word) {
-    return [
-      ...contexts(),
-      out(""),
-      hint(
-        "Switch with `theme <name>`, or pick `theme light`, `dark` or `auto`.",
-      ),
-    ];
-  }
+  if (!word) return contexts();
   if (word === "reset") {
     return [
       {
@@ -519,7 +512,7 @@ function registry(): Command[] {
     {
       name: "theme",
       usage: "theme [name|light|dark|auto]",
-      summary: "Change the site's colours. Saved in this browser.",
+      summary: "Pick the site's colours. Saved in this browser.",
       run: theme,
       takesArgs: true,
     },
@@ -556,6 +549,9 @@ const ABOUT_CHAT: Line[] = [
  * shell. The shell owns the conversation, so it does the asking.
  */
 export const ASK = "ask";
+
+/** Returned by `run` for a bare `theme`: the shell opens its colour picker. */
+export const PICK = "pick";
 
 /**
  * Real shell commands this shell does not have. Typed as a command, they get
@@ -601,7 +597,7 @@ export function run(
   input: string,
   width = 80,
   colours?: { name: string; mode: ModeChoice },
-): Line[] | null | typeof ASK {
+): Line[] | null | typeof ASK | typeof PICK {
   cols = width;
   if (colours) current = colours;
   const trimmed = input.trim();
@@ -609,6 +605,9 @@ export function run(
 
   const [head, ...rest] = trimmed.split(/\s+/);
   const name = (head ?? "").toLowerCase();
+
+  // `/theme` too, for anyone coming from Claude Code or Gemini CLI.
+  if ((name === "theme" || name === "/theme") && rest.length === 0) return PICK;
 
   // `ollama run`'s own commands, for whoever types them out of habit.
   if (name === "/clear" || name === "/bye") return null;

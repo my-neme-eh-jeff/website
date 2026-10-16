@@ -11,9 +11,11 @@ import {
 import { haptic } from "./haptics";
 import { sound, isMuted, setMuted, type Tone } from "./sounds";
 import { load as loadHistory, save as saveHistory } from "./history";
-import { run, completions, ASK, type Line } from "./commands";
+import { run, completions, ASK, PICK, type Line } from "./commands";
+import { ThemePick, PICKS, type PickState } from "./theme-pick";
 import { abortChat, sendChat, type Outcome, type Turn } from "./chat";
 import { KNOWN_HREFS } from "~/content/chat";
+import { DEFAULT_PALETTE } from "~/content/palettes";
 import { profile } from "~/content/profile";
 import lightUrl from "~/components/desk/light.ts?worker&url";
 
@@ -51,11 +53,12 @@ const INTRO: Line = {
 
 const PROMPT = "~ $";
 
-/** Shown under the shell, so nobody has to guess. */
-const SUGGESTIONS = [
-  "What is he working on?",
-  "What's his stack?",
-  "How does this chat work?",
+/** Shown under the shell, so nobody has to guess. One runs a command. */
+const SUGGESTIONS: { label: string; run?: string }[] = [
+  { label: "What is he working on?" },
+  { label: "What's his stack?" },
+  { label: "How does this chat work?" },
+  { label: "Change the colours", run: "theme" },
 ];
 
 /** Matches the Worker's cap, so the visitor hears it here first. */
@@ -473,6 +476,15 @@ export const Terminal = component$(() => {
     note: "",
   });
 
+  /** The colour picker, while it stands in for the prompt. See theme-pick.tsx. */
+  const pick = useStore<PickState>({
+    open: false,
+    i: 0,
+    mode: "auto",
+    saved: DEFAULT_PALETTE,
+    from: "input",
+  });
+
   /*
    * DECLARED BEFORE ensureHistory, AND THE ORDER IS LOAD-BEARING.
    *
@@ -644,11 +656,65 @@ export const Terminal = component$(() => {
     }
   });
 
+  const openPick = $(async (from: PickState["from"]) => {
+    const t = window.siteTheme?.get();
+    pick.saved = t?.name ?? DEFAULT_PALETTE;
+    pick.i = Math.max(
+      0,
+      PICKS.findIndex((p) => p.id === pick.saved),
+    );
+    pick.mode = t?.mode ?? "auto";
+    pick.from = from;
+    pick.open = true;
+    untilDone(() => {
+      const list = document.getElementById("theme-list");
+      if (!list) return false;
+      list.focus();
+      const body = document.querySelector<HTMLElement>("[data-shell] label");
+      if (body) body.scrollTop = body.scrollHeight;
+      return true;
+    });
+    await feedback("enter");
+  });
+
+  /** Keep the highlighted palette, or put the saved one back. */
+  const closePick = $(async (keep: boolean) => {
+    if (!pick.open) return;
+    pick.open = false;
+    const p = PICKS[pick.i]!;
+    if (keep) window.siteTheme?.set(p.id, pick.mode);
+    else window.siteTheme?.set();
+    const how = p.only
+      ? ""
+      : pick.mode === "auto"
+        ? ", following your system"
+        : `, ${pick.mode}`;
+    const said: Line = keep
+      ? {
+          kind: "out",
+          text: `Switched to ${p.name}${how}. Saved in this browser.`,
+        }
+      : {
+          kind: "meta",
+          text: `Kept ${PICKS.find((x) => x.id === pick.saved)?.name ?? pick.saved}.`,
+        };
+    lines.items = [...lines.items, said];
+    stickToBottom(renderGroups(lines.items).length);
+    const back = pick.from === "chip" ? "term-theme-chip" : "term-input";
+    untilDone(() => {
+      const el = document.getElementById(back);
+      if (!el || el.offsetParent === null) return false;
+      el.focus();
+      return true;
+    });
+    await feedback(keep ? "enter" : "key");
+  });
+
   /**
    * Run one line, typed or picked from the suggestions. The shell decides per
    * line whether it is a command or a question; there is no mode to enter.
    */
-  const runLine = $(async (raw: string) => {
+  const runLine = $(async (raw: string, from: PickState["from"] = "input") => {
     // finally, not a tail call: every early return has to clear the busy
     // dots, and a throw must not leave them running forever.
     let handedOff = false;
@@ -676,6 +742,10 @@ export const Terminal = component$(() => {
          */
         handedOff = true;
         void converse(raw.trim());
+        return;
+      }
+      if (result === PICK) {
+        await openPick(from);
         return;
       }
       if (result === null) {
@@ -710,12 +780,12 @@ export const Terminal = component$(() => {
    * A suggestion is asked exactly as if it had been typed. The row stays put
    * afterwards, so the button keeps focus rather than vanishing from under it.
    */
-  const suggest = $(async (q: string) => {
+  const suggest = $(async (q: string, from: PickState["from"] = "input") => {
     if (convo.streaming) {
       clearBusy();
       return;
     }
-    await runLine(q);
+    await runLine(q, from);
   });
 
   /**
@@ -1199,12 +1269,22 @@ export const Terminal = component$(() => {
         </label>
       </div>
 
+      {pick.open && (
+        <div class="px-3 pt-1 pb-3 sm:px-4">
+          <ThemePick
+            state={pick}
+            onClose$={closePick}
+            onMove$={$(() => feedback("key"))}
+          />
+        </div>
+      )}
+
       {/*
        * The prompt sits in its own box under the log rather than as the log's
        * last line, where it looked like one more command already sent. The
        * box draws the focus ring, since the input inside draws none.
        */}
-      <div class="px-3 pt-1 sm:px-4">
+      <div class="px-3 pt-1 sm:px-4" hidden={pick.open}>
         <div class="term-composer flex items-center gap-2 rounded-xl px-3 py-2.5">
           <span class="text-accent shrink-0 font-mono text-[0.8125rem]">
             {PROMPT}
@@ -1262,19 +1342,27 @@ export const Terminal = component$(() => {
       <div
         role="group"
         aria-labelledby="term-suggest"
+        hidden={pick.open}
         class="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-3 pt-2 pb-3 sm:px-4"
       >
         <span id="term-suggest" class="text-muted font-mono text-[0.6875rem]">
-          Try asking
+          Try
         </span>
         {SUGGESTIONS.map((q) => (
           <button
             type="button"
-            key={q}
-            onClick$={[clickGuard, $(() => suggest(q))]}
-            class="border-line text-muted hover:text-text hover:border-muted min-h-6 rounded-full border px-2.5 font-mono text-[0.6875rem] transition-colors duration-150"
+            key={q.label}
+            {...(q.run ? { id: "term-theme-chip" } : {})}
+            onClick$={[
+              clickGuard,
+              $(() => suggest(q.run ?? q.label, q.run ? "chip" : "input")),
+            ]}
+            class="border-line text-muted hover:text-text hover:border-muted inline-flex min-h-6 items-center gap-1.5 rounded-full border px-2.5 font-mono text-[0.6875rem] transition-colors duration-150"
           >
-            {q}
+            {q.run && (
+              <span class="swatch swatch-current size-2.5" aria-hidden="true" />
+            )}
+            {q.label}
           </button>
         ))}
       </div>
