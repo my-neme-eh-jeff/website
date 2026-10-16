@@ -245,7 +245,7 @@ export default component$(() => {
           <Slot />
         </main>
 
-        <footer class="text-muted border-line/50 border-t py-8 text-xs">
+        <footer class="text-muted border-line/40 border-t py-10 text-[0.8125rem]">
           <div class="flex flex-wrap items-center gap-4">
             <span>
               © {buildYear} {profile.name}
@@ -256,7 +256,7 @@ export default component$(() => {
               <a href="https://github.com/my-neme-eh-jeff/website">
                 Source
                 <span class="sr-only"> code for this site</span>
-                <span class="text-accent font-arrow ml-1" aria-hidden="true">
+                <span class="font-arrow ml-1" aria-hidden="true">
                   ↗
                 </span>
               </a>
