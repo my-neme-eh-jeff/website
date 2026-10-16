@@ -30,7 +30,7 @@ const Repo = ({ name, wrong }: { name: string; wrong?: boolean }) => (
   <span
     class={[
       "rounded px-1.5 py-0.5 font-mono text-xs",
-      wrong ? "text-danger bg-danger/10" : "bg-text/5",
+      wrong ? "text-danger ring-danger ring-1 ring-inset" : "bg-text/5",
     ]}
   >
     ⎇ {name}

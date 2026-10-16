@@ -304,9 +304,6 @@ export const Terminal = component$(() => {
   const lines = useStore<{ items: Line[] }>({ items: [INTRO] });
   const partial = useSignal("");
 
-  // The icon's state only; stale until `sound()` first returns the real one.
-  const muted = useSignal(false);
-
   const tab = useStore({ base: "", last: "", i: -1, armed: false });
 
   const convo = useStore<{ streaming: boolean; turns: Turn[]; note: string }>({
@@ -344,7 +341,7 @@ export const Terminal = component$(() => {
   });
 
   const feedback = $(async (tone: Tone) => {
-    muted.value = await sound(tone);
+    document.documentElement.toggleAttribute("data-muted", await sound(tone));
     await haptic(tone === "chrome" ? "key" : tone);
   });
 
@@ -651,7 +648,7 @@ export const Terminal = component$(() => {
 
   const toggleMute = $(async () => {
     const next = !(await isMuted());
-    muted.value = next;
+    document.documentElement.toggleAttribute("data-muted", next);
     await setMuted(next);
     lines.items = [
       ...lines.items,
@@ -679,6 +676,15 @@ export const Terminal = component$(() => {
     }
     if (e.key === "Tab" && !e.shiftKey && el.value.trim() !== "") {
       e.preventDefault();
+      return;
+    }
+    // The log is a <label>, which never takes focus, so without this the
+    // output above the fold is out of a keyboard's reach.
+    if (e.key === "PageUp" || e.key === "PageDown") {
+      const log = el.closest("[data-shell]")?.querySelector(".term-log");
+      if (!log) return;
+      e.preventDefault();
+      log.scrollBy(0, (e.key === "PageUp" ? -0.9 : 0.9) * log.clientHeight);
       return;
     }
     if (!e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
@@ -733,7 +739,7 @@ export const Terminal = component$(() => {
                 href={profile.employer.url}
                 target="_blank"
                 rel="noopener"
-                class="no-underline hover:underline"
+                class="underline decoration-current decoration-dotted underline-offset-2 hover:decoration-solid"
               >
                 {profile.employer.name}
                 <span class="sr-only"> (opens in a new tab)</span>
@@ -746,11 +752,11 @@ export const Terminal = component$(() => {
           id={MUTE_BTN_ID}
           onClick$={toggleMute}
           title="Sound on or off. Remembered on this device."
-          class="hover:bg-text/10 text-muted ml-auto grid size-6 place-items-center rounded-full transition duration-150 active:scale-90"
+          class="hover:bg-text/10 text-muted ml-auto grid size-6 shrink-0 place-items-center rounded-full transition duration-150 active:scale-90"
         >
-          <span class="sr-only">
-            {muted.value ? "Unmute shell sounds" : "Mute shell sounds"}
-          </span>
+          {/* Both, and `data-muted` on <html> hides one: see MUTED_KEY. */}
+          <span class="if-sound sr-only">Mute shell sounds</span>
+          <span class="if-muted sr-only">Unmute shell sounds</span>
           <svg
             viewBox="0 0 16 16"
             class="size-3.5"
@@ -762,11 +768,8 @@ export const Terminal = component$(() => {
             aria-hidden="true"
           >
             <path d="M8.5 3L5 6H2.5v4H5l3.5 3z" />
-            {muted.value ? (
-              <path d="M11 6.5l3 3M14 6.5l-3 3" />
-            ) : (
-              <path d="M11 6a3 3 0 010 4" />
-            )}
+            <path class="if-muted" d="M11 6.5l3 3M14 6.5l-3 3" />
+            <path class="if-sound" d="M11 6a3 3 0 010 4" />
           </svg>
         </button>
       </div>
@@ -787,8 +790,6 @@ export const Terminal = component$(() => {
           class="term-log absolute inset-0 block cursor-text overflow-y-auto overscroll-contain px-4 pt-3 pb-3"
           for="term-input"
         >
-          <span class="sr-only">Terminal input</span>
-
           <div class="flex min-h-full flex-col justify-end gap-1 font-mono text-[0.8125rem] leading-relaxed">
             {/* aria-busy while streaming: the answer is announced once, whole. */}
             <div
@@ -890,6 +891,9 @@ export const Terminal = component$(() => {
             autoCorrect="off"
             autoCapitalize="off"
             placeholder="Ask about Aman's work"
+            // Its own name: the <label> above wraps the whole log, and would
+            // otherwise make every line of output the field's name.
+            aria-label="Ask about Aman's work, or type a command"
             /*
              * 16px on phones: iOS Safari zooms on focus of a smaller input,
              * and capping maximum-scale instead would fail WCAG 1.4.4.

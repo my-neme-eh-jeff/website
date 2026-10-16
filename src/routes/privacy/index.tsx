@@ -14,7 +14,10 @@ export default component$(() => {
       <p class="text-muted">
         This site is run by {profile.name}, an individual in India. Questions or
         requests about your data:{" "}
-        <a href={`mailto:${profile.email}`} class="underline">
+        <a
+          href={`mailto:${profile.email}`}
+          class="decoration-accent/60 underline"
+        >
           {profile.email}
         </a>
         .

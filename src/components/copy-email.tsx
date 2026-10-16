@@ -3,6 +3,8 @@ import { component$, useSignal, $ } from "@qwik.dev/core";
 /**
  * A mailto: link does nothing without a mail handler (most Macs whose owner
  * reads mail in a browser), so the address can be copied too.
+ * The button keeps one name and a status region says it copied: a focused
+ * button being renamed is not reliably announced.
  */
 export const CopyEmail = component$<{ email: string }>(({ email }) => {
   const copied = useSignal(false);
@@ -43,9 +45,7 @@ export const CopyEmail = component$<{ email: string }>(({ email }) => {
         onClick$={copy}
         class="hover:bg-line text-muted hover:text-text grid size-8 shrink-0 place-items-center rounded-lg transition duration-150 active:scale-90"
       >
-        <span class="sr-only">
-          {copied.value ? "Email address copied" : "Copy email address"}
-        </span>
+        <span class="sr-only">Copy email address</span>
         {copied.value ? (
           <svg
             viewBox="0 0 16 16"
@@ -74,6 +74,9 @@ export const CopyEmail = component$<{ email: string }>(({ email }) => {
           </svg>
         )}
       </button>
+      <span role="status" class="sr-only">
+        {copied.value ? "Email address copied" : ""}
+      </span>
     </span>
   );
 });

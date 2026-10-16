@@ -408,6 +408,31 @@ check("every page applies the saved palette before first paint", () => {
   return `${ids.length} palettes, default ${DEFAULT_PALETTE}`;
 });
 
+/*
+ * The shell's mute button once said "Mute" to a visitor who had already
+ * muted, and pressing it unmuted them: its label came from a signal that only
+ * read storage on the first interaction. The theme script now marks <html>
+ * before paint and CSS picks the label.
+ */
+check(
+  "the mute button's label matches the stored choice from first paint",
+  () => {
+    const html = read("dist", "index.html");
+    const head = html.slice(0, html.indexOf("</head>"));
+    assert(
+      head.includes('setAttribute("data-muted"'),
+      "index.html: the theme script no longer sets data-muted before paint.",
+    );
+    for (const cls of ["if-sound", "if-muted"])
+      assert(
+        new RegExp(`class="[^"]*\\b${cls}\\b`).test(html) &&
+          new RegExp(`\\.${cls}\\b`).test(head),
+        `index.html: .${cls} is not both in the page and in its CSS.`,
+      );
+    return "both labels ship, CSS picks one";
+  },
+);
+
 check("every hero link is also asserted in sameAs", () => {
   // Read Person.sameAs itself: the hero renders the same hrefs as links, so a
   // whole-page search always passes.
@@ -750,6 +775,55 @@ check("every palette meets WCAG AA in every mode it has", () => {
   return `focus ring: ${results.join(", ")}`;
 });
 
+/*
+ * A tint under text is a ground of its own: `text-danger bg-danger/10` put
+ * red on a red wash, 4.16:1 in kanagawa dark, while danger on the plain
+ * surface passed above. Tailwind draws `bg-x/n` as x at n% alpha, which the
+ * browser composites over whatever is beneath in sRGB, so that is the sum
+ * here, over both grounds.
+ */
+check("text on a tinted background still clears 4.5:1", () => {
+  const TOKENS = ["text", "muted", "accent", "danger"];
+  const pairs = new Set();
+  for (const page of [...PAGES, "404.html"]) {
+    for (const [, cls] of read("dist", page).matchAll(/\sclass="([^"]*)"/g)) {
+      const list = cls.split(/\s+/);
+      const fg = list
+        .find((c) => c.startsWith("text-") && TOKENS.includes(c.slice(5)))
+        ?.slice(5);
+      const tint = list
+        .map((c) => c.match(/^bg-([a-z]+)\/(\d+)$/))
+        .find((m) => m && TOKENS.includes(m[1]));
+      if (fg && tint) pairs.add(`${fg} ${tint[1]} ${tint[2]}`);
+    }
+  }
+  const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const over = (top, alpha, ground) =>
+    "#" +
+    rgb(top)
+      .map((c, i) => Math.round(c * alpha + rgb(ground)[i] * (1 - alpha)))
+      .map((n) => n.toString(16).padStart(2, "0"))
+      .join("");
+  for (const pair of pairs) {
+    const [fg, tok, pct] = pair.split(" ");
+    for (const palette of PALETTES) {
+      for (const mode of modesOf(palette)) {
+        const t = palette[mode];
+        for (const ground of ["bg", "surface"]) {
+          const r = contrast(t[fg], over(t[tok], pct / 100, t[ground]));
+          assert(
+            r >= 4.5,
+            `text-${fg} on bg-${tok}/${pct} over ${ground} is ` +
+              `${r.toFixed(2)}:1 in ${palette.id} ${mode}, needs 4.5:1 ` +
+              `(WCAG 1.4.3). Drop the tint, or keep it and use text-text.`,
+          );
+        }
+      }
+    }
+  }
+  return `${pairs.size} pairing(s) in the built pages`;
+});
+
 check("the blog's terminal palette is readable on its own ground", () => {
   // The blog's terminal is dark in both themes, so the --sem-* checks above
   // never see it.
@@ -813,6 +887,55 @@ check("skip link is present, first, and points at a real target", () => {
     );
   }
   return `${PAGES.length} pages`;
+});
+
+/*
+ * Not every browser gives a sideways scroller a tab stop of its own, and
+ * without one a keyboard cannot scroll a status line on a phone-width window.
+ * src/routes/layout.tsx gives one to each box that overflows, from inline
+ * handlers on its root.
+ */
+check("every sideways scroller gets a tab stop when it overflows", () => {
+  for (const page of [...PAGES, "404.html"]) {
+    const html = read("dist", page);
+    const root = html.match(/<div\b[^>]*class="min-h-dvh"[^>]*>/)?.[0] ?? "";
+    const funcs =
+      html.match(/<script q:func="qwik\/json">([\s\S]*?)<\/script>/)?.[1] ?? "";
+    assert(
+      /q-dp:keydown="#\d+"/.test(root) &&
+        /q-d:qidle="#\d+"/.test(root) &&
+        funcs.includes("scrollStop"),
+      `${page}: nothing gives overflowing boxes a tab stop.`,
+    );
+  }
+  return `${PAGES.length + 1} pages`;
+});
+
+/*
+ * A <label> takes its control's name from all of its text. The shell's log is
+ * a label for its input, so its field was named by the whole transcript: 1716
+ * characters after three commands, read out each time focus came back.
+ */
+check("no control is named by a live region", () => {
+  let n = 0;
+  for (const page of [...PAGES, "404.html"]) {
+    const html = read("dist", page);
+    for (const [, id, inner] of html.matchAll(
+      /<label\b[^>]*\bfor="([^"]+)"[^>]*>([\s\S]*?)<\/label>/g,
+    )) {
+      if (!/aria-live=/.test(inner)) continue;
+      n++;
+      const control = html.match(
+        new RegExp(`<[a-z]+\\b[^>]*\\bid="${id}"[^>]*>`),
+      );
+      assert(
+        control && /\saria-label(ledby)?="[^"]+"/.test(control[0]),
+        `${page}: #${id} is labelled by a <label> that wraps a live region, ` +
+          `so its name grows with every update. Give it an aria-label.`,
+      );
+    }
+  }
+  return `${n} labelled live region(s), each control named on its own`;
 });
 
 check("document structure: lang, one h1, no skipped heading levels", () => {

@@ -82,6 +82,32 @@ export default component$(() => {
     { passive: true },
   );
 
+  /*
+   * A box that scrolls sideways needs a tab stop, or a keyboard cannot scroll
+   * it (WCAG 2.1.1). Chrome gives one to a scroller with nothing focusable
+   * inside, but not every browser does. This gives one to each box that
+   * overflows right now, and takes back only the ones it gave when they stop.
+   * Run once the page is idle and again before every Tab, so a resize or a
+   * client-side navigation is caught without a listener on either.
+   */
+  const scrollStops = sync$((e: Event) => {
+    if (e.type === "keydown" && (e as KeyboardEvent).key !== "Tab") return;
+    for (const el of document.querySelectorAll<HTMLElement>(
+      "main :is(.scroll-cue, pre, .table-wrapper):not([aria-hidden] *)",
+    )) {
+      const wide = el.scrollWidth > el.clientWidth;
+      if (wide && !el.hasAttribute("tabindex")) {
+        el.tabIndex = 0;
+        el.dataset["scrollStop"] = "";
+      } else if (!wide && el.dataset["scrollStop"] !== undefined) {
+        el.removeAttribute("tabindex");
+        delete el.dataset["scrollStop"];
+      }
+    }
+  });
+  useOnDocument("qidle", scrollStops);
+  useOnDocument("keydown", scrollStops, { passive: true });
+
   return (
     <div class="min-h-dvh">
       <div class="field" aria-hidden="true" />
@@ -177,6 +203,7 @@ export default component$(() => {
               <Link href="/privacy/">Privacy</Link>
               <a href="https://github.com/my-neme-eh-jeff/website">
                 Source
+                <span class="sr-only"> code for this site</span>
                 <span class="text-accent font-arrow ml-1" aria-hidden="true">
                   ↗
                 </span>

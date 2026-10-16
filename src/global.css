@@ -450,6 +450,11 @@
     animation: scroll-cue linear both;
     animation-timeline: scroll(self inline);
   }
+  /* The mask clips the element's own focus ring. */
+  .scroll-cue:focus-visible,
+  .post > .table-wrapper:focus-visible {
+    mask-image: none;
+  }
 }
 
 @keyframes scroll-cue {
@@ -467,6 +472,12 @@
     --cue-start: 2.5rem;
     --cue-end: 0px;
   }
+}
+
+/* The mute button's label and icon, from the stored choice (MUTED_KEY). */
+:root[data-muted] .if-sound,
+:root:not([data-muted]) .if-muted {
+  display: none;
 }
 
 /* Shown off `[data-busy]`, which keyGuard sets before Qwik has loaded. */

@@ -27,7 +27,7 @@ const marked = (g: Seg, h?: string) =>
 export const Segment = (g: Seg, key: number, h?: string): JSXOutput => {
   const cls = [
     g.tone === "grad" ? "" : TONE[g.tone],
-    marked(g, h) ? "bg-term-fg/15 rounded-sm" : "",
+    marked(g, h) ? "bg-term-fg/6 rounded-sm" : "",
   ];
   const style = g.tone === "grad" ? { color: gradCss(g.pct ?? 0) } : undefined;
   if (!g.says)
@@ -57,15 +57,15 @@ export const Terminal = ({
     <div
       role="group"
       aria-label={label}
-      class="bg-term border-term-fg/10 overflow-hidden rounded-xl border"
+      class="bg-term border-term-fg/10 has-[:focus-visible]:outline-accent overflow-hidden rounded-xl border has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2"
     >
       <div class="bg-term-bar flex gap-1.5 px-3 py-2" aria-hidden="true">
         <span class="bg-term-dim/40 size-2.5 rounded-full" />
         <span class="bg-term-dim/40 size-2.5 rounded-full" />
         <span class="bg-term-dim/40 size-2.5 rounded-full" />
       </div>
-      {/* Positioned, so Segment's screen-reader-only spans are clipped here, not by the page. */}
-      <div class="scroll-cue relative overflow-x-auto">
+      {/* Positioned, so Segment's screen-reader-only spans are clipped here, not by the page. The frame draws the focus ring: on --term-bg the light palettes' accents are under 3:1. */}
+      <div class="scroll-cue relative overflow-x-auto focus-visible:outline-none">
         <div class="w-max min-w-full px-4 py-3 font-mono text-[0.75rem] leading-[1.75]">
           {lines.length === 0 && (
             <div class="text-term-dim italic">{empty ?? "\u00a0"}</div>

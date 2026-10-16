@@ -36,6 +36,9 @@ declare global {
   }
 }
 
+/** Read before paint too, so CSS can label the shell's mute button. */
+export const MUTED_KEY = "shell:muted";
+
 const GROUNDS = Object.fromEntries(
   PALETTES.map((p) => [
     p.id,
@@ -62,6 +65,6 @@ document.dispatchEvent(new CustomEvent("themechange",{detail:{name:s.name,mode:s
 window.siteTheme={get:function(){var s=state();s.scheme=scheme(s);return s},
 set:function(n,m){if(n!==undefined)put(K,n===D||!has(n)?null:n);if(m!==undefined)put(M,m==="light"||m==="dark"?m:null);paint()},
 preview:function(n,m){paint({name:has(n)?n:D,mode:m==="light"||m==="dark"?m:"auto"})}};
-r.setAttribute("data-js","");paint();q.addEventListener("change",function(){paint()});
+r.setAttribute("data-js","");if(get(${JSON.stringify(MUTED_KEY)})==="1")r.setAttribute("data-muted","");paint();q.addEventListener("change",function(){paint()});
 addEventListener("storage",function(e){if(e.key===K||e.key===M||e.key===null)paint()})
 })();`;

@@ -418,6 +418,7 @@ function registry(): Command[] {
             out(`  ${a.padEnd(6)} k ${full.join(" ")}`),
           ),
           out(""),
+          out("PageUp and PageDown scroll this output."),
           hint("Start with: kgp, or ask what he is working on."),
         ];
       },

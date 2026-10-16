@@ -1,4 +1,5 @@
 import { $ } from "@qwik.dev/core";
+import { MUTED_KEY } from "~/content/theme";
 
 /** freq in Hz, decay in seconds, drop as a fraction of freq. */
 const SPEC = {
@@ -11,12 +12,10 @@ const SPEC = {
 
 export type Tone = keyof typeof SPEC;
 
-const STORE_KEY = "shell:muted";
-
 /** Reading storage throws outright in some privacy modes, not just returns null. */
 function readMuted(): boolean {
   try {
-    return localStorage.getItem(STORE_KEY) === "1";
+    return localStorage.getItem(MUTED_KEY) === "1";
   } catch {
     return false;
   }
@@ -28,7 +27,7 @@ export const isMuted = $(() =>
 
 export const setMuted = $((value: boolean) => {
   try {
-    localStorage.setItem(STORE_KEY, value ? "1" : "0");
+    localStorage.setItem(MUTED_KEY, value ? "1" : "0");
   } catch {
     // Storage denied: muted for this page only.
   }

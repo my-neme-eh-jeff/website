@@ -29,6 +29,10 @@ writing a new doc.
 | Skip link present, first focusable, target exists and has `tabindex="-1"` | per page             |
 | `lang` attribute, exactly one `<h1>`, no skipped heading levels           | per page             |
 | Every `<img>` has `alt`; every `<svg>` is named or `aria-hidden`          | per page             |
+| `text-x` on a `bg-y/n` tint, over `--sem-bg` and `--sem-surface`          | ≥ 4.5:1 (WCAG 1.4.3) |
+| Overflowing sideways scrollers get a tab stop (the layout's handler)      | per page (2.1.1)     |
+| No control is named by a `<label>` that wraps a live region               | per page (4.1.2)     |
+| The shell's mute button is labelled from storage before first paint       | home (4.1.2)         |
 
 The accent bar is not cosmetic bookkeeping: **`:focus-visible` is drawn in
 `--sem-accent`**, so the accent's contrast IS the focus indicator's contrast.
@@ -59,7 +63,19 @@ Do not read a green `verify` as "accessible". These need a person:
   focus. Automation cannot see tab order.
 - **Focus ring against real backgrounds.** The check tests accent-on-`--sem-bg`.
   A control sitting on `--sem-surface` or on the mesh figure is a different
-  pairing.
+  pairing. Never draw the ring on the blog's terminal ground (`--term-bg`,
+  `#14130f`): the light palettes' accents are under 3:1 there (modus light
+  1.78, acme light 1.29, computed 2026-10-16). `statusline/terminal.tsx` rings
+  the frame instead, on the page's ground.
+- **Text over the field wash.** Every `--sem-*` check measures against flat
+  `--sem-bg`, but text on a phone, and the post's side rail and captions on
+  desktop, sits on the field gradient. Measured from rendered pixels on
+  2026-10-16, muted or accent text fell to 2.36:1 (amber dark), 2.98 (wada
+  light), 2.74 (paper light), 2.91 (paper dark) and 3.22 (kanagawa dark); modus
+  and acme passed. Only a screenshot can measure this: hide the text, sample
+  the pixels under it, compare with its colour. Re-measure:
+  `pnpm run build && node scripts/measure-a11y.mjs --contrast` (slow; narrow
+  it with `--only amber-dark --widths 390`).
 - **Screen-reader announcement.** VoiceOver: `Cmd+F5`, then `Ctrl+Opt+U` for
   the rotor. Landmarks and headings should describe the page; link text should
   make sense out of context ("Source" in the footer is borderline).
@@ -146,9 +162,10 @@ The keys and the selectors they drive are in `src/content/palettes.ts`.
 
 ## If deeper coverage is wanted
 
-`axe-core` is the industry standard and would catch ARIA and name-computation
-rules this script does not. It needs a real DOM, so it means a new dev
-dependency (axe-core plus a browser driver) and therefore explicit approval
-under the repo's dependency policy. `anthropics/skills` also ships
-`webapp-testing` (Playwright) — not installed, same reason. Ask before adding
-either.
+`axe-core` catches ARIA and name-computation rules `verify` does not, and it
+needs a real DOM. `node scripts/measure-a11y.mjs` runs it on every page,
+palette and mode at 320 and 1280, using the axe-core and puppeteer-core that
+lighthouse already installs, so it needs no dependency change. It is a script,
+not part of `verify`: a green `verify` says nothing about ARIA. Clean on
+2026-10-16 (axe-core 4.13.0). Promoting axe to a direct dependency, or adding
+Playwright, would still need approval under the repo's dependency policy.

@@ -19,7 +19,13 @@ export const Range = component$<RangeProps>(
           <label for={id} class="text-muted text-sm">
             {label}
           </label>
-          <output for={id} class="font-mono text-xs tabular-nums">
+          {/* Hidden from screen readers: an <output> is a live region, and
+              aria-valuetext below already says this on every step. */}
+          <output
+            for={id}
+            aria-hidden="true"
+            class="font-mono text-xs tabular-nums"
+          >
             {text}
           </output>
         </div>

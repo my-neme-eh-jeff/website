@@ -59,7 +59,7 @@ export const WidthTwin = component$(() => {
               class={[
                 "text-center font-medium",
                 start + i >= target + TITLE.length
-                  ? "bg-danger/15 text-danger"
+                  ? "text-danger"
                   : "bg-accent/15",
               ]}
             >
