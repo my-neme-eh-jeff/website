@@ -2,23 +2,18 @@
  * Does anything wake Qwik before the reader acts? Run:
  * `node scripts/measure-wake.mjs` (after `pnpm run build`)
  *
- * Qwik keeps a page at <html q:container="paused"> until a handler that names
- * a bundle runs, then resumes it. verify's "nothing wakes Qwik" check reads
- * the handlers off the HTML; this watches the page. Every page in the sitemap,
- * at phone and desktop width: the container after load and an idle wait, then
- * after scrolling to the bottom in steps. Hovering is not tried: a <Link>
- * prefetches on pointerenter, which wakes Qwik by design.
+ * Reads <html q:container> on every sitemap page, at phone and desktop width,
+ * after load and an idle wait, then after scrolling to the bottom in steps.
+ * Hovering is not tried: a <Link> prefetches on pointerenter, which wakes Qwik
+ * by design. Judge by q:container, not by which scripts ran: the preloader and
+ * the router's scroll memory run code on any scroll and resume nothing.
  *
- * Judge by q:container, not by which scripts ran. The preloader's idle queue
- * and the router's scroll memory run code while any page scrolls, rail or no
- * rail, and resume nothing.
- *
- *   --url <base>   a deployed site, e.g. https://amannambisan.com. Analytics
- *                  and /api/ are answered locally, so nothing is sent.
+ *   --url <base>   a deployed site; analytics and /api/ are answered locally,
+ *                  so nothing is sent
  *   --dist <dir>   another build
  *
  * Exits 1 if scrolling wakes a page, or a page throws. Waking on load is
- * reported, not failed: /privacy/'s switch does, on purpose (verify's WAKES).
+ * reported, not failed.
  */
 
 import { spawn } from "node:child_process";
@@ -44,7 +39,7 @@ const WIDTHS = [
   [1440, 900],
 ];
 
-/* puppeteer-core arrives with lighthouse; see measure-nav.mjs. */
+/* puppeteer-core comes with lighthouse; resolved from the pnpm store. */
 function fromStore(prefix, entry) {
   const store = join(ROOT, "node_modules", ".pnpm");
   const hit = readdirSync(store).find((d) => d.startsWith(prefix));

@@ -1,21 +1,11 @@
 /**
- * Appends a Content-Security-Policy for each built page to dist/_headers.
- * Runs after `qwik build` (package.json `build`), because it hashes the HTML
- * that is actually served.
+ * Appends a Content-Security-Policy for each built page to dist/_headers. Run
+ * by `pnpm run build` after `qwik build`, since it hashes the served HTML.
  *
- * Every Qwik page carries executable inline scripts: the loader's bootstrap,
- * the preloader's start, the page's event list and its binding functions
- * (`q:func`). A static site has no server to add a nonce, so each page's
- * policy allows its own inline scripts by sha256 hash, and nothing else
- * inline.
- *
- * One rule per page rather than one for the site: Cloudflare ignores any
- * _headers line over 2,000 characters, and every page's hashes in one line
- * would pass that at about ten pages. 404.html gets none: it is served at
- * every unknown path, which no rule can name without also matching the real
- * pages, and a response that matches two policies must satisfy both.
- *
- * `pnpm run verify` re-hashes every page and checks its rule.
+ * A static site has no server to add a nonce, so each page allows its own
+ * inline scripts by sha256 hash. One rule per page: Cloudflare ignores a
+ * _headers line over 2,000 characters. 404.html gets none: it is served at
+ * every unknown path, and a response matching two policies must satisfy both.
  */
 import { createHash } from "node:crypto";
 import { appendFileSync, readFileSync, readdirSync } from "node:fs";
@@ -29,10 +19,8 @@ const HEADER = "Content-Security-Policy";
 /** Data blocks. The browser never runs them, so CSP never checks them. */
 const DATA = /^(application\/(ld\+)?json|qwik\/.+)$/i;
 
-/*
- * Quote-aware and case-insensitive, so a ">" or "src=" inside an attribute
- * value cannot cut a tag short or mistake it for an external script.
- */
+// Quote-aware, so a ">" or "src=" inside an attribute value can't end a tag
+// early or pass for an external script.
 const SCRIPT =
   /<script\b((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]*?)<\/script\s*>/gi;
 const attrsOf = (s) =>
@@ -47,11 +35,11 @@ const attrsOf = (s) =>
 const policy = (hashes) =>
   [
     "default-src 'self'",
-    // The analytics beacon, which src/content/analytics.ts adds at runtime.
+    // Cloudflare's analytics beacon, added at runtime.
     `script-src 'self' ${hashes.join(" ")} https://static.cloudflareinsights.com`,
     // Qwik writes style attributes, and the stylesheet is inlined.
     "style-src 'self' 'unsafe-inline'",
-    // The grain texture in global.css is an SVG data: URI.
+    // The grain texture is an SVG data: URI.
     "img-src 'self' data:",
     "font-src 'self'",
     "connect-src 'self' https://cloudflareinsights.com",
@@ -68,7 +56,7 @@ for (const file of readdirSync(DIST, { recursive: true }).sort()) {
   const hashes = new Set();
   for (const [, raw, body] of html.matchAll(SCRIPT)) {
     const attrs = attrsOf(raw);
-    // Nor does an empty one. Anything else is hashed, known type or not.
+    // Anything else non-empty is hashed, known type or not.
     if (attrs.has("src") || DATA.test(attrs.get("type") ?? "") || body === "")
       continue;
     hashes.add(

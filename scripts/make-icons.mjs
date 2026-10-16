@@ -1,40 +1,23 @@
 /**
- * Icon pipeline. Run: `node scripts/make-icons.mjs`
+ * Icon pipeline. Run: `pnpm run icons`
  *
  * Regenerates public/favicon.svg, public/favicon.ico and
- * public/apple-touch-icon.png from the single geometry definition below.
- * Never hand-edit those outputs — edit the geometry and re-run.
+ * public/apple-touch-icon.png from the geometry below. Never hand-edit those
+ * outputs: edit the geometry and re-run.
  *
- * ---------------------------------------------------------------------------
- * METHOD — the parts that were expensive to learn
+ * METHOD
  *
- * 1. Judge small icons at a TRUE 1x pixel grid. Rendering an SVG at 16px in a
- *    3x device-scale-factor screenshot shows 48 real pixels and flatters the
- *    design. Doing this properly reversed the design verdict twice: a 3-node
- *    DAG reading of the letter looked good at 96px but its node became a stray
- *    speck at 16, and a hexagon tile left too little room for the glyph so its
- *    crossbar merged into the legs. At 16 physical pixels only silhouette and
- *    contrast survive — meaning must live in the outline, not in added detail.
- *    To inspect: screenshot at scale factor 1, then display the PNG upscaled
- *    with `image-rendering: pixelated`.
- *
- * 2. Render each ICO size at 4x and downscale by 4, rather than rendering 16px
- *    natively (fights Chrome's window floor) or downscaling one 512px master
- *    (a 32x reduction turns to mush).
- *
- * 3. Style the SVG with plain CSS rules, NOT custom properties. `var()` in an
- *    SVG presentation attribute has a patchy history in WebKit, and a dropped
- *    `stroke` falls back to `none` — a blank tile with no glyph.
- *
- * 4. apple-touch-icon must be full-bleed, opaque and square-cornered. iOS
- *    applies its own squircle mask and renders transparency as black.
- *
- * 5. Chrome's --screenshot defaults to a white background; pass
- *    --default-background-color=00000000 or rounded corners come out white.
- *    Always verify alpha by compositing over a garish colour.
- *
- * 6. A .ico may wrap PNGs (Vista+); every browser that still needs an .ico
- *    supports it. Avoids hand-rolling BMP scanline padding and the AND-mask.
+ * 1. Judge small icons at a true 1x pixel grid; a 3x screenshot flatters them.
+ *    Screenshot at scale factor 1, view it with `image-rendering: pixelated`.
+ * 2. Render each ICO size at 4x and downscale by 4. Native 16px fights
+ *    Chrome's window floor; one 512px master turns to mush.
+ * 3. Style the SVG with plain CSS rules, not custom properties: WebKit can
+ *    drop `var()` in a presentation attribute, and `stroke` falls back to none.
+ * 4. apple-touch-icon must be full-bleed and opaque: iOS applies its own mask
+ *    and renders transparency as black.
+ * 5. Chrome's --screenshot background is white unless
+ *    --default-background-color=00000000. Check alpha over a garish colour.
+ * 6. A .ico may wrap PNGs (Vista+), which spares BMP padding and the AND-mask.
  */
 
 import { execFileSync } from "node:child_process";
@@ -51,15 +34,12 @@ import { fileURLToPath } from "node:url";
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
 
-// --- Palette: mirrors the tokens in src/global.css -------------------------
-const INK = "#16150f"; // --text
-const PAPER = "#fbfaf8"; // --bg
-const CREAM = "#f2f0e9"; // dark-mode --text
-const CLAY = "#d97757"; // --accent
+const INK = "#16150f";
+const PAPER = "#fbfaf8";
+const CREAM = "#f2f0e9";
+const CLAY = "#d97757";
 
-// --- Geometry, 32x32 viewBox ----------------------------------------------
-// The A fills its tile deliberately; at 16 physical pixels timid padding is
-// wasted canvas. Values chosen by the 1x pixel-grid comparison in METHOD 1.
+// 32x32 viewBox, tuned on the 1x grid (METHOD 1).
 const APEX = { x: 16, y: 6.4 };
 const FOOT = 7.4;
 const Y_FOOT = 26;
@@ -76,7 +56,6 @@ const BX2 = 2 * APEX.x - BX1;
 const markPaths = `<path d="M${FOOT} ${Y_FOOT} L${APEX.x} ${APEX.y} L${(2 * APEX.x - FOOT).toFixed(1)} ${Y_FOOT}"/>
     <path d="M${BX1.toFixed(2)} ${BAR_Y} H${BX2.toFixed(2)}"/>`;
 
-/** Theme-swapping favicon. See METHOD 3 for why these are CSS rules. */
 const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="A">
   <style>
     /*
@@ -100,7 +79,7 @@ const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" 
 </svg>
 `;
 
-/** Fixed-colour source for favicon.ico — no media query survives rasterisation. */
+/** Fixed colours for favicon.ico: no media query survives rasterisation. */
 const icoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <rect width="32" height="32" rx="${RX}" fill="${INK}"/>
   <g fill="none" stroke="${PAPER}" stroke-width="${SW}" stroke-linecap="round" stroke-linejoin="round">
@@ -109,7 +88,6 @@ const icoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 </svg>
 `;
 
-/** apple-touch-icon source. Full-bleed and opaque — see METHOD 4. */
 const touchSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <rect width="32" height="32" fill="${INK}"/>
   <g fill="none" stroke="${PAPER}" stroke-width="${SW}" stroke-linecap="round" stroke-linejoin="round">
@@ -119,13 +97,8 @@ const touchSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 `;
 
 /**
- * The A read as a 3-node DAG: the apex circle IS the source node, so the legs
- * terminate on its boundary instead of meeting in a point beneath it (that
- * difference is what separates "node with two out-edges" from "lollipop").
- *
- * Unusable as a favicon — see METHOD 1 — but it reads well from about 64px up.
- * The og:image shipped without it, so this currently has no callers and is
- * written nowhere: an alternate mark kept for a surface with room for it.
+ * An alternate mark: the A as a 3-node DAG, the apex circle its source node.
+ * Reads from about 64px up; too fine for a favicon (METHOD 1).
  */
 export function dagMark({ tile = INK, glyph = PAPER, node = CLAY } = {}) {
   const R = 3.2,
@@ -147,8 +120,6 @@ export function dagMark({ tile = INK, glyph = PAPER, node = CLAY } = {}) {
 `;
 }
 
-// --- Rasterisation ---------------------------------------------------------
-
 const CHROMES = [
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
@@ -168,7 +139,6 @@ function findChrome() {
   return hit;
 }
 
-/** Screenshot an SVG at exactly `px` square, with a transparent background. */
 function rasterise(chrome, dir, svgName, px, outName) {
   const html = `<!doctype html><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:transparent}img{display:block}</style><img src="${svgName}" width="${px}" height="${px}">`;
   const htmlName = `page-${outName}.html`;
@@ -196,7 +166,7 @@ const downscale = (from, to, px) =>
     stdio: "ignore",
   });
 
-/** Multi-entry .ico wrapping PNGs. See METHOD 6. */
+/** A multi-entry .ico wrapping PNGs (METHOD 6). */
 function buildIco(pngs) {
   const HEADER = 6,
     ENTRY = 16;
@@ -221,8 +191,6 @@ function buildIco(pngs) {
   });
   return Buffer.concat([head, ...entries, ...pngs.map((p) => p.data)]);
 }
-
-// --- Main ------------------------------------------------------------------
 
 const ICO_SIZES = [16, 32, 48];
 const TOUCH_SIZE = 180;
@@ -253,8 +221,7 @@ try {
     readFileSync(join(dir, "touch.png")),
   );
 
-  // The touch icon must have no alpha channel at all (METHOD 4). PNG colour
-  // type lives at byte 25: 2 = RGB, 6 = RGBA.
+  // No alpha channel (METHOD 4). PNG colour type is byte 25: 2 RGB, 6 RGBA.
   const touch = readFileSync(join(PUBLIC, "apple-touch-icon.png"));
   const colourType = touch[25];
   if (colourType === 6) {

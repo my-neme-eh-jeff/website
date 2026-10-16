@@ -1,14 +1,4 @@
-/**
- * Post-build invariant checks. Run: `node scripts/verify-build.mjs`
- *
- * These are the repo's invariants from CLAUDE.md, executed instead of merely
- * written down. Each one has already been broken at least once, or would fail
- * silently in production rather than at build time -- which is the whole reason
- * to assert it here rather than trust a comment.
- *
- * A script rather than inline CI YAML so it runs identically on a laptop and in
- * Actions, and so the reasoning lives next to the assertion.
- */
+/** Post-build invariant checks. Run: `pnpm run verify`, after a build. */
 
 import { createHash } from "node:crypto";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
@@ -36,12 +26,7 @@ function check(name, fn) {
   }
 }
 
-/**
- * Same as `check`, but does not fail the build.
- *
- * For states that are genuinely pending rather than broken. A CI job that is
- * red from day one gets ignored, and an ignored CI job protects nothing.
- */
+/** Like `check`, but only warns: for states that are pending, not broken. */
 function warn(name, fn) {
   try {
     fn();
@@ -55,10 +40,6 @@ const assert = (cond, msg) => {
   if (!cond) throw new Error(msg);
 };
 
-/*
- * The pages every per-page check runs on. Posts are discovered in dist/blog/
- * rather than listed, so a new post is checked without anyone adding it here.
- */
 const PAGES = [
   "index.html",
   "blog/index.html",
@@ -74,7 +55,7 @@ const PAGES = [
     : []),
 ];
 
-// --- Hosting contract ------------------------------------------------------
+// Hosting contract
 
 check("dist/404.html exists at the exact path Cloudflare serves", () => {
   assert(
@@ -87,8 +68,6 @@ check("dist/404.html exists at the exact path Cloudflare serves", () => {
 });
 
 check("sitemap.xml excludes the 404 page", () => {
-  // Scoped to <loc> paths, not the whole document: a bare /404/ match would
-  // also fire on a legitimate future URL such as /blog/debugging-a-404/.
   const locs = [
     ...read("dist", "sitemap.xml").matchAll(/<loc>([^<]*)<\/loc>/g),
   ].map((m) => m[1]);
@@ -102,8 +81,6 @@ check("sitemap.xml excludes the 404 page", () => {
 });
 
 check("wrangler.jsonc runs the Worker on /api/* only", () => {
-  // JSONC: full-line comments and trailing commas are the only extensions
-  // this file uses. Strip both and parse it properly.
   const w = read("wrangler.jsonc")
     .split("\n")
     .filter((l) => !l.trim().startsWith("//"))
@@ -132,11 +109,8 @@ check("wrangler.jsonc runs the Worker on /api/* only", () => {
   return `Worker on ${first.join(", ")}`;
 });
 
-/*
- * Cloudflare applies every _headers rule whose path matches and comma-joins a
- * header set twice, so a Cache-Control in the catch-all would be appended to
- * every immutable /build/ and /assets/ file. Verified on wrangler's asset worker.
- */
+// Cloudflare applies every matching _headers rule and comma-joins a repeated
+// header (verified on wrangler's asset worker).
 check("_headers sets no Cache-Control in its catch-all block", () => {
   const blocks = read("public", "_headers").split(/\n(?=\/)/);
   const all = blocks.find((b) => b.startsWith("/*\n"));
@@ -156,14 +130,6 @@ check("_headers ships in dist", () => {
   );
 });
 
-/*
- * scripts/csp.mjs gives each page a policy that allows its inline scripts by
- * hash. They are hashed again here from the served pages, so a stale policy
- * fails the build instead of being blocked in the browser. The parse is
- * checked as well: every <script> a page opens must be one parsed here, and
- * nothing may need what a hash cannot allow, an on*= handler or a javascript:
- * URL.
- */
 const SCRIPT =
   /<script\b((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]*?)<\/script\s*>/gi;
 const attrsOf = (s) =>
@@ -274,11 +240,6 @@ check(
       }
       rendered.set(path, own.sort().join(" "));
     }
-    /*
-     * After a client-side navigation the first page's policy still applies, so
-     * a script a component renders on one page only would be blocked when it
-     * is reached that way. Those must be the same on every page.
-     */
     assert(
       new Set(rendered.values()).size <= 1,
       "Component-rendered inline scripts differ between pages, so one would " +
@@ -309,7 +270,7 @@ check("q-manifest.json stays out of the upload, and nothing fetches it", () => {
   return `${served.length} served files never mention it`;
 });
 
-// --- Dependency hygiene ---------------------------------------------------
+// Dependency hygiene
 
 check("no caret ranges on dependencies", () => {
   const pkg = JSON.parse(read("package.json"));
@@ -324,17 +285,13 @@ check("no caret ranges on dependencies", () => {
   return `${Object.keys(ranges).length} deps, all exact`;
 });
 
-// --- SEO output -----------------------------------------------------------
+// SEO output
 
 check("exactly one JSON-LD block per page", () => {
   for (const page of PAGES) {
     const html = read("dist", page);
-    /*
-     * Count opening TAGS, not occurrences of the string. Qwik serialises the
-     * DocumentHead into its resumability state blob, so `application/ld+json`
-     * appears twice per page while only one of them is a real script element.
-     * A naive string count reports a duplicate that no crawler ever sees.
-     */
+    // Count tags, not the string: Qwik also serialises the head into its
+    // state, so `application/ld+json` appears twice.
     const tags = html.match(/<script[^>]*application\/ld\+json[^>]*>/g) ?? [];
     assert(
       tags.length === 1,
@@ -345,7 +302,7 @@ check("exactly one JSON-LD block per page", () => {
       /<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/,
     );
     assert(m, `${page} has no parseable JSON-LD block.`);
-    const graph = JSON.parse(m[1]); // throws on malformed output
+    const graph = JSON.parse(m[1]);
     assert(
       Array.isArray(graph["@graph"]) && graph["@graph"].length > 0,
       `${page} JSON-LD has no @graph entities.`,
@@ -389,13 +346,8 @@ warn("no placeholder text in the homepage's indexable meta tags", () => {
 });
 
 check("theme-color meta matches the default palette in both modes", () => {
-  /*
-   * A meta tag cannot read a CSS variable, so these are rendered from
-   * src/content/palettes.ts by root.tsx. They are what a visitor without
-   * JavaScript gets; the theme script rewrites them for anyone else. A
-   * mismatch renders as a visible band of the wrong colour between the
-   * browser chrome and the page.
-   */
+  // A meta tag can't read a CSS variable. A mismatch shows as a band of the
+  // wrong colour between the browser chrome and the page.
   const def = PALETTES.find((x) => x.id === DEFAULT_PALETTE);
   assert(
     def?.light && def?.dark,
@@ -422,12 +374,8 @@ check("theme-color meta matches the default palette in both modes", () => {
 });
 
 check("every page applies the saved palette before first paint", () => {
-  /*
-   * The theme script must sit in <head>, after the two theme-color tags it
-   * rewrites, or a returning visitor sees the default flash first. Its
-   * palette list is the allowlist a stored name is checked against, so it
-   * has to be exactly the palettes there are.
-   */
+  // The script's palette list is the allowlist a stored name is checked
+  // against.
   const ids = PALETTES.map((x) => x.id);
   assert(
     ids.every((id) => /^[a-z]+$/.test(id)) && new Set(ids).size === ids.length,
@@ -461,16 +409,8 @@ check("every page applies the saved palette before first paint", () => {
 });
 
 check("every hero link is also asserted in sameAs", () => {
-  /*
-   * A visible profile link missing from sameAs wastes the strongest
-   * entity-disambiguation signal available, and the drift is silent because
-   * both lists render fine independently.
-   *
-   * Reads the Person node's sameAs array specifically -- NOT the whole HTML.
-   * Searching the page for the URL always succeeds, because the hero renders
-   * the same href as a visible <a>, so a whole-document check passes even when
-   * sameAs is empty. That mistake made this check vacuous once already.
-   */
+  // Read Person.sameAs itself: the hero renders the same hrefs as links, so a
+  // whole-page search always passes.
   const src = read("src", "content", "profile.ts");
   const start = src.indexOf("links: [");
   const end = src.indexOf("sameAs:", start);
@@ -499,11 +439,7 @@ check("every hero link is also asserted in sameAs", () => {
 });
 
 check("every referenced font file exists and is a real woff2", () => {
-  /*
-   * A typo in a @font-face url() or a preload href does not error -- the
-   * browser silently renders the fallback stack. The site looks fine, just
-   * wrong, which is the hardest kind of regression to notice.
-   */
+  // A wrong font URL doesn't error: the browser renders the fallback stack.
   const css = read("src", "global.css");
   const refs = [...css.matchAll(/url\("(\/fonts\/[^"]+)"\)/g)].map((m) => m[1]);
   assert(refs.length > 0, "No /fonts/ references in global.css.");
@@ -514,7 +450,6 @@ check("every referenced font file exists and is a real woff2", () => {
       existsSync(onDisk),
       `global.css references ${ref}, which is not in dist. Run \`pnpm run fonts\`.`,
     );
-    // woff2 files start with the ASCII signature 'wOF2'.
     const sig = readFileSync(onDisk).subarray(0, 4).toString("latin1");
     assert(
       sig === "wOF2",
@@ -522,8 +457,6 @@ check("every referenced font file exists and is a real woff2", () => {
     );
   }
 
-  // A preload no @font-face claims is fetched and then ignored. (On-disk
-  // existence is a separate check, above.)
   const html = read("dist", "index.html");
   for (const m of html.matchAll(
     /<link[^>]*rel="preload"[^>]*href="([^"]+)"[^>]*>/g,
@@ -534,11 +467,8 @@ check("every referenced font file exists and is a real woff2", () => {
       refs.includes(href),
       `Preloading ${href}, which no @font-face uses -- so it is downloaded and ignored.`,
     );
-    /*
-     * Fonts are always fetched in CORS mode. A preload without crossorigin is
-     * a DIFFERENT cache entry than the @font-face request, so the file gets
-     * downloaded twice -- a silent doubling, not an error.
-     */
+    // Fonts are always fetched in CORS mode, so a preload without
+    // crossorigin is a separate cache entry.
     assert(
       /crossorigin/i.test(tag),
       `Font preload for ${href} lacks crossorigin, so the file downloads twice.`,
@@ -565,33 +495,14 @@ check("the stylesheet is inlined into every page, not linked", () => {
 });
 
 check("every class in the output has a CSS rule", () => {
-  /*
-   * Tailwind does not error on a class it does not recognise -- it emits
-   * nothing, and the element renders unstyled. `class="mono"` shipped that way
-   * in 8 places: a leftover from before the Tailwind migration, where the real
-   * utility is `font-mono`. The page looked almost right, which is why nobody
-   * would catch it by eye.
-   *
-   * So: collect every class token the built HTML actually uses, and assert each
-   * one appears as a selector in the built CSS. Semantic classes (pill,
-   * eyebrow) have rules too, so there are no legitimate orphans.
-   */
   const cssFile = readdirSync(p("dist", "assets")).find((f) =>
     f.endsWith(".css"),
   );
   assert(cssFile, "No stylesheet in dist/assets.");
   const css = read("dist", "assets", cssFile);
 
-  /*
-   * Tailwind escapes `:` `.` `/` `[` in generated class names, so the token
-   * regex must accept an escaped anything (`\\.`) but NOT a bare `,` `.` or
-   * `:`. An earlier version allowed those, and on a grouped selector like
-   *   .border-line,.border-line\\/60{...}
-   * it matched the whole run as ONE token — recording neither real class name
-   * and reporting `border-line` as an orphan when its rule was right there.
-   * A false positive in a guard is worse than no guard, so: bare `,` ends a
-   * token, bare `:` starts a pseudo-class, bare `.` starts the next selector.
-   */
+  // Tailwind escapes `:` `.` `/` `[` in class names, so a token takes any
+  // escaped character but ends at a bare `,` `.` or `:`.
   const base = (c) => c.replace(/\\/g, "").split(":")[0];
   const selectors = new Set(
     [...css.matchAll(/\.((?:\\.|[-\w[\]()/%#])+)/g)].map((m) => base(m[1])),
@@ -607,14 +518,8 @@ check("every class in the output has a CSS rule", () => {
     }
   }
 
-  /*
-   * Tailwind's variant MARKERS are real classes with no rule of their own, by
-   * design: `group` exists only so `group-hover:*` has something to select
-   * against, and the rule generated is `.group:hover .group-hover\\:x`, which
-   * never contains a bare `.group` selector. Same for `peer`. They are the one
-   * legitimate orphan, so they are named here rather than the check being
-   * loosened -- a typo like `gorup` must still fail.
-   */
+  // Tailwind's `group` and `peer` are markers with no rule of their own, so
+  // they are named rather than the check loosened.
   const MARKERS = new Set(["group", "peer"]);
 
   const orphans = [...used].filter(
@@ -646,12 +551,8 @@ function jpegSize(buf) {
 }
 
 check("og:image is referenced only if it exists and is a real image", () => {
-  /*
-   * A referenced-but-missing og:image is worse than none: the platform reserves
-   * the card's space and renders it blank. So if the tag is emitted, the file
-   * must be in dist AND actually be an image. Every page, because a post can
-   * carry its own cover instead of the site card.
-   */
+  // A missing og:image is worse than none: platforms reserve the card's
+  // space and render it blank.
   const files = new Set();
   for (const page of PAGES) {
     const html = read("dist", page);
@@ -673,11 +574,6 @@ check("og:image is referenced only if it exists and is a real image", () => {
     const png = buf.subarray(1, 4).toString("latin1") === "PNG";
     assert(jpeg || png, `${rel} is neither JPEG nor PNG.`);
 
-    /*
-     * Scrapers fetch this before rendering a preview, and several give up on
-     * large files. A gradient card as lossless PNG lands near 900 kB, which is
-     * why this exists as a ceiling rather than a comment.
-     */
     const kb = Math.round(buf.length / 1024);
     assert(
       buf.length < 400_000,
@@ -685,7 +581,7 @@ check("og:image is referenced only if it exists and is a real image", () => {
         `it under ~400 kB (JPEG, not PNG, for a gradient).`,
     );
 
-    // Every platform crops from 1200x630; anything else gets cropped oddly.
+    // Platforms crop from 1200x630.
     const size = png
       ? { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) }
       : jpegSize(buf);
@@ -709,12 +605,7 @@ check("og:image is referenced only if it exists and is a real image", () => {
   return files.size ? [...files].join(", ") : "not emitted (allowed)";
 });
 
-/*
- * /blog/ draws each post twice through `?jsx` (src/routes/blog/index.tsx): its
- * cover as a print for phones, and a backdrop for hover, which is
- * src/content/backdrops/<slug>.png or else the cover again. Each is found by
- * its path, and one it cannot find renders nothing, silently.
- */
+// An image `?jsx` can't find renders nothing, silently.
 check("every post's cover and backdrop reach /blog/ as WebP srcsets", () => {
   const covers = (
     read("src", "content", "profile.ts").match(/^\s+cover: \{/gm) ?? []
@@ -736,12 +627,6 @@ check("every post's cover and backdrop reach /blog/ as WebP srcsets", () => {
   return `${imgs.length} image(s) for ${covers} post(s)`;
 });
 
-/*
- * A post's "N min read" is a number in profile.ts, so it goes stale when the
- * post changes. Recounted here from the built article the way profile.ts
- * describes: words outside figures, code blocks and the contents list, at 238
- * a minute, plus 12 s a figure.
- */
 check("every post's reading time matches its built text", () => {
   const profile = read("src", "content", "profile.ts");
   const posts = PAGES.filter((pg) => /^blog\/[^/]+\/index\.html$/.test(pg));
@@ -774,10 +659,6 @@ check("every post's reading time matches its built text", () => {
   return `${posts.length} post(s)`;
 });
 
-/*
- * Every image a page shows is WebP, from `?jsx` (CLAUDE.md, Invariants). An
- * og:image is not shown on a page, so it stays the JPEG the og check measures.
- */
 check("every <img> on every page is a WebP srcset or an SVG", () => {
   let n = 0;
   for (const page of PAGES) {
@@ -792,11 +673,7 @@ check("every <img> on every page is a WebP srcset or an SVG", () => {
   return `${n} image(s) on ${PAGES.length} pages`;
 });
 
-// --- Accessibility -------------------------------------------------------
-//
-// Structural and colour checks only. These catch regressions, they do not
-// certify the site: keyboard order, screen-reader announcement and 400% zoom
-// still need a human. See .claude/skills/a11y-ui/ for what is NOT covered.
+// Accessibility
 
 /** sRGB relative luminance, per WCAG 2.x. */
 function luminance(hexColour) {
@@ -819,11 +696,7 @@ check("every palette meets WCAG AA in every mode it has", () => {
     for (const mode of modesOf(palette)) {
       const t = palette[mode];
       const name = `${palette.id} ${mode}`;
-      /*
-       * Six-digit hex, every core token. src/components/desk/light.ts reads
-       * them back with parseInt for its shader, and the arithmetic below
-       * needs a colour it can measure.
-       */
+      // The desk's WebGL light parses these with parseInt.
       for (const key of [
         "bg",
         "surface",
@@ -838,7 +711,6 @@ check("every palette meets WCAG AA in every mode it has", () => {
         );
       }
 
-      // 4.5:1 -- WCAG 1.4.3, normal-size body text.
       for (const key of ["text", "muted"]) {
         const r = contrast(t[key], t.bg);
         assert(
@@ -847,12 +719,6 @@ check("every palette meets WCAG AA in every mode it has", () => {
             `(WCAG 1.4.3, body text).`,
         );
       }
-      /*
-       * 3:1 -- WCAG 1.4.11. The :focus-visible ring is drawn in --sem-accent,
-       * and focus is a component STATE, so its indicator is non-text contrast
-       * rather than decoration. This is the check that caught #d97757 at
-       * 2.99:1 on the original light ground.
-       */
       const focus = contrast(t.accent, t.bg);
       assert(
         focus >= 3,
@@ -860,19 +726,6 @@ check("every palette meets WCAG AA in every mode it has", () => {
           `focus ring uses this colour, so keyboard focus would be ` +
           `non-conformant (WCAG 1.4.11).`,
       );
-      /*
-       * 4.5:1 -- WCAG 1.4.3 again, but measured against BOTH grounds, because
-       * --sem-danger is only ever used for text and that text is only ever on
-       * the glass panel, not on the page. The panel is --sem-surface under a
-       * backdrop-filter, so --sem-bg alone would have cleared a colour that is
-       * still unreadable where it actually renders.
-       *
-       * This is the check that would have caught #e0715c, which sat inline in
-       * terminal.tsx as `text-[#e0715c]` at 3.01:1 on the light ground and
-       * 3.14:1 on the light surface. A hex in a component is invisible to
-       * this check, which is the whole argument for the no-raw-colours
-       * invariant.
-       */
       for (const ground of ["bg", "surface"]) {
         const r = contrast(t.danger, t[ground]);
         assert(
@@ -882,16 +735,6 @@ check("every palette meets WCAG AA in every mode it has", () => {
             `the glass panel.`,
         );
       }
-      /*
-       * --sem-accent has to clear the TEXT bar too, not just the 3:1 focus bar
-       * above, because it is no longer only a ring. The shell renders hint
-       * lines, the prompt, and every linkified URL and email address in it --
-       * on the panel, so --sem-surface is the ground that matters as much as
-       * --sem-bg. The accent is the colour most likely to be changed for
-       * aesthetic reasons, and it carries a text requirement it did not
-       * carry when it was first chosen. (Wada's light accent is Burnt Sienna
-       * rather than Raw Sienna because of this check: 4.52:1 against 3.31:1.)
-       */
       for (const ground of ["bg", "surface"]) {
         const r = contrast(t.accent, t[ground]);
         assert(
@@ -908,13 +751,8 @@ check("every palette meets WCAG AA in every mode it has", () => {
 });
 
 check("the blog's terminal palette is readable on its own ground", () => {
-  /*
-   * The status-line figures draw a dark terminal in BOTH themes, so the
-   * --sem-* pairings above never see it. Its text tokens need 4.5:1 on
-   * --term-bg, and so does every colour the context gradient can produce.
-   * That one is computed from a percentage at render time, so the whole
-   * 0-100 range is walked through the same grad() the figures call.
-   */
+  // The blog's terminal is dark in both themes, so the --sem-* checks above
+  // never see it.
   const css = read("src", "global.css");
   const term = (name) => {
     const m = css.match(new RegExp(`--term-${name}:\\s*(#[0-9a-f]{6})`, "i"));
@@ -959,20 +797,13 @@ check("skip link is present, first, and points at a real target", () => {
       new RegExp(`id="${target}"`).test(html),
       `${page}: skip link points at #${target}, which no element has.`,
     );
-    /*
-     * The target must be focusable or the fragment jump moves the viewport
-     * without moving focus, and the next Tab goes back to the nav.
-     */
     const el = html.match(new RegExp(`<[a-z]+[^>]*id="${target}"[^>]*>`, "i"));
     assert(
       el && /tabindex="-1"/i.test(el[0]),
       `${page}: #${target} lacks tabindex="-1", so focus does not follow the jump.`,
     );
-    /*
-     * Focusable is not enough here: Qwik Router cancels the jump and only
-     * scrolls. src/routes/layout.tsx moves focus from an inline (sync$) click
-     * handler on its root element.
-     */
+    // Qwik Router cancels the fragment jump and only scrolls, so focus has to
+    // move from an inline (sync$) click handler on the root element.
     const root = html.match(/<div\b[^>]*class="min-h-dvh"[^>]*>/)?.[0] ?? "";
     const funcs =
       html.match(/<script q:func="qwik\/json">([\s\S]*?)<\/script>/)?.[1] ?? "";
@@ -1020,10 +851,6 @@ check("every graphic has an accessible name or is hidden", () => {
         `${page}: <img> without alt: ${tag.slice(0, 70)}`,
       );
     }
-    /*
-     * An <svg> is either meaningful (carries an accessible name) or decorative
-     * (aria-hidden). Neither means a screen reader announces raw path data.
-     */
     for (const tag of html.match(/<svg\b[^>]*>/g) ?? []) {
       const named = /aria-label=|aria-labelledby=/.test(tag);
       const hidden = /aria-hidden="true"/.test(tag);
@@ -1036,22 +863,8 @@ check("every graphic has an accessible name or is hidden", () => {
   return `${PAGES.length} pages`;
 });
 
-// --- Cross-file parity -----------------------------------------------------
+// Cross-file parity
 
-/*
- * The grain recipe lives in two files, and for a week they disagreed: the OG
- * card kept opacity 0.28 and a bare feTurbulence -- the recipe global.css had
- * already measured as invisible, 1.80 luma levels on the dark wash and 0.013
- * on light -- while a comment above it asserted the two matched.
- *
- * A parity claim written in prose is one nothing re-checks. Asserted here
- * instead, so the claim and the check are the same object.
- */
-/*
- * The desk is drawn twice: as text in the page, and over it by the worker
- * that lights it. Both come from rasterize(), and this re-runs it here, so
- * the text the page ships is the grid the light lands on.
- */
 check("the desk in the page is the grid rasterize() draws", () => {
   const html = read("dist", "index.html");
   for (const [size, { cols, rows }] of Object.entries(GRIDS)) {
@@ -1109,16 +922,8 @@ check("OG card's grain matches grain-page in global.css", () => {
   return "opacity, blend mode and noise URI identical";
 });
 
-/*
- * A design token nothing uses never reaches the stylesheet, but the header
- * above it goes on describing what it is for. `--container-page` sat here with
- * zero uses and a documented purpose until an audit went looking.
- *
- * Only plain `@theme` is checked. `@theme inline` substitutes its values into
- * each utility rather than emitting the custom property, so its colour tokens
- * are correctly absent from the output by name -- which is the whole reason
- * `inline` is load-bearing here.
- */
+// Plain `@theme` only: Tailwind substitutes `@theme inline` values into each
+// utility, so those tokens never appear by name.
 check("every plain @theme token reaches the built CSS", () => {
   const css = read("src", "global.css").replace(/\/\*[\s\S]*?\*\//g, "");
   const dist = readdirSync(p("dist", "assets"))
@@ -1149,15 +954,6 @@ check("every plain @theme token reaches the built CSS", () => {
   return `${n} tokens, none dead`;
 });
 
-/*
- * `field`'s custom properties repeat the 0% keyframe of `field-shift`, and the
- * comment there says they must stay in sync. Nothing compared them.
- *
- * Drift here is close to invisible: the static values are what paints when the
- * animation never runs -- under reduced motion -- so a mismatch ships the wrong
- * opening palette to exactly the visitors least likely to be the one reviewing
- * it.
- */
 check("field's static fallback matches the 0% keyframe", () => {
   const css = read("src", "global.css");
 
@@ -1198,7 +994,7 @@ check("field's static fallback matches the 0% keyframe", () => {
   return `${names.length} declarations identical`;
 });
 
-// --- Navigation and view transitions ----------------------------------------
+// Navigation and view transitions
 
 /** Classes whose built rule satisfies `test`, e.g. `.grain-page{…mix-blend-mode:overlay…}`. */
 function classesWhere(test) {
@@ -1214,12 +1010,8 @@ function classesWhere(test) {
 }
 
 /**
- * The classes of every element named for a view transition, whether the name
- * is inline in the HTML or set by a class rule.
- *
- * Match the whole tag first and pull `class` out of it. Anchoring on
- * `<div class="…"` instead silently matches nothing the moment the serialiser
- * reorders attributes, and a check that matches nothing passes for ever.
+ * Classes of every element named for a view transition, inline or by a class
+ * rule. Matches whole tags, so attribute order doesn't matter.
  */
 function namedElements() {
   const namedByCss = classesWhere((rule) =>
@@ -1244,19 +1036,6 @@ function namedElements() {
   return found;
 }
 
-/*
- * A blended layer must never carry a view-transition-name.
- *
- * `grain-page` did. A named element is captured into the view transition's own
- * layer, where it has no backdrop to blend against, so `mix-blend-mode:
- * overlay` degraded to normal compositing and the grain painted as raw grey
- * noise at opacity 0.38 over the whole viewport. Measured over resume -> blog:
- * a one-frame +34.5 mean luma spike against a 38.3 steady state, with the
- * darkest histogram bucket going from 56% of pixels to 3%.
- *
- * Written as a general rule rather than a grain-specific one, because the trap
- * belongs to the combination, not to that element.
- */
 check("no blended element carries a view-transition-name", () => {
   const blended = classesWhere((rule) =>
     /mix-blend-mode:\s*(?!normal)/.test(rule),
@@ -1279,13 +1058,6 @@ check("no blended element carries a view-transition-name", () => {
   return `${named.length} named elements, ${blended.size} blended classes, no overlap`;
 });
 
-/*
- * Nor may a full-viewport layer. `field` was named: named groups paint above
- * the root snapshot, so its opaque gradient covered everything left in root
- * and the header, footer and grain vanished for the length of every
- * transition. The mean-luma measurement behind the name could not see that;
- * one frame of `node scripts/measure-nav.mjs --frames <dir>` does.
- */
 check("no full-viewport layer carries a view-transition-name", () => {
   const full = classesWhere(
     (rule) => /position:fixed/.test(rule) && /inset:0(?![.\d])/.test(rule),
@@ -1306,12 +1078,7 @@ check("no full-viewport layer carries a view-transition-name", () => {
   return `${full.size} full-viewport classes, none named`;
 });
 
-/*
- * The reading column comes from head frontmatter set in
- * src/routes/blog/(post)/layout.tsx, not from the URL; src/routes/layout.tsx
- * says why. If that wiring breaks, posts still render — in the wide column —
- * so this is the only place it shows.
- */
+// If the column wiring breaks, posts still render, in the wide column.
 check(
   "posts use the reading column, home the stage, the rest the wide one",
   () => {
@@ -1338,15 +1105,9 @@ check(
 );
 
 /*
- * Qwik loads nothing and runs no component code until a handler that names a
- * bundle fires; then it resumes the page (q:container "paused" -> "resumed").
- * An element's own handlers fire when the reader acts on that element, which
- * is what they are for. These fire without that: window and document
- * listeners, on any scroll, click or key anywhere, and qvisible, qinit and
- * qidle by themselves. Each must be an inline sync$ (`#n`), which runs without
- * waking Qwik, or be listed in WAKES with the reason it may name a bundle.
- * The say-hi choice and the post's checkpoint rail both first shipped as a
- * plain $(). `node scripts/measure-wake.mjs` watches it in a browser.
+ * Qwik resumes the page when a handler that names a bundle fires; an inline
+ * sync$ (`#n`) doesn't. Window and document listeners, and qvisible, qinit and
+ * qidle, fire without the reader acting on the element.
  */
 const WAKES = [
   { listener: "d:qcinit", why: "Qwik Router's startup: scroll memory" },
@@ -1394,11 +1155,7 @@ check("nothing wakes Qwik before the reader acts on it", () => {
   return `${inline} inline, ${WAKES.length} allowed by WAKES`;
 });
 
-/*
- * The rail reads its post's headings once, untracked, and lives in the post
- * layout, which stays mounted from one post to the next. Without a per-page
- * key, client-side navigation to another post kept the first post's sections.
- */
+// The post layout stays mounted from one post to the next.
 check("the checkpoint rail is remounted for each post", () => {
   const rail = read("src", "components", "blog", "checkpoints.tsx");
   const layout = read("src", "routes", "blog", "(post)", "layout.tsx");
@@ -1410,12 +1167,8 @@ check("the checkpoint rail is remounted for each post", () => {
   );
 });
 
-/*
- * <Link> prefetches through Qwik's preloader. With `preloader: false` the
- * preloader module never loads, so every visible, hover and click prefetch is
- * a silent no-op and a click fetches the next route as a waterfall. Its
- * bootstrap is a preload of the bundle graph. Numbers in src/entry.ssr.tsx.
- */
+// <Link> prefetches through Qwik's preloader, so with `preloader: false` every
+// prefetch is a silent no-op. Its bootstrap is a preload of the bundle graph.
 check("the preloader ships, so <Link> prefetch has something to call", () => {
   for (const page of PAGES) {
     assert(
@@ -1429,11 +1182,8 @@ check("the preloader ships, so <Link> prefetch has something to call", () => {
   return `${PAGES.length} pages`;
 });
 
-/*
- * Client-side navigation is silent to a screen reader unless something
- * announces it; the router does not. The region must start empty, or it reads
- * the title out a second time to anyone browsing the page.
- */
+// Qwik Router doesn't announce navigations. The region starts empty, or it
+// reads the title a second time.
 check("every page has an empty route announcer", () => {
   for (const page of PAGES) {
     const regions =
@@ -1450,12 +1200,10 @@ check("every page has an empty route announcer", () => {
 });
 
 /*
- * A click must not re-run the root layout. Each value it shows per page is read
- * in JSX, which the optimizer compiles to a signal binding and serialises into
- * the page's q:func script. For an expression with a call, a module-scope name
- * (even a shadowed one, like the route's own `head` export) or over 150
- * characters, rc.3 instead evaluates it in the render, which subscribes the
- * whole layout -- silently, so a missing function here is the only sign.
+ * Qwik rc.3 compiles a JSX read to a binding in the page's q:func script,
+ * except an expression with a call, a module-scope name (even shadowed) or
+ * over 150 characters: that is evaluated in the render, which subscribes the
+ * whole layout. Silently, so a missing binding here is the only sign.
  */
 check("the root layout's per-page values are bindings, not re-renders", () => {
   const reads = [
@@ -1485,18 +1233,11 @@ check("the root layout's per-page values are bindings, not re-renders", () => {
   return `${reads.length} bindings on ${PAGES.length} pages`;
 });
 
-// --- Report ---------------------------------------------------------------
-
-// --- Privacy ---------------------------------------------------------------
+// Privacy
 
 check("no third-party script is loaded by the built HTML", () => {
-  /*
-   * The one third-party script, Cloudflare's analytics beacon, is created at
-   * runtime by the guarded loader in src/content/analytics.ts, never written
-   * as a tag. A <script src> pointing off-origin would bypass every opt-out.
-   * (Scripts Cloudflare injects at the edge can't be seen here — the site
-   * must be switched to snippet mode in the dashboard for that.)
-   */
+  // An off-origin <script src> would bypass every opt-out. Cloudflare's edge
+  // injection can't be seen here; the dashboard must stay on snippet mode.
   for (const page of PAGES) {
     const html = read("dist", page);
     for (const m of html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)) {
@@ -1543,6 +1284,8 @@ check("every page links the privacy notice from the footer", () => {
   }
   return `${PAGES.length + 1} pages`;
 });
+
+// Report
 
 for (const ok of passes) console.log(`  ok    ${ok}`);
 for (const w of warnings) console.warn(`  WARN  ${w}`);

@@ -2,29 +2,22 @@
  * Navigation measurements. Run: `node scripts/measure-nav.mjs`
  * (after `pnpm run build`)
  *
- * Two things about a <Link> click that reading the code does not tell you:
- *
- *   1. COST. Headless Chrome loads --from, waits for the idle preloads, then
- *      clicks the header link to --to over a simulated round trip, and times
- *      click -> view transition ready. Also reports the JS the start page
- *      fetched before anyone clicked. src/entry.ssr.tsx quotes these numbers.
- *   2. LOOK. --frames writes a filmstrip of one transition slowed 10x. The
- *      vanishing nav described in global.css's view-transition note was
- *      invisible to a mean-luma measurement and obvious in a single frame.
+ * Loads --from, waits for the idle preloads, clicks the header link to --to
+ * over a simulated round trip, and times click -> view transition ready. Also
+ * reports the JS the start page fetched before the click.
  *
  *   --rtt <ms>       simulated round trip, default 40; 150 is a slow phone
  *   --runs <n>       median of n cold runs, default 3
  *   --from <path>    default /
  *   --to <path>      default /blog/ — must be a link in the header
- *   --frames <dir>   also write <dir>/strip.png
+ *   --frames <dir>   also write <dir>/strip.png, one transition slowed 10x
  *   --motion reduce  emulate reduced motion; exits 1 if any view-transition
  *                    animation runs
  *   --scheme <s>     light or dark; headless Chrome otherwise follows the OS
  *   --dist <dir>     measure another build, e.g. a copy saved before a change
  *
  * python's http.server sends no compression, so the brotli figure is computed
- * from the files rather than read off the wire. Compare runs with each other,
- * not with production.
+ * from the files. Compare runs with each other, not with production.
  */
 
 import { spawn } from "node:child_process";
@@ -53,11 +46,8 @@ const REDUCE = arg("motion", "") === "reduce";
 const SCHEME = arg("scheme", "");
 const DIST = resolve(arg("dist", join(ROOT, "dist")));
 
-/*
- * Both arrive with lighthouse (puppeteer-core) and the Qwik/Tailwind toolchain
- * (sharp); resolved out of the pnpm store rather than added as dependencies
- * for a script that is not part of the build.
- */
+// puppeteer-core and sharp are transitive; resolved from the pnpm store rather
+// than added as dependencies for a script outside the build.
 function fromStore(prefix, entry) {
   const store = join(ROOT, "node_modules", ".pnpm");
   const hit = readdirSync(store).find((d) => d.startsWith(prefix));

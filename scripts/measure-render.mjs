@@ -2,66 +2,20 @@
  * Rendered-pixel measurements. Run: `node scripts/measure-render.mjs`
  * (after `pnpm run build`)
  *
- * Two questions that only the rasteriser can answer, so neither is checkable
- * by reading the CSS:
+ *   1. Grain: how visible the film grain is. Its opacity can't say: overlay
+ *      compresses toward the backdrop at both ends, so on a near-black or
+ *      near-white ground even opacity 1 can be invisible.
+ *   2. Field: whether the field's drift moves the ground under the text
+ *      column enough to change body-text contrast.
  *
- *   1. GRAIN — can you actually see the film grain, and by how much.
- *   2. FIELD — as the field drifts, does the background under the text
- *      column move enough to change body-text contrast.
+ * The grain metric is the mean absolute luma difference between horizontally
+ * adjacent pixels over a flat region, which separates high-frequency noise
+ * from the slow gradient. The page renders with the layer on and forced off,
+ * and the difference is the grain, since gradient dithering also registers.
+ * It screenshots the built dist/, so there is no second copy of the recipe.
  *
- * Both exist because a plausible-sounding CSS value was measurably wrong. See
- * each section's note.
- *
- * ---------------------------------------------------------------------------
- * WHY THE GRAIN SECTION EXISTS
- *
- * The grain layer's opacity tells you nothing about whether the grain is
- * visible. It is composited with `mix-blend-mode: overlay`, and overlay is a
- * conditional blend — multiply below mid-grey, screen above — so its output is
- * compressed toward the backdrop at both ends of the range. On a near-black or
- * near-white ground the layer can be at opacity 1 and still be invisible.
- *
- * That is not hypothetical. `grain-page` sat at `opacity: 0.28` with a comment
- * claiming it "makes it actually read", and measured 1.80 luma levels on the
- * dark wash and 0.013 on light. Both are below what an eye can find. The
- * comment was written from the value in the CSS rather than from the pixels.
- *
- * So: measure the pixels.
- *
- * THE METRIC
- *
- * Mean absolute luma difference between horizontally adjacent pixels, over a
- * flat region of the page. Grain is high-frequency by definition, so a
- * neighbour delta isolates it from the gradient underneath, which varies
- * slowly and contributes almost nothing to this number. Plain standard
- * deviation does not work — it is dominated by the wash.
- *
- * Rendered twice, once with the layer and once with it forced off, because the
- * absolute number means little on its own: dithering in the gradient ramp
- * shows up as a neighbour delta too. The DIFFERENCE between the two runs is
- * the grain.
- *
- * WHY IT SCREENSHOTS THE REAL BUILT PAGE
- *
- * An isolated harness gets this wrong in ways that are hard to notice. Two
- * that bit during development, both of which silently produced "no grain"
- * rather than an error:
- *
- *   - `width='100%'` inside a data: URI. The `%` starts a percent-escape, the
- *     SVG never parses, and the layer renders as nothing.
- *   - `url("data:...")` interpolated into a double-quoted HTML style
- *     attribute. The inner quote closes the attribute.
- *
- * Measuring the shipped dist/ avoids inventing a second copy of the recipe
- * that can be wrong on its own.
- *
- * ROUGH GUIDE TO THE NUMBERS
- *
- * Below ~2 is invisible. 6-10 reads as film grain. Above ~20 reads as noise on
- * a broken display. Weber's law applies, so the same delta is less visible on
- * a light ground than a dark one; the light wash is allowed to sit a little
- * higher than the dark one for that reason.
- * ---------------------------------------------------------------------------
+ * Rough guide: below ~2 is invisible, 6-10 reads as film grain, above ~20 as
+ * a broken display. A light ground may sit a little higher (Weber's law).
  */
 
 import { execFileSync, spawn } from "node:child_process";
@@ -83,11 +37,7 @@ const PORT = 8241;
 const W = 1440;
 const H = 900;
 
-/**
- * Sample region: left of the viewport, below the header, above the fold.
- * This is the part of the page that is deliberately empty — the artwork —
- * so no glyph edges pollute a metric built on adjacent-pixel differences.
- */
+/** Must hold no text: glyph edges would swamp the neighbour delta. */
 const REGION = { x0: 40, y0: 180, x1: 460, y1: 760 };
 
 const CHROME =
@@ -97,8 +47,7 @@ const CHROME =
 const work = join(tmpdir(), `grain-${process.pid}`);
 
 function findSharp() {
-  // sharp arrives transitively; resolve it out of the pnpm store rather than
-  // adding a dependency for a script that is not part of the build.
+  // sharp is transitive; resolved from the pnpm store, not a dependency.
   const store = join(ROOT, "node_modules", ".pnpm");
   const hit = readdirSync(store).find((d) => d.startsWith("sharp@"));
   if (!hit) throw new Error("sharp not found under node_modules/.pnpm");
@@ -129,8 +78,8 @@ function shoot(url, out) {
       "--headless",
       "--disable-gpu",
       "--hide-scrollbars",
-      // Without this the screenshot is converted through the display profile
-      // and the low-amplitude noise this script measures shifts under it.
+      // Otherwise the display profile converts the screenshot and shifts the
+      // low-amplitude noise being measured.
       "--force-color-profile=srgb",
       `--window-size=${W},${H}`,
       "--virtual-time-budget=4000",
@@ -166,21 +115,10 @@ async function grain(sharp, png) {
   return { mean: sum / n, delta: adj / adjn };
 }
 
-/* --- the field morph ------------------------------------------------------ */
-
-/**
- * The region behind the content column at 1440 wide. The layout is a
- * right-aligned max-w-[52rem] column, so this is the ground body text sits on.
- * If the blob geometry in `field-shift` ever moves right, this is what tells
- * you before a visitor does.
- */
+/** Should be the ground body text sits on, at 1440 wide. */
 const TEXT_REGION = { x0: 620, y0: 200, x1: 1400, y1: 820 };
 
-/**
- * Median, not mean. Glyphs are a minority of the pixels in this region, so the
- * median lands on the background between them; a mean would be dragged toward
- * the text colour and report a ground that is not there.
- */
+/** Median, not mean: glyphs are a minority, so it lands on the ground. */
 async function groundUnderText(sharp, png) {
   const { data, info } = await sharp(png)
     .raw()
@@ -203,11 +141,8 @@ async function groundUnderText(sharp, png) {
 }
 
 /**
- * The default palette's dark text colours, from src/content/palettes.ts.
- * Headless Chrome follows the host OS appearance, so if this machine is in
- * light mode the contrast columns below are measured against the wrong pair —
- * the numbers are still a reading of the ground, but the ratios will not mean
- * much.
+ * Dark-mode text colours. Headless Chrome follows the OS appearance, so on a
+ * machine in light mode the contrast columns use the wrong pair.
  */
 const darkOf = PALETTES.find((x) => x.id === DEFAULT_PALETTE).dark;
 const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -227,21 +162,16 @@ const ratio = (a, b) => {
 };
 
 /**
- * Freeze the field's drift at a chosen progress. A running animation lands
- * wherever the clock happens to be when the screenshot is taken; a paused,
- * negatively-delayed linear one lands on exactly that keyframe progress.
+ * Paused at a negative delay, so the capture lands on an exact keyframe
+ * progress rather than wherever the clock happens to be.
  */
 const freezeAt = (pct) =>
   `\n.field{animation:field-shift 10s linear both!important;` +
   `animation-timeline:auto!important;animation-delay:${-(10 * pct) / 100}s!important;` +
   `animation-play-state:paused!important}\n`;
 
-/*
- * Overrides go into the measured page itself. The stylesheet is inlined into
- * each page's HTML (see the a11y-ui skill; `grep -c 'rel="stylesheet"'
- * dist/index.html` prints 0), so appending to dist/assets/*-style.css, which
- * this script used to do, changed nothing and both renders came out the same.
- */
+// Into the page: the stylesheet is inlined, so editing dist/assets changes
+// nothing.
 function inject(dir, cssText) {
   const page = join(dir, "index.html");
   const html = readFileSync(page, "utf8");
@@ -255,8 +185,6 @@ function inject(dir, cssText) {
 async function main() {
   const sharp = (await import(findSharp())).default;
 
-  // A copy of dist with the grain layer forced off, to subtract the gradient's
-  // own dithering from the result.
   rmSync(work, { recursive: true, force: true });
   cpSync(DIST, work, { recursive: true });
   inject(work, ".grain-page{display:none!important}");
@@ -297,9 +225,7 @@ async function main() {
       `  haze       ${haze >= 0 ? "+" : ""}${haze.toFixed(2)} luma levels (should be near 0)`,
     );
 
-    // Not a hard gate: this measures whichever theme the machine running it is
-    // set to, so the absolute figure is not comparable across machines the way
-    // a build invariant has to be. It is a reading, and it says so.
+    // A reading, not a gate: it depends on the machine's light/dark setting.
     if (visible < 2) {
       console.log(
         "\n  Below 2 — that is invisible. See the note on grain-page in src/global.css.",
@@ -309,8 +235,6 @@ async function main() {
         "\n  The layer is shifting mean brightness, not just adding texture.",
       );
     }
-
-    /* --- field morph ----------------------------------------------------- */
 
     console.log(
       `\nField morph, ground under the text column ${JSON.stringify(TEXT_REGION)}`,
@@ -354,8 +278,7 @@ async function main() {
     );
     console.log(`  worst muted-text contrast     ${worstMuted.toFixed(2)}:1`);
 
-    // 4.5:1 is WCAG AA for body text. --sem-muted is the smallest, lowest
-    // contrast text on the page, so it is the one that would fail first.
+    // WCAG AA body text. Muted is the lowest-contrast text, so it fails first.
     if (worstMuted < 4.5) {
       console.log(
         "\n  BELOW AA. A blob in field-shift has drifted under the text column.",

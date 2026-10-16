@@ -4,10 +4,8 @@
  *   git clone --depth 1 https://github.com/my-neme-eh-jeff/ai-experiments.git /tmp/aie
  *   node scripts/statusline-parity.mjs /tmp/aie/claude-statusline
  *
- * Runs every scenario in the script's own demo/render.sh (a throwaway HOME,
- * nothing under yours is touched), strips the colour, and compares each line
- * with src/components/blog/statusline/model.ts given the same inputs. Needs
- * bash and jq. Not part of `verify`, because the script lives in another repo.
+ * Runs each scenario through the script's demo/render.sh (a throwaway HOME)
+ * and compares the uncoloured lines with model.ts. Needs bash and jq.
  */
 
 import { execFileSync } from "node:child_process";
@@ -37,7 +35,6 @@ const limits = (five, fiveLeft, wk, wkLeft) => ({
 const limit = (five, fiveLeft, wk = 20, wkLeft = 400000) =>
   quiet(limits(five, fiveLeft, wk, wkLeft));
 
-// The figures' own presets go first: they are what the post shows.
 const scenarios = {
   calm,
   heating,

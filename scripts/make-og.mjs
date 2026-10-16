@@ -1,40 +1,10 @@
 /**
  * Social card. Run: `pnpm run og`
  *
- * Renders public/og/home.jpg at 1200x630 — the size every platform crops from.
- *
- * JPEG, not PNG. The card is a smooth gradient, which is the worst case for
- * PNG's lossless compression: the first version came out at 882 kB. The same
- * image as JPEG is an order of magnitude smaller with no visible difference,
- * and a social preview that a scraper has to fetch before it can render the
- * card is exactly where size matters.
- *
- * ---------------------------------------------------------------------------
- * WHY THIS EXISTS AT ALL
- *
- * Without it the site emits `twitter:card: summary` and no og:image, so a link
- * shared to LinkedIn, X or Slack renders as a bare text row. That is the single
- * most-seen surface of a portfolio that people share, and it was blank.
- *
- * WHY NOT REFERENCE ONE THAT DOES NOT EXIST
- *
- * `src/content/seo.ts` deliberately emits no image tags when `profile.ogImage`
- * is empty, because a referenced-but-404 og:image renders an EMPTY card, which
- * is worse than none — the platform reserves the space and shows nothing. So
- * this script has to run and the file has to be committed before ogImage is set.
- *
- * WHY HEADLESS CHROME
- *
- * Same reason as the icons: no SVG or image CLI is assumed present, and adding
- * one as a dependency needs review under the repo's dependency policy. Chrome
- * is already here, and it renders the exact CSS the site uses — the gradient
- * and the grain are the same declarations, not an approximation of them.
- *
- * Fonts are read from public/fonts and inlined, not named by family. A
- * headless Chrome has no idea what "Hanken Grotesk" is; without the @font-face
- * it silently falls back to Helvetica and the card is off-brand in a way that
- * is easy to miss.
- * ---------------------------------------------------------------------------
+ * Renders public/og/home.jpg at 1200x630, the size platforms crop from. JPEG,
+ * because a smooth gradient is PNG's worst case and scrapers fetch the card
+ * before they render it. Commit the file before setting `ogImage`: a missing
+ * og:image renders an empty card.
  */
 
 import { execFileSync } from "node:child_process";
@@ -95,11 +65,8 @@ for (const f of [sans, mono]) {
   }
 }
 
-/*
- * Fonts inlined as data URIs. file:// + @font-face with a relative path is
- * blocked by Chrome's local-file CORS rules, and the failure is silent — the
- * card renders in Helvetica and looks almost right.
- */
+// Data URIs: Chrome's local-file CORS rules block a file:// @font-face, and
+// silently, so the card renders in Helvetica and looks almost right.
 const dataUri = (f) =>
   `data:font/woff2;base64,${readFileSync(join(fontDir, f)).toString("base64")}`;
 
@@ -193,15 +160,14 @@ execFileSync(
 );
 
 const png = readFileSync(OUT_PNG);
-// PNG dimensions live at bytes 16-24, big-endian. Check before converting, so a
-// wrong-sized render fails here rather than shipping a cropped card.
+// PNG width and height: big-endian, at bytes 16 and 20.
 const w = png.readUInt32BE(16);
 const h = png.readUInt32BE(20);
 if (w !== 1200 || h !== 630) {
   throw new Error(`Rendered ${w}x${h}, expected 1200x630.`);
 }
 
-// macOS `sips`, so no image library is needed — same reasoning as make-icons.
+// macOS `sips`, so no image library is needed.
 execFileSync(
   "sips",
   ["-s", "format", "jpeg", "-s", "formatOptions", "82", OUT_PNG, "--out", OUT],
@@ -211,7 +177,7 @@ rmSync(OUT_PNG, { force: true });
 rmSync(htmlPath, { force: true });
 
 const jpg = readFileSync(OUT);
-// JPEG must start with the SOI marker, or sips wrote something unexpected.
+// A JPEG starts with the SOI marker.
 if (jpg[0] !== 0xff || jpg[1] !== 0xd8) {
   throw new Error("Output is not a JPEG.");
 }

@@ -1,60 +1,16 @@
 /**
  * Lighthouse audit. Run: `pnpm run audit`
  *
- * Runs Lighthouse against the LIVE site and saves the four category scores to
- * tmp/audit.json (gitignored). They are for our own sanity, not for display:
- * the site no longer publishes them. Pass --local to measure a freshly built
- * ./dist instead.
+ * Runs Lighthouse `RUNS` times against the live site and writes the median
+ * category scores to tmp/audit.json (gitignored). Performance moves with CPU
+ * load on the measuring machine, so one run says little.
  *
- * ---------------------------------------------------------------------------
- * WHY IT RUNS THREE TIMES AND TAKES THE MEDIAN
+ *   --local   measure ./dist instead, for before/after on an unpushed change
+ *   --check   assert FLOOR and write nothing
  *
- * Performance is not a stable measurement. Three consecutive runs against the
- * same deployed commit returned 99, 100 and 98 — the metric moves with CPU
- * contention on the measuring machine, not with the site. Publishing a single
- * run means publishing whichever number happened to come up, and re-running
- * looks like the site is flapping when it is the harness.
- *
- * Median of three, not mean: a mean lets one bad outlier drag the published
- * figure, whereas a median ignores it. The correctness categories
- * (accessibility, best practices, SEO) do not vary at all, but they go through
- * the same path so there is one code path rather than two.
- *
- * A median alone is not enough; the spread guard below says why.
- * ---------------------------------------------------------------------------
- *
- * ---------------------------------------------------------------------------
- * WHY LOCAL LIGHTHOUSE AND NOT THE PAGESPEED INSIGHTS API
- *
- * PSI is free of charge but NOT free of a key: the keyless quota is literally
- * zero. Verified 2026-08-23 -- an unauthenticated call returns HTTP 429 with
- * `"quota_limit_value": "0"`. So "live" scores would need a Google Cloud API
- * key, a Worker to hold it, and caching to stop visitors burning the quota.
- *
- * Lighthouse is the same engine PSI runs server-side, so running it here
- * needs no key, no endpoint, no quota, and gives nothing to spam. The trade is
- * that these are lab numbers from whatever machine ran them, which is why the
- * output records the commit and date rather than claiming to be live.
- *
- * WHY IT MEASURES PRODUCTION AND NOT ./dist BY DEFAULT
- *
- * It used to serve dist with `python3 -m http.server` and measure that. That
- * server sends no compression and no cache headers, so Lighthouse charged the
- * site for both: it reported 87-93 with "est. savings 248 KiB" from caching
- * alone. Cloudflare serves the same bytes with brotli (28.8 kB of HTML becomes
- * 7.6 kB) and honours public/_headers, and the real score is 95 on mobile and
- * 100 on desktop.
- *
- * So the local harness was not a pessimistic approximation, it was measuring a
- * different server. Publishing that number would have understated the site by
- * several points and sent someone optimising the wrong thing. --local stays
- * available for before/after comparison on an unpushed change, but it prints a
- * warning, because its absolute numbers are not comparable to production.
- *
- * CI runs Lighthouse, but as a REGRESSION GATE (see ci.yml): it fails
- * the build if any category drops below the threshold, without writing
- * anything.
- * ---------------------------------------------------------------------------
+ * Local Lighthouse, not the PageSpeed Insights API: PSI's keyless quota is
+ * zero (verified 2026-08-23: HTTP 429, `"quota_limit_value": "0"`), so it
+ * would need an API key and somewhere to hold it.
  */
 
 import { execFileSync, spawn } from "node:child_process";
@@ -67,28 +23,18 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 8175;
 const OUT = join(ROOT, "tmp", "audit.json");
 
-/** Categories in the order Chrome's own report shows them. */
 const CATEGORIES = ["performance", "accessibility", "best-practices", "seo"];
 
-/**
- * `--check` mode: assert and exit non-zero, write nothing. This is what CI
- * runs, so a regression fails a pull request instead of quietly shipping.
- *
- * CI runs `--check --local`, because it must gate the build it just produced
- * rather than whatever is currently deployed. That means the performance floor
- * has to absorb BOTH runner noise and the missing compression and cache headers
- * of the local server — locally the same build measures 87-93 where production
- * measures 95. Hence 80, which still catches a real regression while never
- * flapping. A gate that flaps gets disabled, and then it protects nothing.
- *
- * The other three are absolutes: they measure correctness, not speed, so there
- * is no harness variance to allow for.
- */
 const CHECK = process.argv.includes("--check");
 /** Odd, so the median is an actual observation rather than an interpolation. */
 const RUNS = 3;
 const LOCAL = process.argv.includes("--local");
 const PROD_URL = "https://amannambisan.com/";
+/**
+ * Performance allows for `--check --local`: runner noise, plus the local
+ * server's missing compression and caching. The rest measure correctness,
+ * which doesn't vary.
+ */
 const FLOOR = {
   performance: 80,
   accessibility: 100,
@@ -107,10 +53,7 @@ const commit = (() => {
   }
 })();
 
-/*
- * Only started for --local. python3's http.server has no compression and no
- * cache headers, which is exactly why it is not the default -- see the header.
- */
+// No compression or cache headers, which is why --local isn't the default.
 const server = LOCAL
   ? spawn(
       "python3",
@@ -119,7 +62,6 @@ const server = LOCAL
     )
   : null;
 
-/** Poll until the server answers, rather than sleeping a guessed interval. */
 async function waitForServer(url, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -152,8 +94,7 @@ async function main() {
   });
 
   try {
-    // Mobile is Lighthouse's default and the harsher of the two, so it is the
-    // honest figure to publish.
+    // Mobile: Lighthouse's default, and the harsher form factor.
     const opts = { port: chrome.port, output: "json", logLevel: "error" };
 
     const runs = [];
@@ -205,42 +146,22 @@ async function main() {
     }
 
     const payload = {
-      // Everything needed to say WHEN and WHAT was measured, so the numbers
-      // are never mistaken for live telemetry.
       measuredAt: lhr.fetchTime.slice(0, 10),
-      // The commit is the local HEAD. When measuring production this is only
-      // accurate if HEAD is what is actually deployed, which is why the audit
-      // is refreshed right after a push, not before.
+      // Local HEAD, so it names production only once HEAD is deployed: run
+      // this after a push.
       commit,
       target: LOCAL ? "local" : "production",
       lighthouseVersion: lhr.lighthouseVersion,
       formFactor: lhr.configSettings.formFactor,
-      // Recorded so the number is traceable to how it was obtained.
       runs: RUNS,
       scores,
     };
 
     /*
-     * Refuse to publish an unstable measurement.
-     *
-     * A median of three cancels ONE bad run. It cannot rescue a set where
-     * every run is depressed, and it happily reports a confident-looking
-     * number from a set like 100 / 95 / 95 — which is what a loaded machine
-     * produces. Two medians taken minutes apart on the same deployed commit
-     * gave 98 and 95 while a single quiet run gave 100, with load average
-     * sitting at 13-20 throughout.
-     *
-     * The header above already says the metric "moves with CPU contention on
-     * the measuring machine, not with the site". This is that sentence made
-     * executable: if the runs disagree by more than SPREAD_LIMIT, the sample
-     * is measuring the machine, not the site.
-     *
-     * 3 points, because a 1-2 point wobble is normal at the rounding boundary
-     * (FCP and Speed Index both sit near 0.99 here, so the category legitimately
-     * rounds between 99 and 100), while 5 is the signature of contention.
-     *
-     * Deliberately NOT applied in --check mode: CI gates on a floor, and a
-     * noisy sample that still clears the floor is not a reason to fail a build.
+     * A median of three cancels one bad run, not a set where every run is
+     * depressed. Runs that disagree by more than SPREAD_LIMIT measured the
+     * machine, so nothing is written. 1-2 points is normal rounding wobble.
+     * Not applied with --check, which gates on FLOOR alone.
      */
     const SPREAD_LIMIT = 3;
     const unstable = CATEGORIES.filter((k) => spread[k] > SPREAD_LIMIT);
@@ -273,10 +194,6 @@ async function main() {
       const noise = spread[k] > 0 ? `  ±${spread[k]}` : "";
       console.log(`  ${k.padEnd(15)} ${String(v).padStart(3)}  ${bar}${noise}`);
     }
-    // Only claim the write when one happened. This line used to print
-    // unconditionally, so a refused run still ended by saying it had written
-    // the file — the exact kind of confident-but-wrong output this script's
-    // guards exist to prevent.
     if (!LOCAL && !unstable.length) {
       console.log(`\nwrote tmp/audit.json (commit ${commit})`);
     }
