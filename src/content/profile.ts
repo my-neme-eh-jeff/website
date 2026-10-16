@@ -20,7 +20,7 @@ export const profile = {
   headline: "Platform Engineer",
 
   /** The first line the shell prints. */
-  motd: "I build infrastructure, and a small box on my desk will tell you about it.",
+  motd: "I build infrastructure, and a small box on my desk will tell you about me.",
 
   bio: "I work on internal platform and infrastructure at Atlan — Kubernetes, Terraform, Crossplane, Temporal — making provisioning reliable enough that nobody has to think about it. Lately most of my time goes to agentic tooling: MCP servers, upgrade agents, and the plumbing that lets a model touch production safely. Outside work I build MLOps systems, like a GPU-aware autoscaler for vLLM and a training loop that promotes its own models.",
 
