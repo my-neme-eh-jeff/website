@@ -692,6 +692,66 @@
   color: var(--sem-accent);
 }
 
+/*
+ * The site header: layout.tsx's headroom handler sets the attributes. Its
+ * ground hangs below it, so pinning it never moves the page.
+ */
+[data-site-header] {
+  transition: translate 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+[data-site-header]::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 -0.75rem;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background: var(--sem-bg);
+  border-bottom: 1px solid var(--sem-line);
+  transition: opacity 150ms ease;
+}
+[data-site-header][data-pinned]::before {
+  opacity: 1;
+}
+[data-site-header][data-hidden]:not(
+    :focus-within,
+    :has([data-choice-panel]:not([hidden]))
+  ) {
+  translate: 0 calc(-100% - 1rem);
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+}
+.site-crumb {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 200ms ease,
+    visibility 200ms;
+}
+[data-past-title] .site-crumb {
+  visibility: visible;
+  opacity: 1;
+}
+/* On a phone the post's title needs GitHub's room. */
+@media (width < 40rem) {
+  .site-crumb {
+    display: none;
+  }
+  [data-past-title] .site-crumb {
+    display: block;
+  }
+  [data-past-title] .site-link {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-site-header],
+  [data-site-header]::before,
+  .site-crumb {
+    transition: none !important;
+  }
+}
+
 /* Column sizes, read by .site-column and by the wash mask above. */
 :root {
   --column-wide: 46rem;

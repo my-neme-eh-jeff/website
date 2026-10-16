@@ -1,4 +1,10 @@
-import { component$, Slot, sync$, useOnDocument } from "@qwik.dev/core";
+import {
+  component$,
+  Slot,
+  sync$,
+  useOnDocument,
+  useOnWindow,
+} from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
 import { Link, useDocumentHead, useLocation } from "@qwik.dev/router";
 import {
@@ -7,7 +13,7 @@ import {
   SAY_HI,
 } from "~/components/circled-choice/circled-choice";
 import { ThemePicker } from "~/components/theme-picker";
-import { profile } from "~/content/profile";
+import { posts, profile } from "~/content/profile";
 
 /** Routes set `column`; this layout's `head` sets the rest. */
 export type Frontmatter = {
@@ -87,6 +93,11 @@ export default component$(() => {
 
       const w = window as unknown as { hashScroll?: number };
       cancelAnimationFrame(w.hashScroll ?? 0);
+      // The header stays hidden until the page settles: see headroom.
+      const root = document.documentElement;
+      root.setAttribute("data-hash-scroll", "");
+      const settle = () =>
+        setTimeout(() => root.removeAttribute("data-hash-scroll"), 120);
       const from = scrollY;
       const margin = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
       const to = Math.max(
@@ -99,6 +110,7 @@ export default component$(() => {
       const span = to - from;
       if (matchMedia("(prefers-reduced-motion: reduce)").matches || !span) {
         scrollTo(0, to);
+        settle();
         return;
       }
       // y for x on the curve; x(t) only rises, so bisection finds t.
@@ -118,6 +130,7 @@ export default component$(() => {
         cancelAnimationFrame(w.hashScroll ?? 0);
         removeEventListener("wheel", stop);
         removeEventListener("touchstart", stop);
+        settle();
       };
       // A wheel or a touch takes the page back from the animation.
       addEventListener("wheel", stop, { passive: true });
@@ -133,6 +146,38 @@ export default component$(() => {
       w.hashScroll = requestAnimationFrame(step);
     }),
   );
+
+  /*
+   * The header sticks, hides while the page scrolls down and comes back on
+   * any scroll up. Off the top it gets a ground and a rule (data-pinned); on
+   * a post it names the post once the title has gone by (data-past-title).
+   */
+  const headroom = sync$(() => {
+    const h = document.querySelector<HTMLElement>("[data-site-header]");
+    if (!h) return;
+    const w = window as unknown as { headroomY?: number };
+    const y = Math.max(0, scrollY);
+    const dy = y - (w.headroomY ?? y);
+    w.headroomY = y;
+    const atTop = y < h.offsetHeight;
+    h.toggleAttribute("data-pinned", !atTop);
+    if (atTop) h.removeAttribute("data-hidden");
+    else if (
+      dy > 2 ||
+      document.documentElement.hasAttribute("data-hash-scroll")
+    )
+      h.setAttribute("data-hidden", "");
+    else if (dy < -2) h.removeAttribute("data-hidden");
+    const title = document.querySelector(".post > h1");
+    h.toggleAttribute(
+      "data-past-title",
+      !!title && title.getBoundingClientRect().bottom < h.offsetHeight,
+    );
+  });
+  useOnWindow("scroll", headroom, { passive: true });
+  useOnDocument("qinit", headroom);
+
+  const post = posts.find((p) => loc.url.pathname === `/blog/${p.slug}/`);
 
   /*
    * A box that scrolls sideways needs a tab stop, or a keyboard cannot scroll
@@ -177,10 +222,13 @@ export default component$(() => {
         data-column={doc.frontmatter.column}
       >
         {/* Above main, so the "say hi" panel is not drawn under the shell. */}
-        <header class="relative z-10 flex flex-wrap items-baseline gap-x-5 gap-y-2 pt-6 lg:pt-8">
+        <header
+          data-site-header
+          class="sticky top-0 z-10 flex items-baseline gap-x-5 pt-6 lg:pt-8"
+        >
           <nav
             aria-label="Site"
-            class="flex flex-wrap items-baseline gap-x-5 gap-y-2 text-sm"
+            class="flex min-w-0 items-baseline gap-x-5 text-sm"
             style={{ viewTransitionName: "site-nav" }}
           >
             {pages.map((p) => (
@@ -201,10 +249,22 @@ export default component$(() => {
                 {p.label}
               </Link>
             ))}
+            {post && (
+              <a
+                href="#main"
+                class="site-crumb text-muted hover:text-text -ml-3 min-w-0 truncate no-underline"
+              >
+                <span aria-hidden="true" class="mr-2">
+                  /
+                </span>
+                {post.title}
+                <span class="sr-only">, back to the top</span>
+              </a>
+            )}
           </nav>
 
           <span
-            class="ml-auto flex flex-wrap items-baseline gap-x-3 gap-y-2"
+            class="ml-auto flex shrink-0 items-baseline gap-x-3"
             style={{ viewTransitionName: "site-links" }}
           >
             {profile.links
@@ -214,7 +274,7 @@ export default component$(() => {
                   key={l.href}
                   href={l.href}
                   rel="me noopener"
-                  class="text-muted hover:text-text text-sm no-underline"
+                  class="site-link text-muted hover:text-text text-sm no-underline"
                 >
                   {ICONS[l.label] && (
                     <svg
@@ -236,7 +296,7 @@ export default component$(() => {
         <main
           id="main"
           tabIndex={-1}
-          class="min-w-0 flex-1 pt-14 pb-16 focus:outline-none in-data-[column=stage]:pt-10"
+          class="min-w-0 flex-1 scroll-mt-24 pt-14 pb-16 focus:outline-none in-data-[column=stage]:pt-10"
           style={{
             viewTransitionName: doc.frontmatter.transitionName,
             viewTransitionClass: "page",
