@@ -199,7 +199,7 @@ export function linkify(text: string, allow?: ReadonlySet<string>): Segment[] {
 }
 
 const LINK_CLASS =
-  "text-accent underline decoration-dotted underline-offset-2 hover:decoration-solid";
+  "text-accent underline decoration-current underline-offset-2";
 
 function links(text: string, allow?: ReadonlySet<string>) {
   return linkify(text, allow).map((seg, j) =>
@@ -888,7 +888,7 @@ export const Terminal = component$(() => {
                 href={profile.employer.url}
                 target="_blank"
                 rel="noopener"
-                class="underline decoration-current decoration-dotted underline-offset-2 hover:decoration-solid"
+                class="underline decoration-current underline-offset-2"
               >
                 {profile.employer.name}
                 <span class="sr-only"> (opens in a new tab)</span>

@@ -202,9 +202,6 @@
     text-decoration-color: var(--sem-line);
     text-underline-offset: 3px;
   }
-  a:hover {
-    text-decoration-color: var(--sem-accent);
-  }
 
   /* --sem-accent, because verify holds that colour to 3:1 (WCAG 1.4.11). */
   :focus-visible {
@@ -860,10 +857,6 @@
       transparent
     );
     text-decoration-thickness: 1px;
-  }
-  .post :where(p, li) > a:hover {
-    text-decoration-color: var(--sem-accent);
-    text-decoration-thickness: 2px;
   }
   .post :where(:not(pre) > code) {
     border: 1px solid var(--sem-line);
