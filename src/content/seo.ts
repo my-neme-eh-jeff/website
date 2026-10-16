@@ -1,23 +1,15 @@
 /**
- * SEO and structured-data helpers.
- *
- * Everything here reads from profile.ts, so the markup can never describe
- * content the page doesn't render — which is both a correctness property and
- * what keeps it inside Google's structured-data policy.
+ * Meta tags and JSON-LD, built only from profile.ts: Google's structured-data
+ * policy forbids describing content the page doesn't show.
  */
 import { profile, posts, type Post } from "./profile";
 
-/**
- * NOTE: also hardcoded as `origin` in adapters/ssg/vite.config.ts. The adapter
- * config runs in Vite's context and importing app source into it adds coupling
- * for one string, so the duplication is deliberate. Change both together.
- */
+/** Also `origin` in adapters/ssg/vite.config.ts. Change both together. */
 export const ORIGIN = "https://amannambisan.com";
 
 /**
- * JSON.stringify does not escape "<". A value containing "</script>" would
- * otherwise break out of the ld+json tag. Escaping it as < is valid JSON
- * and inert HTML.
+ * JSON.stringify doesn't escape "<", so "</script>" in a value would end the
+ * ld+json tag. `\u003c` is valid JSON and inert HTML.
  */
 export const ld = (obj: unknown) =>
   JSON.stringify(obj).replace(/</g, "\\u003c");
@@ -33,12 +25,9 @@ type SeoInput = {
 };
 
 /**
- * Shared meta for every route.
- *
- * Deliberately does NOT emit a canonical link: src/root.tsx always emits one,
- * and DocumentHead `links` are additive, so a route-level canonical produces a
- * second conflicting tag rather than overriding the first. Google distrusts
- * both when they conflict.
+ * Emits no canonical: root.tsx writes one on every page, and a route's
+ * DocumentHead `links` add to the page rather than replace (@qwik.dev/router
+ * rc.3, 2026-10-16), so a second would conflict.
  */
 export function seoMeta({
   path,
@@ -64,8 +53,6 @@ export function seoMeta({
     { name: "twitter:description", content: description },
   ];
 
-  // Only emit image tags when an image actually exists. A referenced-but-404
-  // og:image renders a blank card, which is worse than emitting none at all.
   const src = image?.src ?? profile.ogImage;
   if (src) {
     const img = `${ORIGIN}${src}`;
@@ -88,7 +75,6 @@ export function seoMeta({
   return meta;
 }
 
-/** The Person node. Referenced by @id everywhere else so it can't drift. */
 const personNode = () => ({
   "@type": "Person",
   "@id": `${ORIGIN}/#person`,
@@ -116,19 +102,10 @@ const personNode = () => ({
         },
       }
     : {}),
-  // sameAs is the entity-reconciliation hook. Only ever list profiles that are
-  // verified yours and currently live -- a stale or wrong URL actively harms
-  // disambiguation rather than helping it.
   ...(profile.sameAs.length ? { sameAs: [...profile.sameAs] } : {}),
 });
 
-/**
- * Homepage graph: WebSite + ProfilePage + Person in a single @graph.
- *
- * One @graph rather than three scripts, because disconnected top-level nodes
- * are the most common validation complaint -- Google can't relate them.
- * No SearchAction / sitelinks searchbox: Google retired that in Oct 2024.
- */
+/** No SearchAction: Google retired the sitelinks search box in late 2024. */
 export const homeGraph = () => ({
   "@context": "https://schema.org",
   "@graph": [
@@ -145,7 +122,7 @@ export const homeGraph = () => ({
       "@id": `${ORIGIN}/#profilepage`,
       url: `${ORIGIN}/`,
       isPartOf: { "@id": `${ORIGIN}/#website` },
-      // mainEntity is REQUIRED on ProfilePage.
+      // Google requires mainEntity on a ProfilePage.
       mainEntity: { "@id": `${ORIGIN}/#person` },
       inLanguage: "en",
     },
@@ -153,7 +130,6 @@ export const homeGraph = () => ({
   ],
 });
 
-/** Privacy page. A plain WebPage on the site, nothing to disambiguate. */
 export const privacyGraph = () => ({
   "@context": "https://schema.org",
   "@graph": [
@@ -182,10 +158,6 @@ const postingNode = (p: Post) => ({
   inLanguage: "en",
 });
 
-/**
- * Blog index. BlogPosting entries are what tie writing to the person entity --
- * the pathway for "engineers who write about X" queries.
- */
 export const blogGraph = () => ({
   "@context": "https://schema.org",
   "@graph": [
@@ -204,9 +176,8 @@ export const blogGraph = () => ({
 });
 
 /**
- * Everything a post's `head` needs, from its entry in profile.ts. An MDX post
- * does `export const head = postHead("<slug>")`; an unknown slug fails the
- * build rather than shipping a page with no title.
+ * A post's `head`, from its entry in profile.ts: in the MDX,
+ * `export const head = postHead("<slug>")`. An unknown slug fails the build.
  */
 export function postHead(slug: string) {
   const p = posts.find((x) => x.slug === slug);

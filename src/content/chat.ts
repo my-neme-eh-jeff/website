@@ -8,14 +8,11 @@ import {
 } from "./profile";
 
 /**
- * What the shell's model is told, and which links it may print.
+ * What the shell's model is told, and which links it may print, both built
+ * from profile.ts at build time.
  *
- * Both are derived from profile.ts at build time, so the model cannot know
- * anything the pages do not say, and a profile edit reaches it on the next
- * deploy without anyone touching the machine it runs on.
- *
- * The prompt is identical on every request. That is what lets the inference
- * server reuse its cached prefix instead of re-reading the CV each time.
+ * The prompt is identical on every request, which lets the inference server
+ * reuse its cached prefix.
  */
 
 /** The Worker rejects a request past these; the shell trims to them first. */

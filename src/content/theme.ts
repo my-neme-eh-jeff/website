@@ -8,26 +8,18 @@ import {
 } from "./palettes";
 
 /**
- * Applies the visitor's saved palette before first paint, and is the one
- * place a palette is ever changed from.
+ * Applies the saved palette before first paint, and is the only place a
+ * palette is changed from. It runs inline in <head>, after the theme-color
+ * tags it rewrites. On <html> it sets `data-palette` (absent for the default),
+ * `data-mode` (absent for "auto") and `data-js`, which shows the footer picker.
  *
- * It runs inline in <head>, after the theme-color tags it rewrites, so a
- * returning visitor never sees the default flash first. It sets two attributes
- * on <html> that the token stylesheet keys on (`paletteCss`):
- *   - `data-palette`, absent for the default palette,
- *   - `data-mode`, absent for "follow the system".
- * and `data-js`, which shows the footer picker: without this script its
- * radios could change nothing.
- * Client-side navigation keeps <html>, so the attributes outlive it.
+ * Both pickers call `window.siteTheme`: the footer's from a sync$ handler,
+ * which can't import anything, and the shell's, which also calls `preview`.
+ * Every change fires `themechange` on document, with `preview: true` for a
+ * preview.
  *
- * Both controls call `window.siteTheme.set`: the footer picker from a sync$
- * handler, which is serialised into the HTML and so cannot import anything,
- * and the shell's `theme` picker, which also calls `preview` as the cursor
- * moves. Every change fires `themechange` on document, which the desk's WebGL
- * light listens for; a preview's carries `preview: true`.
- *
- * The stored name is checked against the palette list before it touches the
- * DOM, so a hand-edited value cannot reach a selector.
+ * A stored name is checked against the palette list before it touches the
+ * DOM, so a hand-edited value can't reach a selector.
  */
 
 export type SiteTheme = {
@@ -44,7 +36,6 @@ declare global {
   }
 }
 
-/** Each palette's page colour per mode it has, for the theme-color tags. */
 const GROUNDS = Object.fromEntries(
   PALETTES.map((p) => [
     p.id,

@@ -1,20 +1,12 @@
 /**
- * Cloudflare Web Analytics, loaded by us rather than injected at the edge.
+ * Cloudflare Web Analytics, loaded here because edge injection can't be opted
+ * out of. The beacon sets no cookies; the only stored value is the visitor's
+ * opt-out, set on /privacy/.
  *
- * Edge injection can't be opted out of: the tag is added to the HTML after it
- * leaves this build. Loading it here means every condition below is ours.
- * The beacon sets no cookies and uses no storage; the only thing this file
- * stores is the visitor's own opt-out, which `/privacy/` sets.
- *
- * It never loads when:
- *   - the visitor opted out on /privacy/ (localStorage `analytics:off` = "1"),
- *   - the browser sends Global Privacy Control or Do Not Track,
- *   - the visitor is in the EU/EEA, the UK or Switzerland, or the location is
- *     unknown. Location comes from Cloudflare's own `/cdn-cgi/trace` on this
- *     origin, so it fails closed anywhere that isn't Cloudflare (local dev,
- *     CI's Lighthouse run).
- * And it waits for the page's load event plus an idle slot, so it can't
- * delay rendering.
+ * It never loads after that opt-out, under Global Privacy Control or Do Not
+ * Track, or in the EU/EEA, the UK, Switzerland or an unknown location.
+ * Location comes from this origin's `/cdn-cgi/trace`, so off Cloudflare (local
+ * dev, CI) it fails closed. It waits for load plus an idle slot.
  */
 
 /** Public by design — the same value sits in the page of every site using it. */

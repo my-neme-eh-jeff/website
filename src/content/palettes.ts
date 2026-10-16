@@ -1,25 +1,17 @@
 /**
- * Every colour palette the site can wear, and the only place their values live.
+ * Every colour palette the site can wear. `paletteCss` is the token stylesheet
+ * root.tsx puts in <head>.
  *
- * From this file:
- *   - `paletteCss` is the token stylesheet `src/root.tsx` puts in <head>,
- *   - `themeScript` (src/content/theme.ts) applies a visitor's saved choice
- *     before first paint,
- *   - the footer picker and the shell's `theme` command list the palettes,
- *   - `pnpm run verify` checks every palette, in every mode it has, against
- *     the contrast bars, and that each value is six-digit hex.
+ * The six core tokens must be six-digit hex: the desk's WebGL light reads them
+ * back with parseInt. `pnpm run verify` checks that, and every mode's contrast.
  *
- * Six-digit hex is a hard requirement, not a style. `src/components/desk/light.ts`
- * reads the tokens back with parseInt to feed its shader, so `oklch()` or a
- * three-digit hex would draw the desk in black.
- *
- * This file is imported by verify straight into Node, so it imports nothing
- * and uses no TypeScript-only syntax beyond types.
+ * verify imports this file straight into Node, so it imports nothing and uses
+ * no TypeScript-only syntax beyond types.
  */
 
 export type Mode = "light" | "dark";
 
-/** Four field stops, opaque. `.field` in global.css applies each one's alpha. */
+/** Four opaque stops. `.field` in global.css applies each one's alpha. */
 export type FieldStops = readonly [string, string, string, string];
 
 export type Colours = {
@@ -29,7 +21,7 @@ export type Colours = {
   muted: string;
   accent: string;
   danger: string;
-  /** Hairlines and the dot grid. Derived from `text` when absent. */
+  /** Hairlines. Derived from `text` when absent. */
   line?: string;
   dot?: string;
   /**
@@ -42,19 +34,12 @@ export type Colours = {
 export type Palette = {
   id: string;
   name: string;
-  /** Where it comes from, in a few words. Shown in the picker and the shell. */
+  /** Where it comes from, in a few words. */
   from: string;
   light?: Colours;
   dark?: Colours;
 };
 
-/*
- * The original palette. Its contrast history is worth keeping: clay comes in
- * two strengths because #d97757 measured 2.99:1 on the light ground, which
- * failed the 3:1 focus-ring bar by a hair, so light uses #bd5334 (4.52:1). The
- * error red got the same treatment: #e0715c is 3.01:1 on the light ground,
- * #c4472c is 4.70:1.
- */
 const EMBER_PLUM_TEAL: readonly FieldStops[] = [
   ["#ff8a3d", "#d0341f", "oklch(52% 0.19 318)", "oklch(72% 0.15 78)"],
   [
@@ -79,9 +64,8 @@ export const PALETTES: readonly Palette[] = [
      * Matt DesLauriers' open conversion (approximate by its own account):
      * https://github.com/mattdesl/dictionary-of-colour-combinations
      *
-     * The light accent is Burnt Sienna rather than the Raw Sienna of the colour
-     * study: the accent is also hint and link text, and Raw Sienna is 3.31:1
-     * on the lemon page. Burnt Sienna is 4.52:1 on lemon and 5.13:1 on white.
+     * The light accent is Burnt Sienna, not the study's Raw Sienna, which is
+     * short of the 4.5:1 that link and hint text need on the lemon page.
      */
     id: "wada",
     name: "Wada",
@@ -161,9 +145,8 @@ export const PALETTES: readonly Palette[] = [
   {
     /*
      * rebelot's Neovim theme, after Hokusai's Great Wave. Only the dark "wave"
-     * variant ships: no red in Kanagawa reaches 4.5:1 for error text on the
-     * light "lotus" paper (the closest, #c34043, is 4.23:1). Muted is
-     * springViolet2 because the theme's comment grey is 2.88:1.
+     * variant: no Kanagawa red reaches 4.5:1 on the light "lotus" paper. Muted
+     * is springViolet2 because the theme's comment grey is too faint.
      * https://github.com/rebelot/kanagawa.nvim (lua/kanagawa/colors.lua)
      */
     id: "kanagawa",
@@ -181,12 +164,11 @@ export const PALETTES: readonly Palette[] = [
   },
   {
     /*
-     * Rob Pike's acme, the Plan 9 editor (USENIX, 1994). The source mixes pale
-     * yellow #ffffaa and pale blue-green #aaffff with white at 63/255, which
-     * is #ffffea for a window's body and #eaffff for its tag, the line where
-     * commands are typed. So the page is the body and the shell is the tag.
-     * The accent is the navy acme draws for a window with unsaved changes; the
-     * error is its execute-selection red; muted is rio's unfocused grey.
+     * Rob Pike's acme, the Plan 9 editor (USENIX, 1994). Its pale yellow and
+     * blue-green, mixed with white, give #ffffea for a window's body (the page)
+     * and #eaffff for its tag, where commands are typed (the shell). The accent
+     * is the navy of a window with unsaved changes, the error its
+     * execute-selection red, muted rio's unfocused grey.
      * https://github.com/9fans/plan9port (src/cmd/acme/acme.c, libdraw/allocimagemix.c)
      */
     id: "acme",
@@ -231,14 +213,12 @@ export const DEFAULT_PALETTE = "wada";
 export const MODES = ["auto", "light", "dark"] as const;
 export type ModeChoice = (typeof MODES)[number];
 
-/** localStorage keys, in the same style as `shell:muted` and `analytics:off`. */
+/** localStorage keys. */
 export const THEME_KEY = "theme:name";
 export const MODE_KEY = "theme:mode";
 
 export const modesOf = (p: Palette): Mode[] =>
   (["light", "dark"] as const).filter((m) => p[m]);
-
-/* --- the token stylesheet -------------------------------------------------- */
 
 const TOKENS = ["bg", "surface", "text", "muted", "accent", "danger"] as const;
 
@@ -257,7 +237,6 @@ const fieldVars = (c: Colours): string => {
 const block = (c: Colours, mode: Mode): string =>
   [
     ...TOKENS.map((t) => `--sem-${t}:${c[t]}`),
-    // Hairlines are the text colour, faint. Dark grounds need a touch more.
     `--sem-line:${c.line ?? `color-mix(in oklab,${c.text} ${mode === "light" ? 10 : 12}%,transparent)`}`,
     `--sem-dot:${c.dot ?? `color-mix(in oklab,${c.text} ${mode === "light" ? 9 : 7}%,transparent)`}`,
     fieldVars(c),
@@ -267,20 +246,10 @@ const block = (c: Colours, mode: Mode): string =>
 const swatch = (c: Colours) =>
   `--swatch-bg:${c.bg};--swatch-accent:${c.accent}`;
 
-/**
- * Selector shapes, in source order. Specificity decides most of it and source
- * order breaks the ties, so the default comes first:
- *
- *   default light   :root                                          (0,1,0)
- *   default dark    @media dark  :root:not([data-mode=light])      (0,2,0)
- *                   :root[data-mode=dark]                          (0,2,0)
- *   other, light    :root[data-palette=x]                          (0,2,0)
- *   other, dark     @media dark  :root[data-palette=x]:not(...)    (0,3,0)
- *                   :root[data-palette=x][data-mode=dark]          (0,3,0)
- *   one-mode only   :root[data-palette=x], whatever the mode       (0,2,0)
- *
- * A one-mode palette ties with the default's dark rules and wins on order,
- * which is why the default is emitted first.
+/*
+ * The default palette is emitted first: a one-mode palette's
+ * `:root[data-palette=x]` ties in specificity with the default's dark rules,
+ * and wins only by coming after them.
  */
 const DARK = "@media (prefers-color-scheme: dark)";
 

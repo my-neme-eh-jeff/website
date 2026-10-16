@@ -1,73 +1,37 @@
 /**
- * All site content lives here, deliberately.
+ * Every fact the pages render. The shell's model is told all of it too
+ * (chat.ts), so everything here is public, to crawlers included.
  *
- * Two reasons: (1) you edit facts in one file instead of hunting through JSX,
- * and (2) it keeps the escape hatch cheap — porting to another framework means
- * rewriting components, not re-entering content.
- *
- * ---------------------------------------------------------------------------
- * WHAT IS DELIBERATELY NOT HERE
- *
- * Drafted 2026-08-23 from Aman_Nambisan_Resume.pdf, and brought up to date
- * with a newer copy on 2026-10-14. The shell's model is told all of this too
- * (src/content/chat.ts), and anything in its prompt is a question away from
- * public. A resume goes to one recipient; this page goes to Google, GPTBot
- * and every scraper. Two classes of thing were dropped in the crossing, and
- * should stay dropped:
- *
- *   1. Phone number. Publishing it cannot be undone — it is cached and
- *      scraped within days. Email is here instead, which is revocable.
- *
- *   2. Employer internals. The resume cites a per-quarter Sev0 count, an
- *      enterprise customer count, a support-ticket automation percentage,
- *      monthly dollar savings, which model vendors an internal platform uses,
- *      the internal portal's user count, specific Argo CD, Helm and vCluster
- *      version numbers, and the kinds of cloud identifiers a support bot
- *      returns. Those describe Atlan's operational
- *      posture, not Aman's skill, and they read very differently on an
- *      indexed page than in a PDF. The bullets below keep the engineering and
- *      the order of magnitude, and drop the internal figures.
- *
- * Keep that line when editing: scale-class yes, internal metrics no.
- * ---------------------------------------------------------------------------
+ * Two things stay out. A phone number: once scraped it can't be taken back,
+ * where an email can be changed. And employer internals: incident, customer
+ * and user counts, automation rates, savings, which model vendors a platform
+ * uses, tool version numbers, cloud identifiers. Keep the engineering and the
+ * order of magnitude; drop the internal figures.
  */
 
 export const profile = {
   name: "Aman Nambisan",
 
-  /**
-   * The meta description, og:description and schema.org Person.description.
-   * 120–160 chars is the useful range.
-   */
+  /** The meta description, og:description and Person.description. 120–160 chars. */
   tagline:
     "Platform engineer at Atlan. I build the Kubernetes and Terraform machinery that provisions enterprise infrastructure, and the agents that operate it.",
 
   /** The home page's h1, in the shell's title bar: "<name>, <headline> at <employer>". */
   headline: "Platform Engineer",
 
-  /** The first line the shell prints. It folds away at the first command. */
+  /** The first line the shell prints. */
   motd: "I build infrastructure, and a small box on my desk will tell you about it.",
 
   bio: "I work on internal platform and infrastructure at Atlan — Kubernetes, Terraform, Crossplane, Temporal — making provisioning reliable enough that nobody has to think about it. Lately most of my time goes to agentic tooling: MCP servers, upgrade agents, and the plumbing that lets a model touch production safely. Outside work I build MLOps systems, like a GPU-aware autoscaler for vLLM and a training loop that promotes its own models.",
 
   /**
-   * ONE canonical title, identical on LinkedIn and GitHub — variation is what
-   * creates entity ambiguity. This is the literal title from the resume.
-   * If LinkedIn says something else, change LinkedIn or change this, not both
-   * differently.
+   * Word for word the title on LinkedIn and GitHub: a different title on each
+   * blurs whether they are one person.
    */
   jobTitle: "Software Engineer II",
 
-  /**
-   * Current base. Note the GitHub profile still says Mumbai, which is now
-   * stale — worth fixing there so the two agree.
-   */
   city: "Bangalore",
 
-  /**
-   * Public contact. This WILL be scraped; that is the accepted trade for being
-   * reachable by a recruiter. Set to "" to stop emitting it entirely.
-   */
   email: "aman2003nambisan@gmail.com",
 
   employer: { name: "Atlan", url: "https://atlan.com" } as {
@@ -76,9 +40,8 @@ export const profile = {
   } | null,
 
   /**
-   * Feeds Person.knowsAbout. Only things actually shipped with: every
-   * technology here is also in `skills` below ("Model Context Protocol" is
-   * its MCP), plus the two fields they add up to.
+   * Person.knowsAbout. Each technology is also in `skills` ("Model Context
+   * Protocol" is its MCP), plus the two fields they add up to.
    */
   knowsAbout: [
     "Kubernetes",
@@ -102,10 +65,7 @@ export const profile = {
     "MLOps",
   ] as string[],
 
-  /**
-   * The header's links; LinkedIn and X sit under its "say hi" (SAY_HI in
-   * src/components/circled-choice/). Every entry carries rel="me" (RelMeAuth).
-   */
+  /** The header's links, rendered rel="me". verify checks each is in sameAs. */
   links: [
     { label: "GitHub", href: "https://github.com/my-neme-eh-jeff" },
     { label: "LinkedIn", href: "https://www.linkedin.com/in/amannambisan/" },
@@ -113,15 +73,9 @@ export const profile = {
   ],
 
   /**
-   * schema.org sameAs — the machine-readable "these accounts are one person"
-   * assertion, and the best entity-disambiguation tool available.
-   *
-   * Only URLs confirmed yours and live. Trailing slashes match each site's own
-   * canonical form so none of these redirects.
-   *
-   * These pay off only when RECIPROCAL: each profile must link back to
-   * amannambisan.com, or the claim is unverifiable and weighted far lower.
-   * That is a manual step on each site.
+   * Accounts confirmed live and yours, in each site's canonical form so none
+   * redirects. Each must link back to amannambisan.com, by hand on each site,
+   * or the claim counts for little. A wrong URL here does harm.
    */
   sameAs: [
     "https://github.com/my-neme-eh-jeff",
@@ -130,19 +84,14 @@ export const profile = {
   ] as string[],
 
   /**
-   * 1200x630 social card, generated by `pnpm run og` from this same content.
-   *
-   * Empty would emit no og:image tags at all, which is deliberate in seo.ts: a
-   * referenced-but-404 image renders an EMPTY card, and the platform reserves
-   * the space for it. So the file must exist before this is set —
-   * `pnpm run verify` asserts exactly that.
+   * 1200x630, made by `pnpm run og`. Empty emits no og:image tags, which beats
+   * a 404's blank card; `pnpm run verify` checks the file exists.
    */
   ogImage: "/og/home.jpg",
 };
 
 export type Role = {
   company: string;
-  /** Omit when the company is the same as the entry above — renders grouped. */
   companyUrl?: string;
   title: string;
   period: string;
@@ -151,10 +100,7 @@ export type Role = {
   points: string[];
 };
 
-/**
- * Reverse-chronological. Sanitized per the header note — the engineering and
- * the order of magnitude stay, the internal metrics do not.
- */
+/** Most recent first. */
 export const roles: Role[] = [
   {
     company: "Atlan",
@@ -205,57 +151,33 @@ export const roles: Role[] = [
 ];
 
 export type Project = {
-  /** Short, lowercase, kebab — used as the `k get projects` NAME column. */
+  /** Lowercase kebab-case: the NAME column of `k get projects`. */
   slug: string;
   title: string;
-  /** One line. Shown by `k get projects`. */
+  /** One line. */
   summary: string;
-  /** Longer prose. Shown by `k describe project <slug>`. */
   detail: string[];
   stack: string[];
   repo?: string;
   /**
-   * ASCII architecture, shown by `k describe project <slug>`.
-   *
-   * Only where there is a real mechanism worth drawing — a diagram that just
-   * restates the summary in boxes is noise. Keep every line under 64 columns
-   * so it never wraps in the shell, and remember it is rendered aria-hidden:
-   * the `detail` prose has to carry the same information for a screen reader.
+   * Only for a mechanism worth drawing. Lines under 64 columns, so none wraps
+   * in the shell. Screen readers get one labelled image, so `detail` must say
+   * the same thing in prose.
    */
   diagram?: string[];
   /**
-   * Off-repo material: a demo video, a write-up, a talk, a LinkedIn post.
-   *
-   * A repo link asks a visitor to read source before they know whether they
-   * care. A 3-minute demo asks for 3 minutes and shows the thing working, so
-   * where one exists it is usually the better first click — which is why these
-   * render alongside the title rather than buried in the detail prose.
-   *
-   * Every entry must be a URL that actually resolves. This is the one place on
-   * the site where a plausible-looking guess would be published as fact.
+   * Demos, write-ups, talks. Each must be a URL that resolves: a plausible
+   * guess here is published as fact.
    */
   links?: { label: string; href: string }[];
   /**
-   * ISO date of last meaningful work. DATA ONLY — deliberately not rendered.
-   *
-   * It used to appear in three places: an AGE column in `k get projects`, an
-   * `Updated:` field in `k describe`, and a `2024-10` stamp beside every
-   * project on the home page. All three are gone, because a date is not
-   * neutral information on a portfolio — a visitor who reads "2y" decides the
-   * work is stale and never opens it, which is the opposite of what a project
-   * list is for. The work did not get worse; the label just told them to skip.
-   *
-   * Kept as a field because it is true and useful for ordering. If it is ever
-   * rendered again, that should be a deliberate decision rather than a default.
+   * ISO date of the last meaningful work. Not rendered, on purpose: a visitor
+   * who reads an age decides the work is stale and skips it.
    */
   updated: string;
 };
 
-/**
- * Descriptions are drawn from each repository's own README, not invented.
- * NOTE: none of these repos has a GitHub description set, which makes them
- * invisible in GitHub search — worth fixing at the source.
- */
+/** Described from each repository's own README, not invented. */
 export const projects: Project[] = [
   {
     slug: "gpu-autoscaler",
@@ -314,8 +236,7 @@ export const projects: Project[] = [
       "        └──────────────▶ back to the top, no human in the loop",
     ],
     repo: "https://github.com/my-neme-eh-jeff/deploying-autoresearch",
-    // "Autoresearch with reliable CI CD on the cloud" — 3:30, linked from the
-    // repo's own README. Verified to resolve.
+    // "Autoresearch with reliable CI CD on the cloud", linked from the README.
     links: [{ label: "Demo video", href: "https://youtu.be/O0uPoLO-2JM" }],
     updated: "2026-05-28",
   },
@@ -363,7 +284,6 @@ export const education = {
   note: "GPA 8.13 / 10",
 };
 
-/** Grouped, so each set renders under its own heading rather than as one long list. */
 export const skills: Array<{ group: string; items: string[] }> = [
   {
     group: "Applied AI",
@@ -425,30 +345,24 @@ export type Post = {
   /** Must match the route folder: src/routes/blog/(post)/<slug>/index.mdx */
   slug: string;
   title: string;
-  /** ISO date. Rendered, and sent as datePublished. */
+  /** ISO date, also the datePublished. */
   date: string;
   /** Becomes the meta description, so 120–160 characters. */
   summary: string;
-  /** Where the code the post is about lives, if anywhere. */
   repo?: string;
   /**
-   * Shown as "N min read": prose at 238 words a minute (Brysbaert, 2019, for
-   * non-fiction) plus 12 s a figure, rounded. Code blocks are not counted.
-   * `pnpm run verify` recounts the built post and fails with the right number.
+   * Prose at 238 words a minute (Brysbaert, 2019, non-fiction) plus 12 s a
+   * figure, rounded; code isn't counted. `pnpm run verify` recounts it.
    */
   minutes: number;
   /**
-   * 1200x630 JPEG under public/: the card image on /blog/ and the post's
-   * og:image. `pnpm run verify` checks the size and that it exists.
+   * 1200x630 JPEG under public/, for /blog/ and the post's og:image.
+   * `pnpm run verify` checks the size and that it exists.
    */
   cover?: { src: string; alt: string };
 };
 
-/**
- * Real posts only. A placeholder that used to live here was indexed --
- * "Placeholder post — Replace or delete" was live on /blog/ for every crawler
- * and recruiter -- so the index renders an empty state rather than filler.
- */
+/** Real posts only. With none, /blog/ shows an empty state; filler gets indexed. */
 export const posts: Post[] = [
   {
     slug: "claude-code-status-line",
