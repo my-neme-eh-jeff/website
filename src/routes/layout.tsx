@@ -3,6 +3,7 @@ import type { DocumentHead } from "@qwik.dev/router";
 import { Link, useDocumentHead, useLocation } from "@qwik.dev/router";
 import {
   CircledChoice,
+  ICONS,
   SAY_HI,
 } from "~/components/circled-choice/circled-choice";
 import { ThemePicker } from "~/components/theme-picker";
@@ -192,13 +193,18 @@ export default component$(() => {
                   rel="me noopener"
                   class="text-muted hover:text-text text-sm no-underline"
                 >
+                  {/* Inline, not flex, so the row still aligns on the text. */}
+                  {ICONS[l.label] && (
+                    <svg
+                      viewBox="0 0 24 24"
+                      class="mr-1.5 inline-block size-3.5 align-[-0.15em]"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path d={ICONS[l.label]} />
+                    </svg>
+                  )}
                   {l.label}
-                  <span
-                    class="text-accent font-arrow ml-1 text-xs"
-                    aria-hidden="true"
-                  >
-                    ↗
-                  </span>
                 </a>
               ))}
             <CircledChoice label="say hi" />

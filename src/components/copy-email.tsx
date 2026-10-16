@@ -1,27 +1,11 @@
 import { component$, useSignal, $ } from "@qwik.dev/core";
 
 /**
- * The email address, shown and copyable.
+ * "Email" in the "say hi" menu: a mailto: link, and a button that copies the
+ * address. A mailto: link does nothing on a machine with no mail handler,
+ * which is most Macs whose owner reads mail in a browser, so the copy button
+ * is the way through there. The link's title shows the address on hover.
  *
- * ---------------------------------------------------------------------------
- * WHY THIS EXISTS: A mailto: LINK IS NOT A CONTACT METHOD
- *
- * The hero used to offer a pill reading "Email" whose whole behaviour was a
- * `mailto:` href. On any machine with no default mail handler registered —
- * which is most macOS installs where the owner reads mail in a browser, plus
- * plenty of Windows ones — clicking that does NOTHING. No error, no new tab,
- * no clue. The address was never on the page in a form anyone could read or
- * copy, so a visitor whose click silently failed had no way to reach me at
- * all, and no reason to think anything had gone wrong.
- *
- * So the address is now the link text: even when the click is a no-op, the
- * thing you needed is on screen and selectable. The copy button is the
- * convenience on top, not the fix.
- *
- * No new exposure. The address was already in the href, in the HTML, on every
- * page load — this only makes it legible to humans as well as to scrapers.
- *
- * ---------------------------------------------------------------------------
  * The button relabels itself rather than showing a toast, like the shell's
  * mute button: the control that was activated is the thing that reports
  * back, so focus never moves and a screen reader hears the change on the
@@ -49,8 +33,9 @@ export const CopyEmail = component$<{ email: string }>(({ email }) => {
   return (
     <span class="flex items-center gap-1">
       <a
-        class="hover:bg-line text-text flex flex-1 items-center gap-2.5 rounded-lg px-2.5 py-1.5 font-mono text-[0.8125rem] no-underline"
+        class="hover:bg-line text-text flex flex-1 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm no-underline"
         href={`mailto:${email}`}
+        title={email}
       >
         <svg
           viewBox="0 0 16 16"
@@ -64,7 +49,7 @@ export const CopyEmail = component$<{ email: string }>(({ email }) => {
           <rect x="1.5" y="3.5" width="13" height="9" rx="1.5" />
           <path d="M2 4.5l6 4.5 6-4.5" />
         </svg>
-        {email}
+        Email
       </a>
       <button
         type="button"
