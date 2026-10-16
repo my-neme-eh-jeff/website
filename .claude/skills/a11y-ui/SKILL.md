@@ -22,8 +22,9 @@ writing a new doc.
 
 | Check                                                                     | Bar                  |
 | ------------------------------------------------------------------------- | -------------------- |
-| `--sem-text` / `--sem-muted` on `--sem-bg`, both themes                   | ≥ 4.5:1 (WCAG 1.4.3) |
-| `--sem-accent` on `--sem-bg`, both themes                                 | ≥ 3:1 (WCAG 1.4.11)  |
+| `--sem-text` / `--sem-muted` on `--sem-bg`, every palette and mode        | ≥ 4.5:1 (WCAG 1.4.3) |
+| `--sem-accent` on `--sem-bg`, every palette and mode (the focus ring)     | ≥ 3:1 (WCAG 1.4.11)  |
+| `--sem-accent` / `--sem-danger` on `--sem-bg` and `--sem-surface` (text)  | ≥ 4.5:1 (WCAG 1.4.3) |
 | Skip link present, first focusable, target exists and has `tabindex="-1"` | per page             |
 | `lang` attribute, exactly one `<h1>`, no skipped heading levels           | per page             |
 | Every `<img>` has `alt`; every `<svg>` is named or `aria-hidden`          | per page             |
@@ -34,17 +35,18 @@ Change the accent and you have changed a conformance property.
 
 ## The colour trap this repo already fell into
 
-`--clay` (`#d97757`) is **2.99:1 on `--paper`**. It shipped with a comment
-claiming it "clears 4.5:1 on both grounds", which was simply wrong. The light
-theme's focus ring was non-conformant by 0.01 — invisible to inspection,
-obvious to arithmetic.
+The original palette's clay (`#d97757`) is **2.99:1 on its light page
+(`#fbfaf8`)**. It shipped with a comment claiming it "clears 4.5:1 on both
+grounds", which was simply wrong. The light theme's focus ring was
+non-conformant by 0.01 — invisible to inspection, obvious to arithmetic.
 
-Hence two clays: `--clay` for dark grounds (6.05:1 on `#12110d`) and
-`--clay-deep` (`#bd5334`, 4.52:1 on `--paper`) for light. **Never assume a
-brand colour works on both themes.** Compute it:
+Hence two clays in the `paper` palette: `#d97757` on dark grounds (6.05:1 on
+`#12110d`) and `#bd5334` (4.52:1) on light. The same arithmetic moved Wada's
+light accent from Raw Sienna (3.31:1) to Burnt Sienna (4.52:1). **Never assume
+a colour works on both grounds.** Compute it:
 
 ```bash
-pnpm run verify   # recomputes from src/global.css on every build
+pnpm run verify   # recomputes every palette in src/content/palettes.ts
 ```
 
 ## What automation here does NOT check
@@ -106,24 +108,22 @@ Do not read a green `verify` as "accessible". These need a person:
   `motion-reduce:` in components. The global rule only shortens durations, so
   anything that must not animate at all needs the variant too.
 
-## Verifying a theme branch deterministically
+## Verifying a palette or mode deterministically
 
 Chrome's `--force-light-mode` does **not** override `prefers-color-scheme`, and
-a headless screenshot inherits the OS theme -- which silently tested dark twice.
-Disable the dark branch instead, in whichever file actually carries the CSS (see
-the delivery note above).
+a headless screenshot inherits the OS theme -- which once silently tested dark
+twice. Pick the palette and mode explicitly instead:
 
-**Serve each variant from its own document root.** Asset paths are absolute
-(`/assets/...`), so serving `light/` and `dark/` as subdirectories of one root
-makes both pages request `/assets/...` from that shared root. They load no CSS
-at all and render identically -- which looks exactly like "the theme swap is
-broken".
+- **In a browser:** `siteTheme.set("acme")`, `siteTheme.set(undefined, "dark")`
+  and `siteTheme.set("wada", "auto")` in the console. The choice is saved, so
+  reloads and other tabs follow.
+- **Headless (puppeteer):** emulate the media feature, or seed the stored
+  choice before the page's own script runs:
 
-    rm -rf /tmp/t && mkdir -p /tmp/t/light && cp -r dist/* /tmp/t/light/
-    # Linked mode: patch the stylesheet. Inlined mode: patch index.html.
-    python3 -c "import glob; f=glob.glob('/tmp/t/light/assets/*-style.css')[0]; \
-      s=open(f).read(); open(f,'w').write(s.replace('@media(prefers-color-scheme:dark){','@media not all{'))"
-    cd /tmp/t/light && python3 -m http.server 8082   # own root, not a subpath
+      await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "dark" }]);
+      await page.evaluateOnNewDocument(() => localStorage.setItem("theme:name", "kanagawa"));
+
+The keys and the selectors they drive are in `src/content/palettes.ts`.
 
 ## Precedence when guidance conflicts
 

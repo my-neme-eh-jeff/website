@@ -65,10 +65,17 @@
  */
 
 import { execFileSync, spawn } from "node:child_process";
-import { cpSync, rmSync, appendFileSync, readdirSync } from "node:fs";
+import {
+  cpSync,
+  rmSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
+import { DEFAULT_PALETTE, PALETTES } from "../src/content/palettes.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = join(ROOT, "dist");
@@ -192,14 +199,16 @@ async function groundUnderText(sharp, png) {
 }
 
 /**
- * Dark-theme text colours, from the `prefers-color-scheme: dark` block in
- * src/global.css: --sem-text is --cream, --sem-muted is #a4a096. Headless
- * Chrome follows the host OS appearance, so if this machine is in light mode
- * the contrast columns below are measured against the wrong pair — the numbers
- * are still a reading of the ground, but the ratios will not mean much.
+ * The default palette's dark text colours, from src/content/palettes.ts.
+ * Headless Chrome follows the host OS appearance, so if this machine is in
+ * light mode the contrast columns below are measured against the wrong pair —
+ * the numbers are still a reading of the ground, but the ratios will not mean
+ * much.
  */
-const TEXT_ON_DARK = [0xf2, 0xf0, 0xe9];
-const MUTED_ON_DARK = [0xa4, 0xa0, 0x96];
+const darkOf = PALETTES.find((x) => x.id === DEFAULT_PALETTE).dark;
+const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+const TEXT_ON_DARK = rgbOf(darkOf.text);
+const MUTED_ON_DARK = rgbOf(darkOf.muted);
 
 const lin = (c) => {
   c /= 255;
@@ -226,6 +235,22 @@ const freezeAt = (pct) =>
   `animation-timeline:auto!important;animation-delay:${-(10 * pct) / 100}s!important;` +
   `animation-play-state:paused!important}\n`;
 
+/*
+ * Overrides go into the measured page itself. The stylesheet is inlined into
+ * each page's HTML (see the a11y-ui skill; `grep -c 'rel="stylesheet"'
+ * dist/index.html` prints 0), so appending to dist/assets/*-style.css, which
+ * this script used to do, changed nothing and both renders came out the same.
+ */
+function inject(dir, cssText) {
+  const page = join(dir, "index.html");
+  const html = readFileSync(page, "utf8");
+  if (!html.includes("</head>")) throw new Error(`no </head> in ${page}`);
+  writeFileSync(
+    page,
+    html.replace("</head>", `<style>${cssText}</style></head>`),
+  );
+}
+
 async function main() {
   const sharp = (await import(findSharp())).default;
 
@@ -233,14 +258,7 @@ async function main() {
   // own dithering from the result.
   rmSync(work, { recursive: true, force: true });
   cpSync(DIST, work, { recursive: true });
-  const css = readdirSync(join(work, "assets")).find((f) =>
-    f.endsWith("style.css"),
-  );
-  if (!css) throw new Error("no stylesheet in dist/assets");
-  appendFileSync(
-    join(work, "assets", css),
-    "\n.grain-page{display:none!important}\n",
-  );
+  inject(work, ".grain-page{display:none!important}");
 
   const on = spawn(
     "python3",
@@ -303,7 +321,7 @@ async function main() {
       const dir = join(work, `f${pct}`);
       rmSync(dir, { recursive: true, force: true });
       cpSync(DIST, dir, { recursive: true });
-      appendFileSync(join(dir, "assets", css), freezeAt(pct));
+      inject(dir, freezeAt(pct));
       const srv = spawn(
         "python3",
         ["-m", "http.server", String(PORT + 2), "--directory", dir],

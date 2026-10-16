@@ -1,6 +1,7 @@
 import { component$, Slot, sync$, useOnDocument } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
 import { Link, useDocumentHead, useLocation } from "@qwik.dev/router";
+import { ThemePicker } from "~/components/theme-picker";
 import { profile } from "~/content/profile";
 
 /**
@@ -209,19 +210,20 @@ export default component$(() => {
         </main>
 
         <footer class="text-muted border-line/50 border-t py-8 text-xs">
-          <div class="flex flex-wrap gap-4">
+          <div class="flex flex-wrap items-center gap-4">
             <span>
               © {buildYear} {profile.name}
             </span>
-            <Link href="/privacy/" class="ml-auto">
-              Privacy
-            </Link>
-            <a href="https://github.com/my-neme-eh-jeff/website">
-              Source
-              <span class="text-accent font-arrow ml-1" aria-hidden="true">
-                ↗
-              </span>
-            </a>
+            <div class="ml-auto flex flex-wrap items-center gap-4">
+              <ThemePicker />
+              <Link href="/privacy/">Privacy</Link>
+              <a href="https://github.com/my-neme-eh-jeff/website">
+                Source
+                <span class="text-accent font-arrow ml-1" aria-hidden="true">
+                  ↗
+                </span>
+              </a>
+            </div>
           </div>
         </footer>
 

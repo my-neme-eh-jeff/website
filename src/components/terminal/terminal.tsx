@@ -567,7 +567,7 @@ export const Terminal = component$(() => {
         await saveHistory(cmdHistory.past);
       }
 
-      const result = run(raw, shellColumns());
+      const result = run(raw, shellColumns(), window.siteTheme?.get());
       if (result === ASK) {
         /*
          * NOT awaited. Qwik runs an element's handlers one at a time, so
@@ -589,6 +589,9 @@ export const Terminal = component$(() => {
       }
 
       lines.items = [...lines.items, ...result];
+      // `theme` and `k config use-context` say what to change; this changes it.
+      const colours = result.find((l) => l.theme)?.theme;
+      if (colours) window.siteTheme?.set(colours.name, colours.mode);
       stickToBottom(renderGroups(lines.items).length);
       await feedback(result.some((l) => l.kind === "err") ? "error" : "enter");
     } finally {

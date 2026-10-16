@@ -6,22 +6,24 @@
  *
  * Colours are defined twice on purpose.
  *
- *   1. `:root` holds `--sem-*` semantic values, and a prefers-color-scheme
- *      block swaps them. This is the only place a theme decision is made.
- *   2. `@theme inline` maps those into Tailwind's colour namespace, so
+ *   1. `--sem-*` holds the semantic values. They are not in this file: every
+ *      palette, with its light and dark values, lives in
+ *      src/content/palettes.ts, which generates the token stylesheet that
+ *      src/root.tsx puts in <head>. That is the only place a colour decision
+ *      is made.
+ *   2. `@theme inline` below maps those into Tailwind's colour namespace, so
  *      `bg-surface` / `text-muted` / `border-line` exist as utilities.
  *
  * `inline` is load-bearing. A plain `@theme` would emit `--color-surface:
  * var(--sem-surface)` and utilities would resolve it once at :root, freezing
- * the light value. `inline` substitutes the var() into each utility instead,
- * so the media query below still wins. Verify after any change to this block:
+ * the first value. `inline` substitutes the var() into each utility instead,
+ * so the palette and mode selectors still win. Verify after any change here:
  *
- *   npm run build
+ *   pnpm run build
  *   grep -o 'var(--sem-bg)' dist/assets/*.css | head    # must be non-empty
  *
- * The payoff: almost no `dark:` variants anywhere in the markup. One swap
- * here retints the whole site, which is what keeps a visual-direction change
- * cheap.
+ * The payoff: almost no `dark:` variants anywhere in the markup. One swap of
+ * `data-palette` / `data-mode` on <html> retints the whole site.
  * ---------------------------------------------------------------------------
  */
 
@@ -112,49 +114,12 @@
     U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-/* --- Raw palette. Never referenced by components; only by the swap below. -- */
+/*
+ * --- Fixed colours ----------------------------------------------------------
+ * Only colours that must NOT change with the palette live here. Everything a
+ * palette changes is in src/content/palettes.ts.
+ */
 :root {
-  --paper: #fbfaf8;
-  --ink: #16150f;
-  --cream: #f2f0e9;
-
-  /*
-   * Clay exists in two values because one could not serve both grounds.
-   *
-   * --clay (#d97757) measures 2.99:1 on --paper. The focus ring below is drawn
-   * in the accent, and WCAG 1.4.11 requires 3:1 for the visual indication of a
-   * component state -- so on the light theme the ring was non-conformant, by a
-   * hair, and keyboard users are exactly who cannot afford that.
-   *
-   * --clay-deep (#bd5334) is 4.52:1 on --paper, clearing both the 3:1 focus
-   * bar and the 4.5:1 body-text bar. Visible consequence: the mesh figure and
-   * caret read as a deeper terracotta in light mode. That is the cost of the
-   * fix, and it sits better on cream anyway.
-   *
-   * Recompute after any change: npm run verify
-   */
-  --clay: #d97757;
-  --clay-deep: #bd5334;
-
-  /*
-   * Error red, and it needed exactly the same two-value treatment as clay,
-   * for exactly the same reason.
-   *
-   * --ember (#e0715c) shipped hardcoded in the shell as BOTH the error-line
-   * colour and the close lamp. It is 6.01:1 on the dark ground and fine there,
-   * but 3.01:1 on --paper and 3.14:1 on the light --sem-surface -- so light
-   * mode was rendering error text at well under the 4.5:1 body-text bar. The
-   * hex being inline in the component is what kept it out of `verify`'s reach.
-   *
-   * --ember-deep (#c4472c) is 4.70:1 on --paper and 4.90:1 on #ffffff, so it
-   * clears both light grounds. It also sits a hair hotter than --clay-deep,
-   * which is what keeps an error line distinguishable from the accent.
-   *
-   * Recompute after any change: pnpm run verify
-   */
-  --ember: #e0715c;
-  --ember-deep: #c4472c;
-
   /*
    * The terminal the blog's status-line figures draw. It does not
    * theme-swap: the script's colours were picked for a dark ground, and
@@ -170,34 +135,8 @@
   --term-cyan: #5fb8c4;
   --term-yellow: #e2b86b;
 
-  /* Light is the base. */
-  --sem-bg: var(--paper);
-  --sem-surface: #ffffff;
-  --sem-text: var(--ink);
-  --sem-muted: #5f5d55;
-  --sem-line: rgb(0 0 0 / 0.1);
-  --sem-accent: var(--clay-deep);
-  --sem-danger: var(--ember-deep);
-  /* Dots sit below --sem-line: a grid at border strength reads as a table. */
-  --sem-dot: rgb(0 0 0 / 0.09);
-
-  /* Tells the UA to render form controls and scrollbars for both themes. */
-  color-scheme: light dark;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --sem-bg: #12110d;
-    --sem-surface: #1b1a15;
-    --sem-text: var(--cream);
-    --sem-muted: #a4a096;
-    --sem-line: rgb(255 255 255 / 0.12);
-    --sem-dot: rgb(255 255 255 / 0.07);
-    /* Dark can use the brighter clay: #d97757 is 6.05:1 on #12110d. */
-    --sem-accent: var(--clay);
-    /* Likewise the brighter ember: 6.01:1 on #12110d, 5.55:1 on the surface. */
-    --sem-danger: var(--ember);
-  }
+  /* The border of the blog's cover prints. Photo paper, whatever the palette. */
+  --print-paper: #fbfaf8;
 }
 
 @theme inline {
@@ -318,6 +257,12 @@
  * ---------------------------------------------------------------------------
  * THE SCROLL MORPH
  *
+ * The stop colours belong to the active palette: `field` in
+ * src/content/palettes.ts sets --field-{1-4}{a,b,c} for the top, middle and
+ * bottom of the page. Paper is the palette the notes below were measured on
+ * (ember -> plum -> teal). Most palettes hold one set of stops, so only the
+ * blobs drift, and a palette with no field leaves the page flat.
+ *
  * Every gradient stop, and the position of two of the four blobs, is a
  * REGISTERED custom property. The registration is the whole trick: an
  * unregistered `--x` is only a string, so animating it snaps between values.
@@ -416,12 +361,12 @@
    * These repeat the 0% keyframe, and `pnpm run verify` compares them. Not a
    * duplicate: they are what renders when the animation never runs — no
    * scroll-timeline support, or reduced motion — so this is the static
-   * fallback, and it is the palette the page has always opened on.
+   * fallback: the top of the page's stops, held.
    */
-  --f1: color-mix(in oklab, #ff8a3d 30%, transparent);
-  --f2: color-mix(in oklab, #d0341f 24%, transparent);
-  --f3: color-mix(in oklab, oklch(52% 0.19 318) 22%, transparent);
-  --f4: color-mix(in oklab, oklch(72% 0.15 78) 16%, transparent);
+  --f1: color-mix(in oklab, var(--field-1a) 30%, transparent);
+  --f2: color-mix(in oklab, var(--field-2a) 24%, transparent);
+  --f3: color-mix(in oklab, var(--field-3a) 22%, transparent);
+  --f4: color-mix(in oklab, var(--field-4a) 16%, transparent);
   --fx1: 8%;
   --fy1: 12%;
   --fx3: 4%;
@@ -501,16 +446,15 @@
  * keyframe makes the midpoint a palette somebody chose, so the journey reads
  * as ember -> plum -> teal rather than as ember dissolving into teal.
  *
- * 55% rather than 50%: the ember palette is the site's identity and the first
- * section is the one every visitor sees, so it holds a little longer than an
- * even split would give it.
+ * 55% rather than 50%: the first section is the one every visitor sees, so
+ * its stops hold a little longer than an even split would give them.
  */
 @keyframes field-shift {
   0% {
-    --f1: color-mix(in oklab, #ff8a3d 30%, transparent);
-    --f2: color-mix(in oklab, #d0341f 24%, transparent);
-    --f3: color-mix(in oklab, oklch(52% 0.19 318) 22%, transparent);
-    --f4: color-mix(in oklab, oklch(72% 0.15 78) 16%, transparent);
+    --f1: color-mix(in oklab, var(--field-1a) 30%, transparent);
+    --f2: color-mix(in oklab, var(--field-2a) 24%, transparent);
+    --f3: color-mix(in oklab, var(--field-3a) 22%, transparent);
+    --f4: color-mix(in oklab, var(--field-4a) 16%, transparent);
     --fx1: 8%;
     --fy1: 12%;
     --fx3: 4%;
@@ -518,20 +462,20 @@
     transform: none;
   }
   55% {
-    --f1: color-mix(in oklab, oklch(75% 0.14 330) 30%, transparent);
-    --f2: color-mix(in oklab, oklch(56.5% 0.17 300) 24%, transparent);
-    --f3: color-mix(in oklab, oklch(52% 0.17 285) 22%, transparent);
-    --f4: color-mix(in oklab, oklch(72% 0.12 345) 16%, transparent);
+    --f1: color-mix(in oklab, var(--field-1b) 30%, transparent);
+    --f2: color-mix(in oklab, var(--field-2b) 24%, transparent);
+    --f3: color-mix(in oklab, var(--field-3b) 22%, transparent);
+    --f4: color-mix(in oklab, var(--field-4b) 16%, transparent);
     --fx1: 18%;
     --fy1: 30%;
     --fx3: 13%;
     --fy3: 78%;
   }
   100% {
-    --f1: color-mix(in oklab, oklch(75% 0.13 205) 30%, transparent);
-    --f2: color-mix(in oklab, oklch(56.5% 0.13 225) 24%, transparent);
-    --f3: color-mix(in oklab, oklch(52% 0.12 195) 22%, transparent);
-    --f4: color-mix(in oklab, oklch(72% 0.1 200) 16%, transparent);
+    --f1: color-mix(in oklab, var(--field-1c) 30%, transparent);
+    --f2: color-mix(in oklab, var(--field-2c) 24%, transparent);
+    --f3: color-mix(in oklab, var(--field-3c) 22%, transparent);
+    --f4: color-mix(in oklab, var(--field-4c) 16%, transparent);
     --fx1: 6%;
     --fy1: 46%;
     --fx3: 22%;
@@ -1141,7 +1085,7 @@
     width: 11rem;
     margin-top: 1.25rem;
     border-radius: 0.75rem;
-    background: var(--paper);
+    background: var(--print-paper);
     padding: 0.3rem;
     transform: rotate(-3deg);
     box-shadow: 0 10px 24px -12px rgb(0 0 0 / 0.5);
@@ -1213,6 +1157,89 @@
     .covers > li:is(:hover, :has(:focus-visible)) > .backdrop {
       transform: perspective(40rem) rotateX(3deg) rotateY(-10deg) rotateZ(-1deg)
         scale(0.94);
+    }
+  }
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * The colour picker in the footer (src/components/theme-picker.tsx).
+ *
+ * Hidden until src/content/theme.ts has run and set `data-js`: without
+ * JavaScript its radios could change nothing.
+ *
+ * The panel is a native popover. It opens above its button where CSS anchor
+ * positioning exists, in the bottom-right corner where it does not, and as a
+ * sheet along the bottom edge on a phone.
+ * ---------------------------------------------------------------------------
+ */
+@layer components {
+  .theme-picker {
+    display: none;
+  }
+  :root[data-js] .theme-picker {
+    display: contents;
+  }
+
+  /* One palette at a glance: its page, with its accent in the middle. */
+  .swatch {
+    position: relative;
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 9999px;
+    background: var(--swatch-bg);
+    box-shadow: inset 0 0 0 1px var(--sem-line);
+  }
+  .swatch::after {
+    content: "";
+    position: absolute;
+    inset: 32%;
+    border-radius: inherit;
+    background: var(--swatch-accent);
+  }
+  .swatch-current {
+    --swatch-bg: var(--sem-bg);
+    --swatch-accent: var(--sem-accent);
+  }
+
+  .theme-panel {
+    margin: 0;
+    inset: auto max(1rem, env(safe-area-inset-right, 0px))
+      max(1rem, env(safe-area-inset-bottom, 0px)) auto;
+    width: min(24rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    overflow: auto;
+    border: 1px solid var(--sem-line);
+    border-radius: 0.875rem;
+    padding: 1rem 1.125rem;
+    background: var(--sem-surface);
+    color: var(--sem-text);
+    box-shadow: 0 24px 70px -24px rgb(0 0 0 / 0.55);
+  }
+  @supports (position-area: top) {
+    .theme-button {
+      anchor-name: --theme-button;
+    }
+    .theme-panel {
+      position-anchor: --theme-button;
+      position-area: top span-left;
+      position-try-fallbacks: flip-block;
+      inset: auto;
+      margin-block: 0.5rem;
+    }
+  }
+  @media (width < 40rem) {
+    .theme-panel {
+      position-area: none;
+      inset: auto 0 0 0;
+      width: auto;
+      max-height: 85dvh;
+      margin: 0;
+      border-radius: 1rem 1rem 0 0;
+      padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+      padding-inline: max(1.125rem, env(safe-area-inset-left, 0px))
+        max(1.125rem, env(safe-area-inset-right, 0px));
     }
   }
 }

@@ -16,6 +16,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { grad } from "../src/components/blog/statusline/model.ts";
 import { GRIDS, rasterize } from "../src/components/desk/desk.ts";
+import { DEFAULT_PALETTE, PALETTES, modesOf } from "../src/content/palettes.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const p = (...s) => join(ROOT, ...s);
@@ -387,24 +388,19 @@ warn("no placeholder text in the homepage's indexable meta tags", () => {
   );
 });
 
-check("theme-color meta matches --sem-bg in both themes", () => {
+check("theme-color meta matches the default palette in both modes", () => {
   /*
-   * These live in two places that cannot reference each other: a meta tag
-   * cannot read a CSS variable. A mismatch renders as a visible band of the
-   * wrong colour between the browser chrome and the page, so it is asserted
-   * rather than trusted to a comment.
+   * A meta tag cannot read a CSS variable, so these are rendered from
+   * src/content/palettes.ts by root.tsx. They are what a visitor without
+   * JavaScript gets; the theme script rewrites them for anyone else. A
+   * mismatch renders as a visible band of the wrong colour between the
+   * browser chrome and the page.
    */
-  const css = read("src", "global.css");
-  const light = css.match(/--sem-bg:\s*var\(--paper\)/)
-    ? css.match(/--paper:\s*(#[0-9a-f]{3,8})/i)?.[1]
-    : css.match(/--sem-bg:\s*(#[0-9a-f]{3,8})/i)?.[1];
-  const darkBlock = css.slice(css.indexOf("prefers-color-scheme: dark"));
-  const dark = darkBlock.match(/--sem-bg:\s*(#[0-9a-f]{3,8})/i)?.[1];
+  const def = PALETTES.find((x) => x.id === DEFAULT_PALETTE);
   assert(
-    light && dark,
-    "Could not read --sem-bg for both themes from global.css.",
+    def?.light && def?.dark,
+    `DEFAULT_PALETTE "${DEFAULT_PALETTE}" must exist and have both modes.`,
   );
-
   const html = read("dist", "index.html");
   const tags = [
     ...html.matchAll(
@@ -416,15 +412,52 @@ check("theme-color meta matches --sem-bg in both themes", () => {
     tags.length === 2,
     `Expected 2 theme-color tags (light + dark), found ${tags.length}.`,
   );
+  for (const mode of ["light", "dark"]) {
+    assert(
+      got[mode] === def[mode].bg.toLowerCase(),
+      `theme-color ${mode} is ${got[mode]}, but ${def.id}'s ${mode} page is ${def[mode].bg}.`,
+    );
+  }
+  return `${def.light.bg} / ${def.dark.bg}`;
+});
+
+check("every page applies the saved palette before first paint", () => {
+  /*
+   * The theme script must sit in <head>, after the two theme-color tags it
+   * rewrites, or a returning visitor sees the default flash first. Its
+   * palette list is the allowlist a stored name is checked against, so it
+   * has to be exactly the palettes there are.
+   */
+  const ids = PALETTES.map((x) => x.id);
   assert(
-    got.light === light.toLowerCase(),
-    `theme-color light is ${got.light}, but --sem-bg light is ${light}.`,
+    ids.every((id) => /^[a-z]+$/.test(id)) && new Set(ids).size === ids.length,
+    `Palette ids must be unique lowercase words; they end up in selectors: ${ids.join(", ")}`,
   );
-  assert(
-    got.dark === dark.toLowerCase(),
-    `theme-color dark is ${got.dark}, but --sem-bg dark is ${dark}.`,
-  );
-  return `${light} / ${dark}`;
+  for (const page of [...PAGES, "404.html"]) {
+    const html = read("dist", page);
+    const head = html.slice(0, html.indexOf("</head>"));
+    const at = head.indexOf("window.siteTheme=");
+    assert(at !== -1, `${page}: no theme script in <head>.`);
+    const lastMeta = head.lastIndexOf('name="theme-color"');
+    assert(
+      lastMeta !== -1 && lastMeta < at,
+      `${page}: the theme script runs before the theme-color tags it rewrites.`,
+    );
+    const list = head
+      .slice(Math.max(0, at - 2000), at)
+      .match(/var P=(\{.*?\}\}),D=/s);
+    assert(list, `${page}: could not read the theme script's palette list.`);
+    const listed = Object.keys(JSON.parse(list[1]));
+    assert(
+      listed.join() === ids.join(),
+      `${page}: the theme script allows ${listed.join(", ")}, palettes.ts has ${ids.join(", ")}.`,
+    );
+    assert(
+      head.includes(":root{--sem-bg:"),
+      `${page}: the palette token stylesheet is missing from <head>.`,
+    );
+  }
+  return `${ids.length} palettes, default ${DEFAULT_PALETTE}`;
 });
 
 check("every hero link is also asserted in sameAs", () => {
@@ -780,120 +813,98 @@ const contrast = (a, b) => {
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 };
 
-check("colour contrast meets WCAG AA in both themes", () => {
-  const css = read("src", "global.css");
-  const val = (name, scope = css) =>
-    scope.match(new RegExp(`--${name}:\\s*(#[0-9a-f]{3,8})`, "i"))?.[1];
-  const raw = {
-    paper: val("paper"),
-    ink: val("ink"),
-    cream: val("cream"),
-    clay: val("clay"),
-    "clay-deep": val("clay-deep"),
-    ember: val("ember"),
-    "ember-deep": val("ember-deep"),
-  };
-  const darkBlock = css.slice(css.indexOf("prefers-color-scheme: dark"));
-
-  // Resolve one indirection: `--sem-x: var(--raw)` or a literal.
-  const sem = (name, scope) => {
-    const m = scope.match(new RegExp(`--sem-${name}:\\s*([^;]+);`));
-    assert(m, `--sem-${name} not found`);
-    const v = m[1].trim();
-    const ref = v.match(/^var\(--([a-z-]+)\)$/);
-    return ref ? raw[ref[1]] : v;
-  };
-
-  const themes = {
-    light: {
-      bg: sem("bg", css),
-      surface: sem("surface", css),
-      text: sem("text", css),
-      muted: sem("muted", css),
-      accent: sem("accent", css),
-      danger: sem("danger", css),
-    },
-    dark: {
-      bg: sem("bg", darkBlock),
-      surface: sem("surface", darkBlock),
-      text: sem("text", darkBlock),
-      muted: sem("muted", darkBlock),
-      accent: sem("accent", darkBlock),
-      danger: sem("danger", darkBlock),
-    },
-  };
-
+check("every palette meets WCAG AA in every mode it has", () => {
   const results = [];
-  for (const [name, t] of Object.entries(themes)) {
-    // 4.5:1 -- WCAG 1.4.3, normal-size body text.
-    for (const key of ["text", "muted"]) {
-      const r = contrast(t[key], t.bg);
-      assert(
-        r >= 4.5,
-        `${name}: --sem-${key} on --sem-bg is ${r.toFixed(2)}:1, needs 4.5:1 ` +
-          `(WCAG 1.4.3, body text).`,
-      );
-    }
-    /*
-     * 3:1 -- WCAG 1.4.11. The :focus-visible ring is drawn in --sem-accent,
-     * and focus is a component STATE, so its indicator is non-text contrast
-     * rather than decoration. This is the check that caught #d97757 at
-     * 2.99:1 on the light ground.
-     */
-    const focus = contrast(t.accent, t.bg);
-    assert(
-      focus >= 3,
-      `${name}: --sem-accent on --sem-bg is ${focus.toFixed(2)}:1, needs 3:1. ` +
-        `The focus ring uses this colour, so keyboard focus would be ` +
-        `non-conformant (WCAG 1.4.11).`,
-    );
-    /*
-     * 4.5:1 -- WCAG 1.4.3 again, but measured against BOTH grounds, because
-     * --sem-danger is only ever used for text and that text is only ever on
-     * the glass panel, not on the page. The panel is --sem-surface under a
-     * backdrop-filter, so --sem-bg alone would have cleared a colour that is
-     * still unreadable where it actually renders.
-     *
-     * This is the check that would have caught #e0715c, which sat inline in
-     * terminal.tsx as `text-[#e0715c]` at 3.01:1 on --paper and 3.14:1 on the
-     * light surface. A hex in a component is invisible to this file, which is
-     * the whole argument for the no-raw-colours invariant.
-     */
-    for (const ground of ["bg", "surface"]) {
-      const r = contrast(t.danger, t[ground]);
-      assert(
-        r >= 4.5,
-        `${name}: --sem-danger on --sem-${ground} is ${r.toFixed(2)}:1, ` +
-          `needs 4.5:1 (WCAG 1.4.3). The shell renders error lines in this ` +
-          `colour on the glass panel.`,
-      );
-    }
+  for (const palette of PALETTES) {
+    for (const mode of modesOf(palette)) {
+      const t = palette[mode];
+      const name = `${palette.id} ${mode}`;
+      /*
+       * Six-digit hex, every core token. src/components/desk/light.ts reads
+       * them back with parseInt for its shader, and the arithmetic below
+       * needs a colour it can measure.
+       */
+      for (const key of [
+        "bg",
+        "surface",
+        "text",
+        "muted",
+        "accent",
+        "danger",
+      ]) {
+        assert(
+          /^#[0-9a-f]{6}$/i.test(t[key]),
+          `${name}: ${key} is ${t[key]}, needs six-digit hex.`,
+        );
+      }
 
-    /*
-     * --sem-accent has to clear the TEXT bar too, not just the 3:1 focus bar
-     * checked above, because it is no longer only a ring. The shell renders
-     * hint lines, the prompt, and now every linkified URL and email address in
-     * it -- on the panel, so --sem-surface is the ground that matters as much
-     * as --sem-bg. It passes today (light 4.72, dark 5.58); the point of
-     * asserting it is that the accent is the colour most likely to be changed
-     * for aesthetic reasons, and it now carries a text requirement it did not
-     * carry when it was chosen.
-     */
-    for (const ground of ["bg", "surface"]) {
-      const r = contrast(t.accent, t[ground]);
+      // 4.5:1 -- WCAG 1.4.3, normal-size body text.
+      for (const key of ["text", "muted"]) {
+        const r = contrast(t[key], t.bg);
+        assert(
+          r >= 4.5,
+          `${name}: ${key} on bg is ${r.toFixed(2)}:1, needs 4.5:1 ` +
+            `(WCAG 1.4.3, body text).`,
+        );
+      }
+      /*
+       * 3:1 -- WCAG 1.4.11. The :focus-visible ring is drawn in --sem-accent,
+       * and focus is a component STATE, so its indicator is non-text contrast
+       * rather than decoration. This is the check that caught #d97757 at
+       * 2.99:1 on the original light ground.
+       */
+      const focus = contrast(t.accent, t.bg);
       assert(
-        r >= 4.5,
-        `${name}: --sem-accent on --sem-${ground} is ${r.toFixed(2)}:1, ` +
-          `needs 4.5:1 (WCAG 1.4.3). The shell renders links and hint text ` +
-          `in this colour, so it is body text and not just the focus ring.`,
+        focus >= 3,
+        `${name}: accent on bg is ${focus.toFixed(2)}:1, needs 3:1. The ` +
+          `focus ring uses this colour, so keyboard focus would be ` +
+          `non-conformant (WCAG 1.4.11).`,
       );
+      /*
+       * 4.5:1 -- WCAG 1.4.3 again, but measured against BOTH grounds, because
+       * --sem-danger is only ever used for text and that text is only ever on
+       * the glass panel, not on the page. The panel is --sem-surface under a
+       * backdrop-filter, so --sem-bg alone would have cleared a colour that is
+       * still unreadable where it actually renders.
+       *
+       * This is the check that would have caught #e0715c, which sat inline in
+       * terminal.tsx as `text-[#e0715c]` at 3.01:1 on the light ground and
+       * 3.14:1 on the light surface. A hex in a component is invisible to
+       * this check, which is the whole argument for the no-raw-colours
+       * invariant.
+       */
+      for (const ground of ["bg", "surface"]) {
+        const r = contrast(t.danger, t[ground]);
+        assert(
+          r >= 4.5,
+          `${name}: danger on ${ground} is ${r.toFixed(2)}:1, needs 4.5:1 ` +
+            `(WCAG 1.4.3). The shell renders error lines in this colour on ` +
+            `the glass panel.`,
+        );
+      }
+      /*
+       * --sem-accent has to clear the TEXT bar too, not just the 3:1 focus bar
+       * above, because it is no longer only a ring. The shell renders hint
+       * lines, the prompt, and every linkified URL and email address in it --
+       * on the panel, so --sem-surface is the ground that matters as much as
+       * --sem-bg. The accent is the colour most likely to be changed for
+       * aesthetic reasons, and it carries a text requirement it did not
+       * carry when it was first chosen. (Wada's light accent is Burnt Sienna
+       * rather than Raw Sienna because of this check: 4.52:1 against 3.31:1.)
+       */
+      for (const ground of ["bg", "surface"]) {
+        const r = contrast(t.accent, t[ground]);
+        assert(
+          r >= 4.5,
+          `${name}: accent on ${ground} is ${r.toFixed(2)}:1, needs 4.5:1 ` +
+            `(WCAG 1.4.3). The shell renders links and hint text in this ` +
+            `colour, so it is body text and not just the focus ring.`,
+        );
+      }
+      results.push(`${name} ${focus.toFixed(2)}`);
     }
-    results.push(
-      `${name} focus ${focus.toFixed(2)}:1, danger ` +
-        `${contrast(t.danger, t.surface).toFixed(2)}:1`,
-    );
   }
-  return results.join(", ");
+  return `focus ring: ${results.join(", ")}`;
 });
 
 check("the blog's terminal palette is readable on its own ground", () => {

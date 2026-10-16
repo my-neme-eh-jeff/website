@@ -153,7 +153,9 @@ function page() {
     run();
   });
 
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", colors);
+  // Fired by src/content/theme.ts for a new palette or mode, and for the OS
+  // switching light/dark while the visitor follows it.
+  document.addEventListener("themechange", colors);
   new ResizeObserver(() => void layout()).observe(shell);
 
   colors();

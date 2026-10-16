@@ -1,4 +1,10 @@
 import {
+  DEFAULT_PALETTE,
+  PALETTES,
+  modesOf,
+  type ModeChoice,
+} from "~/content/palettes";
+import {
   achievements,
   education,
   profile,
@@ -43,6 +49,11 @@ export type Line = {
   link?: { text: string; href: string };
   /** The answer still streaming: its text is in a signal, not here. */
   live?: boolean;
+  /**
+   * A colour change for the shell to apply (`theme`, `k config use-context`).
+   * Handlers stay pure: they say what should change, the shell changes it.
+   */
+  theme?: { name?: string; mode?: ModeChoice };
 };
 
 const out = (text: string): Line => ({ kind: "out", text });
@@ -54,6 +65,12 @@ const art = (text: string): Line => ({ kind: "art", text });
 
 /** The shell's width in characters, as a CLI reads $COLUMNS. Set by `run`. */
 let cols = 80;
+
+/** The palette and mode in use, as the theme script reports it. Set by `run`. */
+let current: { name: string; mode: ModeChoice } = {
+  name: DEFAULT_PALETTE,
+  mode: "auto",
+};
 
 /**
  * Whether a column layout survives `cols`: it fits outright, or its last
@@ -249,6 +266,115 @@ const RESOURCES: Resource[] = [
 const findResource = (word: string) =>
   RESOURCES.find((r) => r.name === word || r.aliases.includes(word));
 
+/* --- colours -------------------------------------------------------------- */
+
+const SAVED = out("Saved in this browser.");
+
+/** The palettes, as `kubectl config get-contexts` lists contexts. */
+function contexts(): Line[] {
+  return table(
+    ["CURRENT", "NAME", "LOOK", "FROM"],
+    PALETTES.map((p) => {
+      const modes = modesOf(p);
+      return [
+        p.id === current.name ? "*" : "",
+        p.id,
+        modes.length === 2 ? "light + dark" : `${modes[0]} only`,
+        p.from,
+      ];
+    }),
+  );
+}
+
+function theme(args: string[]): Line[] {
+  const word = args[0]?.toLowerCase();
+  if (!word) {
+    return [
+      ...contexts(),
+      out(""),
+      hint(
+        "Switch with `theme <name>`, or pick `theme light`, `dark` or `auto`.",
+      ),
+    ];
+  }
+  if (word === "reset") {
+    return [
+      {
+        kind: "out",
+        text: `Back to ${DEFAULT_PALETTE}, following your system's light or dark setting.`,
+        theme: { name: DEFAULT_PALETTE, mode: "auto" },
+      },
+      SAVED,
+    ];
+  }
+  if (word === "light" || word === "dark" || word === "auto") {
+    const p = PALETTES.find((x) => x.id === current.name);
+    const modes = p ? modesOf(p) : [];
+    return [
+      {
+        kind: "out",
+        text:
+          word === "auto"
+            ? "Following your system's light or dark setting."
+            : `${word === "light" ? "Light" : "Dark"}, whatever your system says.`,
+        theme: { mode: word },
+      },
+      ...(modes.length === 1
+        ? [
+            hint(
+              `${current.name} has a ${modes[0]} version only. This applies once you pick a palette with both.`,
+            ),
+          ]
+        : []),
+      SAVED,
+    ];
+  }
+  const p = PALETTES.find((x) => x.id === word);
+  if (!p) {
+    return [
+      err(`theme: no palette called "${args[0]}"`),
+      out(`Palettes: ${PALETTES.map((x) => x.id).join(", ")}`),
+    ];
+  }
+  return [
+    { kind: "out", text: `Switched to ${p.id}.`, theme: { name: p.id } },
+    SAVED,
+  ];
+}
+
+/** `k config ...`: the palettes are this cluster's contexts. */
+function config(sub: string | undefined, rest: string[]): Line[] {
+  if (sub === "get-contexts") return contexts();
+  if (sub === "current-context") return [out(current.name)];
+  if (sub === "use-context") {
+    const name = rest[0];
+    if (!name) {
+      return [
+        err("error: you must specify a context name"),
+        out(`Try: k config use-context ${DEFAULT_PALETTE}`),
+      ];
+    }
+    const p = PALETTES.find((x) => x.id === name.toLowerCase());
+    // kubectl's own wording, both ways.
+    if (!p) return [err(`error: no context exists with the name: "${name}"`)];
+    return [
+      {
+        kind: "out",
+        text: `Switched to context "${p.id}".`,
+        theme: { name: p.id },
+      },
+    ];
+  }
+  return [
+    err(
+      sub
+        ? `error: unknown command "${sub}" for "kubectl config"`
+        : "error: you must specify a config command",
+    ),
+    out("Available: get-contexts, current-context, use-context"),
+  ];
+}
+
 /* --- top-level commands -------------------------------------------------- */
 
 type Command = {
@@ -291,12 +417,14 @@ function kubectl(args: string[]): Line[] {
     return [
       out("Usage: k <verb> <resource> [name]"),
       out(""),
-      out(`Verbs:     get, describe`),
+      out(`Verbs:     get, describe, config`),
       out(`Resources: ${RESOURCES.map((r) => r.name).join(", ")}`),
       out(""),
       hint("Try: k get projects"),
     ];
   }
+
+  if (verb === "config") return config(resourceWord, rest);
 
   if (verb === "get" || verb === "describe") {
     if (!resourceWord) {
@@ -331,7 +459,10 @@ function kubectl(args: string[]): Line[] {
     return res.describe(key.toLowerCase());
   }
 
-  return [err(`unknown verb "${verb}"`), out("Supported: get, describe")];
+  return [
+    err(`unknown verb "${verb}"`),
+    out("Supported: get, describe, config"),
+  ];
 }
 
 function registry(): Command[] {
@@ -384,6 +515,13 @@ function registry(): Command[] {
           ["Company", profile.employer?.name ?? ""],
           ["Location", profile.city],
         ]),
+    },
+    {
+      name: "theme",
+      usage: "theme [name|light|dark|auto]",
+      summary: "Change the site's colours. Saved in this browser.",
+      run: theme,
+      takesArgs: true,
     },
     {
       name: "chat",
@@ -459,8 +597,13 @@ const ARG = /^[-/.~]|\/|\w\.\w/;
  * or the conversation and should not pretend otherwise. `width` is the shell's
  * width in characters, which tables and prose lay themselves out to.
  */
-export function run(input: string, width = 80): Line[] | null | typeof ASK {
+export function run(
+  input: string,
+  width = 80,
+  colours?: { name: string; mode: ModeChoice },
+): Line[] | null | typeof ASK {
   cols = width;
+  if (colours) current = colours;
   const trimmed = input.trim();
   if (!trimmed) return [];
 
@@ -487,6 +630,10 @@ export function run(input: string, width = 80): Line[] | null | typeof ASK {
   // `kgp foo` expands to `k get projects foo`.
   const alias = ALIASES[name];
   if (alias) return kubectl([...alias, ...rest]);
+
+  // `theme` takes one word; anything longer is a sentence about it.
+  if (name === "theme" && (rest.length > 1 || trimmed.endsWith("?")))
+    return ASK;
 
   const cmd = registry().find((c) => c.name === name);
   if (cmd && (rest.length === 0 || cmd.takesArgs)) return cmd.run(rest);
@@ -522,5 +669,11 @@ export function completions(): string[] {
     "k describe",
     ...RESOURCES.map((r) => `k get ${r.name}`),
     ...projects.map((p) => `k describe projects ${p.slug}`),
+    "theme",
+    ...["light", "dark", "auto", "reset"].map((w) => `theme ${w}`),
+    ...PALETTES.map((p) => `theme ${p.id}`),
+    "k config get-contexts",
+    "k config current-context",
+    ...PALETTES.map((p) => `k config use-context ${p.id}`),
   ];
 }

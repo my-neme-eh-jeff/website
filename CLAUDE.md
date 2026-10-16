@@ -32,7 +32,8 @@ That rule covers facts, which carry numbers. Two things it kept missing:
 | Qwik 2 API names, adapters, build config                | `.claude/skills/qwik2-beta/`                       |
 | Why Qwik UI / any Qwik 1 component lib can't be used    | `.claude/skills/qwik2-beta/`                       |
 | SEO, structured data, AI-crawler policy                 | `.claude/skills/seo-geo/`                          |
-| Design tokens, theme swap, shared patterns              | `src/global.css` (read the header)                 |
+| Colour palettes, light/dark, the `theme` picker         | `src/content/palettes.ts`, `src/content/theme.ts`  |
+| Design tokens, shared patterns                          | `src/global.css` (read the header)                 |
 | **Accessibility bar for any UI work**                   | `.claude/skills/a11y-ui/`                          |
 | Visual design direction for NEW surfaces                | `.claude/skills/frontend-design/` (upstream)       |
 | Favicon / og:image generation                           | `scripts/make-icons.mjs` (run it, don't hand-edit) |
@@ -70,12 +71,14 @@ them against the real build output. Add new ones there, not here.
   build time, so random rewrites the HTML every deploy. (None exists today;
   `grep -rn 'Math.random' src` should print nothing.)
 - **Colours come from `--sem-*` via Tailwind utilities**, never a raw hex in a
-  component. The `@theme inline` block in `src/global.css` is what makes one
-  media query retint the whole site; a hardcoded colour opts out of it.
-- **`--sem-accent` is the focus-ring colour**, so its contrast is a conformance
-  property, not a style choice. It needs ≥3:1 on `--sem-bg` in BOTH themes —
-  which is why light uses `--clay-deep` and dark uses `--clay`. `pnpm run verify`
-  recomputes this; see `.claude/skills/a11y-ui/`.
+  component. Every palette's values live in `src/content/palettes.ts`; the
+  `@theme inline` block in `src/global.css` is what lets one attribute on
+  `<html>` retint the whole site, and a hardcoded colour opts out of it.
+- **`--sem-accent` is the focus-ring colour and hint/link text**, so its
+  contrast is a conformance property, not a style choice: ≥3:1 on `--sem-bg`
+  and ≥4.5:1 on `--sem-bg` and `--sem-surface`, in every mode of every palette.
+  Core tokens are six-digit hex, because the desk's WebGL light parses them.
+  `pnpm run verify` checks both; see `.claude/skills/a11y-ui/`.
 - **No sideways page scroll at any width from 320px up** (320 = 400% zoom,
   WCAG 1.4.10). Wide content scrolls inside its own box, which needs `relative`
   (an `sr-only` child escapes one that isn't) and `scroll-cue` (phones show no
