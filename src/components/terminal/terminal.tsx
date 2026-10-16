@@ -14,7 +14,12 @@ import { load as loadHistory, save as saveHistory } from "./history";
 import { run, completions, ASK, PICK, type Line } from "./commands";
 import { ThemePick, PICKS, type PickState } from "./theme-pick";
 import { abortChat, sendChat, type Outcome, type Turn } from "./chat";
-import { KNOWN_HREFS } from "~/content/chat";
+import {
+  KNOWN_HREFS,
+  MAX_ASSISTANT_CHARS,
+  MAX_TURNS,
+  MAX_USER_CHARS,
+} from "~/content/chat";
 import { DEFAULT_PALETTE } from "~/content/palettes";
 import { profile } from "~/content/profile";
 import lightUrl from "~/components/desk/light.ts?worker&url";
@@ -60,9 +65,6 @@ const SUGGESTIONS: { label: string; run?: string }[] = [
   { label: "How does this chat work?" },
   { label: "Change the colours", run: "theme" },
 ];
-
-/** Matches the Worker's cap, so the visitor hears it here first. */
-const MAX_CHAT_CHARS = 800;
 
 /** After this long with no answer, say why: the model is probably loading. */
 const SLOW_MS = 4_000;
@@ -572,11 +574,11 @@ export const Terminal = component$(() => {
       stickToBottom(renderGroups(lines.items).length);
     };
 
-    if (text.length > MAX_CHAT_CHARS) {
+    if (text.length > MAX_USER_CHARS) {
       return say([
         {
           kind: "err",
-          text: `Keep it under ${MAX_CHAT_CHARS} characters, please.`,
+          text: `Keep it under ${MAX_USER_CHARS} characters, please.`,
         },
       ]);
     }
@@ -584,7 +586,7 @@ export const Terminal = component$(() => {
     const turns: Turn[] = [
       ...convo.turns,
       { role: "user" as const, content: text },
-    ].slice(-8);
+    ].slice(-MAX_TURNS);
     convo.streaming = true;
     await feedback("enter");
 
@@ -635,7 +637,13 @@ export const Terminal = component$(() => {
     }
 
     if (outcome.ok) {
-      convo.turns = [...turns, { role: "assistant" as const, content: got }];
+      convo.turns = [
+        ...turns,
+        {
+          role: "assistant" as const,
+          content: got.slice(0, MAX_ASSISTANT_CHARS),
+        },
+      ];
       say([{ kind: "meta", text: statsLine(outcome) }]);
     } else if (outcome.code !== "aborted") {
       say(chatError(outcome.code));

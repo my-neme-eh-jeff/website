@@ -1,4 +1,9 @@
-import { SYSTEM_PROMPT } from "../content/chat";
+import {
+  MAX_ASSISTANT_CHARS,
+  MAX_TURNS,
+  MAX_USER_CHARS,
+  SYSTEM_PROMPT,
+} from "../content/chat";
 
 /**
  * The only server code on the site: `POST /api/chat`.
@@ -35,9 +40,6 @@ interface Env {
 type Turn = { role: "user" | "assistant"; content: string };
 
 const MAX_BODY_BYTES = 16_000;
-const MAX_TURNS = 8;
-const MAX_USER_CHARS = 800;
-const MAX_ASSISTANT_CHARS = 2_000;
 
 /**
  * How long to wait for Ollama's response headers. They arrive only after the

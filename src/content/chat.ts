@@ -18,6 +18,11 @@ import {
  * server reuse its cached prefix instead of re-reading the CV each time.
  */
 
+/** The Worker rejects a request past these; the shell trims to them first. */
+export const MAX_TURNS = 8;
+export const MAX_USER_CHARS = 800;
+export const MAX_ASSISTANT_CHARS = 2_000;
+
 const facts = [
   `Name: ${profile.name}`,
   `Title: ${profile.jobTitle}${profile.employer ? ` at ${profile.employer.name}` : ""}`,
