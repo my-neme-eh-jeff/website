@@ -64,22 +64,74 @@ export default component$(() => {
   const doc = useDocumentHead<Frontmatter>();
 
   /*
-   * @qwik.dev/router rc.3 cancels every same-page `#` click and scrolls
-   * instead, leaving focus on the link. This moves it to the target, inline:
+   * @qwik.dev/router rc.3 jumps to a same-page `#` target and leaves focus on
+   * the link. This takes the click instead: it eases the page there on the
+   * page transition's curve, cubic-bezier(0.2, 0, 0, 1), and moves focus to
+   * the target. Reduced motion jumps. The router's version:
    *   grep -n 'scrollIntoView' node_modules/@qwik.dev/router/lib/index.qwik.mjs
    */
   useOnDocument(
     "click",
     sync$((e: Event) => {
+      const m = e as MouseEvent;
+      if (m.button || m.metaKey || m.ctrlKey || m.shiftKey || m.altKey) return;
       const link = (e.target as Element | null)?.closest?.('a[href^="#"]');
-      const target =
-        link && document.getElementById(link.getAttribute("href")!.slice(1));
+      const id = link?.getAttribute("href")!.slice(1);
+      const target = id && document.getElementById(decodeURIComponent(id));
       if (!target) return;
+      e.preventDefault();
+      if (location.hash !== `#${id}`) history.pushState({}, "", `#${id}`);
       if (!target.hasAttribute("tabindex"))
         target.setAttribute("tabindex", "-1");
       target.focus({ preventScroll: true });
+
+      const w = window as unknown as { hashScroll?: number };
+      cancelAnimationFrame(w.hashScroll ?? 0);
+      const from = scrollY;
+      const margin = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+      const to = Math.max(
+        0,
+        Math.min(
+          document.documentElement.scrollHeight - innerHeight,
+          target.getBoundingClientRect().top + from - margin,
+        ),
+      );
+      const span = to - from;
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches || !span) {
+        scrollTo(0, to);
+        return;
+      }
+      // y for x on the curve; x(t) only rises, so bisection finds t.
+      const ease = (x: number) => {
+        let lo = 0;
+        let hi = 1;
+        for (let i = 0; i < 20; i++) {
+          const t = (lo + hi) / 2;
+          if (0.6 * t * (1 - t) ** 2 + t ** 3 < x) lo = t;
+          else hi = t;
+        }
+        const t = (lo + hi) / 2;
+        return 3 * t * t - 2 * t ** 3;
+      };
+      const ms = Math.min(560, 320 + Math.abs(span) / 30);
+      const stop = () => {
+        cancelAnimationFrame(w.hashScroll ?? 0);
+        removeEventListener("wheel", stop);
+        removeEventListener("touchstart", stop);
+      };
+      // A wheel or a touch takes the page back from the animation.
+      addEventListener("wheel", stop, { passive: true });
+      addEventListener("touchstart", stop, { passive: true });
+      let start = 0;
+      const step = (now: number) => {
+        start ||= now;
+        const p = Math.min(1, (now - start) / ms);
+        scrollTo(0, from + span * ease(p));
+        if (p < 1) w.hashScroll = requestAnimationFrame(step);
+        else stop();
+      };
+      w.hashScroll = requestAnimationFrame(step);
     }),
-    { passive: true },
   );
 
   /*

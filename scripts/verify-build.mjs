@@ -1015,7 +1015,7 @@ check("skip link is present, first, and points at a real target", () => {
     const funcs =
       html.match(/<script q:func="qwik\/json">([\s\S]*?)<\/script>/)?.[1] ?? "";
     assert(
-      /q-dp:click="#\d+"/.test(root) && funcs.includes("preventScroll"),
+      /q-dp?:click="#\d+"/.test(root) && funcs.includes("preventScroll"),
       `${page}: nothing moves focus to #${target}; the router only scrolls.`,
     );
   }
