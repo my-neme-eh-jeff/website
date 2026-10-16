@@ -107,8 +107,8 @@ function table(header: string[], rows: string[][]): Line[] {
   return [out(line(header)), ...rows.map((r) => out(line(r)))];
 }
 
-/** Wrap prose so a long paragraph does not force horizontal scrolling. */
-function wrap(text: string, width = 68, indent = "  "): Line[] {
+/** Wrap prose to the shell's width, so a paragraph never scrolls sideways. */
+function wrap(text: string, width = cols, indent = "  "): Line[] {
   width = Math.min(width, cols - indent.length);
   const words = text.split(/[^\S\u00a0]+/);
   const lines: string[] = [];
@@ -215,7 +215,7 @@ const RESOURCES: Resource[] = [
         ]),
         out(""),
         out("Highlights:"),
-        ...r.points.flatMap((pt) => wrap(`- ${pt}`, 68, "  ")),
+        ...r.points.flatMap((pt) => wrap(`- ${pt}`)),
       ];
     },
   },
@@ -225,7 +225,7 @@ const RESOURCES: Resource[] = [
     list: () =>
       skills.flatMap((g) => [
         out(g.group.toUpperCase()),
-        ...wrap(g.items.join(", "), 68, "  "),
+        ...wrap(g.items.join(", ")),
         out(""),
       ]),
   },
@@ -235,7 +235,7 @@ const RESOURCES: Resource[] = [
     list: () =>
       achievements.flatMap((a) => [
         out(`- ${a.title}`),
-        ...(a.note ? wrap(a.note, 66, "    ") : []),
+        ...(a.note ? wrap(a.note, cols, "    ") : []),
       ]),
   },
   {
@@ -483,7 +483,7 @@ function registry(): Command[] {
           ...cmds.flatMap((c) =>
             wide
               ? [out(`  ${c.usage.padEnd(30)} ${c.summary}`)]
-              : [out(`  ${c.usage}`), ...wrap(c.summary, 68, "      ")],
+              : [out(`  ${c.usage}`), ...wrap(c.summary, cols, "      ")],
           ),
           out(""),
           out(`Resources: ${RESOURCES.map((r) => r.name).join(", ")}`),

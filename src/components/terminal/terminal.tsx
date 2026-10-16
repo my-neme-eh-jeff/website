@@ -117,8 +117,7 @@ const LINE_CLASS: Record<Line["kind"], string> = {
   // Diagrams must not wrap — a re-flowed box drawing is unreadable — so this
   // is the one kind that scrolls its container instead.
   art: "text-muted/85 scroll-cue whitespace-pre overflow-x-auto",
-  // Prose, so it gets a measure. Tables and diagrams keep the full width.
-  ai: "text-text max-w-[76ch]",
+  ai: "text-text",
   meta: "text-muted text-[0.6875rem] leading-snug",
 };
 
@@ -294,11 +293,15 @@ function echo(text: string) {
  */
 function prose(text: string, allow?: ReadonlySet<string>) {
   return text.split("\n").map((line, j) => {
-    if (!line.trim()) return <span class="block h-2" key={j} />;
     const lead = /^\s*(?:[-*\u2022]|\d+[.)])\s+/.exec(line)?.[0] ?? "";
+    /*
+     * One element for blank and full lines alike. As two, the span at a key
+     * that streamed in blank kept the spacer's class once its text arrived,
+     * 8px tall with a line in it (rc.3, 2026-10-16).
+     */
     return (
       <span
-        class="block"
+        class={line.trim() ? "block" : "block h-2"}
         style={
           lead
             ? {

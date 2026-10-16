@@ -310,17 +310,17 @@ void main() {
   float along = s * 2.0 * (size.x + size.y) / uDpr;
 
   float ds = fract(s - uHead + 0.5) - 0.5;
-  float comet = exp(-pow(ds / 0.01, 2.0));
-  comet += ds < 0.0 ? 0.65 * exp(ds / 0.07) : 0.0;
+  float comet = 0.5 * exp(-pow(ds / 0.012, 2.0));
+  comet += ds < 0.0 ? 0.25 * exp(ds / 0.1) : 0.0;
   comet *= uThink;
-  float lit = clamp(comet + uFlash, 0.0, 1.0);
+  float lit = clamp(comet + 0.5 * uFlash, 0.0, 1.0);
 
   float wn = vnoise(vec3(along * 0.02, 0.0, uTime * 0.18));
-  float halfW = (mix(0.3, 1.3, wn * wn) + lit * 0.8) * uDpr;
+  float halfW = (mix(0.3, 1.3, wn * wn) + lit * 0.25) * uDpr;
   float brk = mix(smoothstep(0.12, 0.2, vnoise(vec3(along * 0.045, 5.0, uTime * 0.12))), 1.0, lit);
   float line = (1.0 - smoothstep(halfW - 0.6, halfW + 0.6, abs(d))) * brk;
 
-  float halo = exp(-abs(d) / (14.0 * uDpr)) * (comet * 0.5 + uFlash * 0.4);
+  float halo = exp(-abs(d) / (14.0 * uDpr)) * (comet + uFlash) * 0.15;
   float hA = clamp(halo * (uDark > 0.5 ? 0.55 : 0.3), 0.0, 1.0);
   col = vec4(uAccent, 1.0) * hA + col * (1.0 - hA);
 
@@ -485,7 +485,7 @@ function worker() {
         : Math.max(clearTarget, clear - dt / 0.65);
     think += (thinkTarget - think) * Math.min(1, dt * 8);
     flash *= Math.exp(-dt / 0.45);
-    head = (head + dt * 0.45) % 1;
+    head = (head + dt * 0.14) % 1;
     const breathe = 0.45 + 0.2 * Math.sin(time * 1.4);
     const blink = Math.sin(time * 16) > 0 ? 1 : 0.2;
     const led = Math.min(1, breathe * (1 - think) + blink * think + flash);
