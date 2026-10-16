@@ -25,7 +25,7 @@ Written by the proxy, so it can only contain what reaches the desk:
 | ---------------------------------- | ---------------------------------------------------------------- |
 | `ts`, `id`                         | the proxy                                                        |
 | `question`, `history`              | the conversation the browser sent (up to 8 turns)                |
-| `answer`, `reasoning`              | Ollama's stream: the visible answer and the model's hidden notes |
+| `answer`, `reasoning`              | Ollama's stream: the reply, suggested questions and hidden notes |
 | `stats`, `firstTokenMs`, `totalMs` | Ollama's timings and the proxy's clock                           |
 | `outcome`                          | `ok`, `cancelled` (visitor hung up), `error`, `upstream_<code>`  |
 | `systemPrompt`                     | a 12-character hash: which prompt version answered               |

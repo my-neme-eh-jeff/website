@@ -10,7 +10,13 @@ export type Stats = {
 };
 
 export type Outcome =
-  | { ok: true; model: string; stats: Stats | null; firstTokenMs: number }
+  | {
+      ok: true;
+      model: string;
+      stats: Stats | null;
+      firstTokenMs: number;
+      next: string[];
+    }
   | { ok: false; code: string };
 
 // Module scope: an AbortController can't be serialised into a Qwik store.
@@ -55,7 +61,7 @@ export async function sendChat(
 
     const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
     let buffer = "";
-    let done: { model: string; stats: Stats } | null = null;
+    let done: { model: string; stats: Stats; next?: unknown } | null = null;
 
     for (;;) {
       const { value, done: ended } = await reader.read();
@@ -68,7 +74,7 @@ export async function sendChat(
         if (!line.trim()) continue;
         const event = JSON.parse(line) as
           | { type: "token"; text: string }
-          | { type: "done"; model: string; stats: Stats }
+          | { type: "done"; model: string; stats: Stats; next?: unknown }
           | { type: "error"; code: string };
         if (event.type === "token") {
           if (firstTokenMs < 0) firstTokenMs = performance.now() - started;
@@ -86,6 +92,9 @@ export async function sendChat(
       model: done?.model ?? "",
       stats: done?.stats ?? null,
       firstTokenMs,
+      next: Array.isArray(done?.next)
+        ? done.next.filter((q): q is string => typeof q === "string")
+        : [],
     };
   } catch (err) {
     return {

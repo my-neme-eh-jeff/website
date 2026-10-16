@@ -4,12 +4,13 @@ import {
   MAX_USER_CHARS,
   SYSTEM_PROMPT,
 } from "../content/chat";
+import { parse, splitter } from "./follow-ups";
 
 /**
  * `POST /api/chat`, streamed back as NDJSON events:
  *
  *   {"type":"token","text":"..."}
- *   {"type":"done","model":"...","stats":{...}}
+ *   {"type":"done","model":"...","stats":{...},"next":["...?"]}
  *   {"type":"error","code":"..."}
  *
  * Errors before the stream starts are a JSON body with a non-200 status. The
@@ -99,9 +100,10 @@ function callDesk(
 }
 
 /** Ollama NDJSON in, the shell's NDJSON events out. Reasoning is dropped. */
-function relay(): TransformStream<Uint8Array, Uint8Array> {
+function relay(asked: string[]): TransformStream<Uint8Array, Uint8Array> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
+  const split = splitter();
   let buffer = "";
 
   const emit = (
@@ -134,9 +136,11 @@ function relay(): TransformStream<Uint8Array, Uint8Array> {
       send({ type: "error", code: "upstream" });
       return;
     }
-    const text = chunk.message?.content;
+    const text = chunk.message?.content && split.push(chunk.message.content);
     if (text) send({ type: "token", text });
     if (chunk.done) {
+      const { text: rest, block } = split.end();
+      if (rest) send({ type: "token", text: rest });
       send({
         type: "done",
         model: chunk.model,
@@ -148,6 +152,7 @@ function relay(): TransformStream<Uint8Array, Uint8Array> {
           tokens: chunk.eval_count ?? 0,
           genMs: Math.round((chunk.eval_duration ?? 0) / 1e6),
         },
+        next: block === null ? [] : parse(block, asked),
       });
     }
   };
@@ -164,6 +169,12 @@ function relay(): TransformStream<Uint8Array, Uint8Array> {
     flush(out) {
       buffer += decoder.decode();
       emit(buffer, out);
+      const { text } = split.end();
+      if (text) {
+        out.enqueue(
+          encoder.encode(JSON.stringify({ type: "token", text }) + "\n"),
+        );
+      }
     },
   });
 }
@@ -222,8 +233,9 @@ async function chat(request: Request, env: Env): Promise<Response> {
     return json({ error: "offline" }, 503);
   }
 
+  const asked = turns.filter((t) => t.role === "user").map((t) => t.content);
   // A fresh Response, so none of the desk's headers reach the browser.
-  return new Response(upstream.body.pipeThrough(relay()), {
+  return new Response(upstream.body.pipeThrough(relay(asked)), {
     headers: {
       "content-type": "application/x-ndjson; charset=utf-8",
       "cache-control": "no-store",

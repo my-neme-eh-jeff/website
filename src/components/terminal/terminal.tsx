@@ -32,12 +32,25 @@ const INTRO: Line = {
 
 const PROMPT = "~ $";
 
-const SUGGESTIONS: { label: string; run?: string }[] = [
-  { label: "What is he working on?" },
-  { label: "What's his stack?" },
-  { label: "How does this chat work?" },
-  { label: "Change the colours", run: "theme" },
+const SEED_QUESTIONS: readonly string[] = [
+  "What is he working on?",
+  "What's his stack?",
+  "How does this chat work?",
 ];
+
+// Topped up from the old row, so the button that was clicked is never removed
+// from under focus.
+const offer = (fresh: string[], before: readonly string[], asked: string) =>
+  [...fresh, ...before.filter((q) => q !== asked && !fresh.includes(q))].slice(
+    0,
+    Math.max(fresh.length, before.length),
+  );
+
+const CHIP =
+  "border-line text-muted hover:text-text hover:border-muted inline-flex min-h-6 items-center gap-1.5 rounded-full border px-2.5 font-mono text-[0.6875rem] transition-colors duration-150";
+
+// Suggestions are asked as they stand: the model writes them, so never `run`.
+type From = PickState["from"] | "suggestion";
 
 const SLOW_MS = 4_000;
 
@@ -307,10 +320,16 @@ export const Terminal = component$(() => {
 
   const tab = useStore({ base: "", last: "", i: -1, armed: false });
 
-  const convo = useStore<{ streaming: boolean; turns: Turn[]; note: string }>({
+  const convo = useStore<{
+    streaming: boolean;
+    turns: Turn[];
+    note: string;
+    asks: readonly string[];
+  }>({
     streaming: false,
     turns: [],
     note: "",
+    asks: SEED_QUESTIONS,
   });
 
   const pick = useStore<PickState>({
@@ -412,6 +431,9 @@ export const Terminal = component$(() => {
           content: got.slice(0, MAX_ASSISTANT_CHARS),
         },
       ];
+      if (outcome.next.length) {
+        convo.asks = offer(outcome.next, convo.asks, text);
+      }
       say([{ kind: "meta", text: statsLine(outcome) }]);
     } else if (outcome.code !== "aborted") {
       say(chatError(outcome.code));
@@ -485,7 +507,7 @@ export const Terminal = component$(() => {
     await feedback(keep ? "enter" : "key");
   });
 
-  const runLine = $(async (raw: string, from: PickState["from"] = "input") => {
+  const runLine = $(async (raw: string, from: From = "input") => {
     let handedOff = false;
     try {
       const shown =
@@ -498,6 +520,12 @@ export const Terminal = component$(() => {
         cmdHistory.past = [...cmdHistory.past, raw];
         cmdHistory.cursor = -1;
         await saveHistory(cmdHistory.past);
+      }
+
+      if (from === "suggestion") {
+        handedOff = true;
+        void converse(raw.trim());
+        return;
       }
 
       const result = run(raw, shellColumns(), window.siteTheme?.get());
@@ -513,6 +541,7 @@ export const Terminal = component$(() => {
       if (result === null) {
         lines.items = [];
         convo.turns = [];
+        convo.asks = SEED_QUESTIONS;
         await feedback("enter");
         return;
       }
@@ -534,7 +563,7 @@ export const Terminal = component$(() => {
     await runLine(raw);
   });
 
-  const suggest = $(async (q: string, from: PickState["from"] = "input") => {
+  const suggest = $(async (q: string, from: From = "suggestion") => {
     if (convo.streaming) {
       clearBusy();
       return;
@@ -563,6 +592,7 @@ export const Terminal = component$(() => {
       if (k === "l") {
         lines.items = [];
         convo.turns = [];
+        convo.asks = SEED_QUESTIONS;
         await feedback("enter");
         return;
       }
@@ -920,23 +950,26 @@ export const Terminal = component$(() => {
         <span id="term-suggest" class="text-muted font-mono text-[0.6875rem]">
           Try
         </span>
-        {SUGGESTIONS.map((q) => (
+        {/* By slot, so a clicked button keeps focus as its text changes. */}
+        {convo.asks.map((q, i) => (
           <button
             type="button"
-            key={q.label}
-            {...(q.run ? { id: "term-theme-chip" } : {})}
-            onClick$={[
-              clickGuard,
-              $(() => suggest(q.run ?? q.label, q.run ? "chip" : "input")),
-            ]}
-            class="border-line text-muted hover:text-text hover:border-muted inline-flex min-h-6 items-center gap-1.5 rounded-full border px-2.5 font-mono text-[0.6875rem] transition-colors duration-150"
+            key={i}
+            onClick$={[clickGuard, $(() => suggest(q))]}
+            class={CHIP}
           >
-            {q.run && (
-              <span class="swatch swatch-current size-2.5" aria-hidden="true" />
-            )}
-            {q.label}
+            {q}
           </button>
         ))}
+        <button
+          type="button"
+          id="term-theme-chip"
+          onClick$={[clickGuard, $(() => suggest("theme", "chip"))]}
+          class={CHIP}
+        >
+          <span class="swatch swatch-current size-2.5" aria-hidden="true" />
+          Change the colours
+        </button>
       </div>
     </div>
   );

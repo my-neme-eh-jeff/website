@@ -140,7 +140,8 @@ Only what a filename doesn't say; `ls` for the rest.
       worker/                   the one Worker, /api/* only
       global.css                design tokens, theme swap, shared patterns (read the header)
       content/profile.ts        every fact the pages render
-      content/chat.ts           what the shell's model is told, and which links it may print
+      content/chat.ts           what the shell's model is told, which links it may print, and
+                                where its suggested next questions lead
       content/seo.ts            meta tags + JSON-LD
       content/palettes.ts       every palette's values; theme.ts applies the saved one
       components/desk/          the home page desk, as text and as the WebGL light

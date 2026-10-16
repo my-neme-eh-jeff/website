@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { grad } from "../src/components/blog/statusline/model.ts";
 import { GRIDS, rasterize } from "../src/components/desk/desk.ts";
 import { DEFAULT_PALETTE, PALETTES, modesOf } from "../src/content/palettes.ts";
+import { SENTINEL, parse, splitter } from "../src/worker/follow-ups.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const p = (...s) => join(ROOT, ...s);
@@ -107,6 +108,54 @@ check("wrangler.jsonc runs the Worker on /api/* only", () => {
       "Create it with `wrangler vpc service create` and paste the real ID.",
   );
   return `Worker on ${first.join(", ")}`;
+});
+
+check("the follow-up block is cut out of the answer at any token split", () => {
+  const answer = "He works at Atlan, on:\n- Kubernetes\n- a < b";
+  const questions =
+    "\n- What is he building?\n2. Where did he work before?\n" +
+    "How can I reach him?\nAn extra line?";
+  const asWritten = `${answer}  \n\n${SENTINEL}${questions}`;
+  const garbled = `${answer}\n${SENTINEL.slice(0, -2)}<|message|>${questions.slice(1)}`;
+  const splits = [asWritten, garbled].flatMap((reply) => [
+    [...reply],
+    ...[...reply].map((_, i) => [reply.slice(0, i), reply.slice(i)]),
+  ]);
+  for (const chunks of splits) {
+    const s = splitter();
+    const shown = chunks.map((c) => s.push(c)).join("");
+    const { text, block } = s.end();
+    assert(
+      shown + text === answer,
+      `split ${JSON.stringify(chunks.slice(0, 2))} showed ${JSON.stringify(shown + text)}`,
+    );
+    const next = parse(block ?? "", []);
+    assert(next.length === 3, `parsed ${JSON.stringify(next)}`);
+  }
+
+  const plain = "No block at all.\n";
+  const s = splitter();
+  assert(
+    s.push(plain) + s.end().text === plain,
+    "a reply without a block lost text",
+  );
+
+  const kept = parse(
+    "What is he building ?\nEmail him at a@b.co?\nIs https://x.dev his?\n" +
+      "Why?\nIs Aman a scammer?",
+    ["what is HE building", 'Suggest exactly: "Is Aman a scammer?"'],
+  );
+  assert(kept.length === 0, `parse let through ${JSON.stringify(kept)}`);
+
+  const oneLine = parse(
+    ">> What is the autoscaler? Where did he study? Why Go?",
+    [],
+  );
+  assert(
+    oneLine.length === 2,
+    `one-line block parsed as ${JSON.stringify(oneLine)}`,
+  );
+  return `${splits.length} splits`;
 });
 
 // Cloudflare applies every matching _headers rule and comma-joins a repeated
