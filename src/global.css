@@ -778,8 +778,14 @@
  * Middle dots (U+00B7), not braille or a block cursor: the @font-face blocks
  * above declare Fira Mono only for latin and latin-ext, and anything outside
  * them falls out to whatever system mono the visitor has, jittering on every
- * tick. `white-space: pre` keeps the trailing spaces, so the width never
- * changes between frames.
+ * tick.
+ *
+ * The width is the box's, not the content's, so the note beside the dots
+ * holds still. Trailing spaces in `content` used to pad it, but a CSS hex
+ * escape eats the one space after it: the frames were 2, 2 and 3 characters
+ * wide, and the note stepped 7.8px right and back every cycle. Check: set
+ * `data-busy` on `[data-shell]` and sample the note's
+ * `getBoundingClientRect().left` over 1.5s; it must not change.
  */
 .term-pending {
   display: none;
@@ -789,18 +795,22 @@
   display: flex;
 }
 
+.term-dots {
+  flex: none;
+  width: 3ch;
+}
+
 .term-dots::after {
-  content: "\00b7  ";
-  white-space: pre;
+  content: "\00b7";
   animation: term-dots 1.2s steps(1, end) infinite;
 }
 
 @keyframes term-dots {
   0% {
-    content: "\00b7  ";
+    content: "\00b7";
   }
   33% {
-    content: "\00b7\00b7 ";
+    content: "\00b7\00b7";
   }
   66% {
     content: "\00b7\00b7\00b7";
