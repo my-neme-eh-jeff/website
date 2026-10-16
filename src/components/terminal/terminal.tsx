@@ -27,7 +27,7 @@ import lightUrl from "~/components/desk/light.ts?worker&url";
 
 const INTRO: Line = {
   kind: "hint",
-  text: "Type a question, or `help` for the commands.",
+  text: "Type a question, `help` for the commands, or `theme` to switch themes.",
 };
 
 const PROMPT = "~ $";
@@ -47,10 +47,10 @@ const offer = (fresh: string[], before: readonly string[], asked: string) =>
   );
 
 const CHIP =
-  "border-line text-muted hover:text-text hover:border-muted inline-flex min-h-6 items-center gap-1.5 rounded-full border px-2.5 font-mono text-[0.6875rem] transition-colors duration-150";
+  "border-line text-muted hover:text-text hover:border-muted inline-flex min-h-6 items-center rounded-full border px-2.5 font-mono text-[0.6875rem] transition-colors duration-150";
 
 // Suggestions are asked as they stand: the model writes them, so never `run`.
-type From = PickState["from"] | "suggestion";
+type From = "input" | "suggestion";
 
 const SLOW_MS = 4_000;
 
@@ -101,6 +101,16 @@ const LINE_CLASS: Record<Line["kind"], string> = {
 };
 
 const MUTE_BTN_ID = "term-mute";
+
+/** The light/dark dot: a half turn as it flips, a shake when it can't. */
+const SPIN: Keyframe[] = [
+  { transform: "rotate(-180deg)" },
+  { transform: "none" },
+];
+const SHAKE: Keyframe[] = [0, -3, 3, -2, 2, 0].map((x) => ({
+  transform: `translateX(${x}px)`,
+  easing: "ease-in-out",
+}));
 
 export type Group = {
   kind: Line["kind"];
@@ -337,7 +347,6 @@ export const Terminal = component$(() => {
     i: 0,
     mode: "auto",
     saved: DEFAULT_PALETTE,
-    from: "input",
   });
 
   /*
@@ -451,7 +460,7 @@ export const Terminal = component$(() => {
     }
   });
 
-  const openPick = $(async (from: PickState["from"]) => {
+  const openPick = $(async () => {
     const t = window.siteTheme?.get();
     pick.saved = t?.name ?? DEFAULT_PALETTE;
     pick.i = Math.max(
@@ -459,7 +468,6 @@ export const Terminal = component$(() => {
       PICKS.findIndex((p) => p.id === pick.saved),
     );
     pick.mode = t?.mode ?? "auto";
-    pick.from = from;
     pick.open = true;
     untilDone(() => {
       const list = document.getElementById("theme-list");
@@ -496,10 +504,9 @@ export const Terminal = component$(() => {
         };
     lines.items = [...lines.items, said];
     stickToBottom(renderGroups(lines.items).length);
-    const back = pick.from === "chip" ? "term-theme-chip" : "term-input";
     if (ours)
       untilDone(() => {
-        const el = document.getElementById(back);
+        const el = document.getElementById("term-input");
         if (!el || el.offsetParent === null) return false;
         el.focus();
         return true;
@@ -535,7 +542,7 @@ export const Terminal = component$(() => {
         return;
       }
       if (result === PICK) {
-        await openPick(from);
+        await openPick();
         return;
       }
       if (result === null) {
@@ -563,12 +570,12 @@ export const Terminal = component$(() => {
     await runLine(raw);
   });
 
-  const suggest = $(async (q: string, from: From = "suggestion") => {
+  const suggest = $(async (q: string) => {
     if (convo.streaming) {
       clearBusy();
       return;
     }
-    await runLine(q, from);
+    await runLine(q, "suggestion");
   });
 
   /**
@@ -694,6 +701,66 @@ export const Terminal = component$(() => {
   });
 
   /**
+   * Flips what is on screen, not the stored choice. Landing on what the
+   * system asks for goes back to following it, so two presses undo one. On a
+   * one-mode theme the button is disabled, and a press only shakes the dot.
+   */
+  const toggleMode = $(async (_: Event, btn: HTMLButtonElement) => {
+    const theme = window.siteTheme;
+    if (!theme) return;
+    if (pick.open) await closePick(false);
+    const now = theme.get();
+    const dot = matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? null
+      : btn.querySelector(".swatch-split");
+    if (PICKS.find((x) => x.id === now.name)?.only) {
+      dot?.animate(SHAKE, 360);
+      return;
+    }
+    const next = now.scheme === "dark" ? "light" : "dark";
+    const system = matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+    theme.set(undefined, next === system ? "auto" : next);
+    dot?.animate(SPIN, {
+      duration: 450,
+      easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    });
+    lines.items = [
+      ...lines.items,
+      {
+        kind: "meta",
+        text:
+          next === system
+            ? `${next === "dark" ? "Dark" : "Light"} mode, following your system.`
+            : `${next === "dark" ? "Dark" : "Light"} mode. This choice is remembered on this device.`,
+      },
+    ];
+    stickToBottom(renderGroups(lines.items).length);
+    await feedback("chrome");
+  });
+
+  /*
+   * The saved theme is only known in the browser, so a one-mode theme marks
+   * the button disabled here: on qinit, before it can be reached, and on
+   * every repaint. CSS dims it from the first frame.
+   */
+  const markMode = sync$(() => {
+    const btn = document.getElementById("term-mode");
+    if (!btn) return;
+    const root = document.documentElement;
+    if (root.hasAttribute("data-one-mode")) {
+      btn.setAttribute("aria-disabled", "true");
+      btn.title = `This theme is ${root.getAttribute("data-scheme")} only.`;
+    } else {
+      btn.removeAttribute("aria-disabled");
+      btn.title = "Light or dark. Remembered on this device.";
+    }
+  });
+  useOnDocument("qinit", markMode);
+  useOnDocument("themechange", markMode);
+
+  /**
    * @qwik.dev/core rc.3 (2026-10-16): a sync$ runs from qwikloader before the
    * default action and before any fetch or resume, and captures nothing.
    * Shift+Tab, and Tab on an empty field, must still leave (WCAG 2.1.2).
@@ -780,10 +847,28 @@ export const Terminal = component$(() => {
         </h1>
         <button
           type="button"
+          id="term-mode"
+          onClick$={toggleMode}
+          title="Light or dark. Remembered on this device."
+          class="hover:bg-text/10 text-muted ml-auto grid size-6 shrink-0 place-items-center rounded-full transition duration-150 active:scale-90"
+        >
+          {/* All four, and the theme script's attributes hide three. */}
+          <span class="if-two-modes if-dark sr-only">Switch to light mode</span>
+          <span class="if-two-modes if-light sr-only">Switch to dark mode</span>
+          <span class="if-one-mode if-dark sr-only">
+            This theme has no light mode
+          </span>
+          <span class="if-one-mode if-light sr-only">
+            This theme has no dark mode
+          </span>
+          <span class="swatch-split" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
           id={MUTE_BTN_ID}
           onClick$={toggleMute}
           title="Sound on or off. Remembered on this device."
-          class="hover:bg-text/10 text-muted ml-auto grid size-6 shrink-0 place-items-center rounded-full transition duration-150 active:scale-90"
+          class="hover:bg-text/10 text-muted grid size-6 shrink-0 place-items-center rounded-full transition duration-150 active:scale-90"
         >
           {/* Both, and `data-muted` on <html> hides one: see MUTED_KEY. */}
           <span class="if-sound sr-only">Mute shell sounds</span>
@@ -961,15 +1046,6 @@ export const Terminal = component$(() => {
             {q}
           </button>
         ))}
-        <button
-          type="button"
-          id="term-theme-chip"
-          onClick$={[clickGuard, $(() => suggest("theme", "chip"))]}
-          class={CHIP}
-        >
-          <span class="swatch swatch-current size-2.5" aria-hidden="true" />
-          Change the colours
-        </button>
       </div>
     </div>
   );

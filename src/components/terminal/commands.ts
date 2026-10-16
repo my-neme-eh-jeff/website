@@ -261,7 +261,7 @@ function theme(args: string[]): Line[] {
       ...(modes.length === 1
         ? [
             hint(
-              `${current.name} has a ${modes[0]} version only. This applies once you pick a palette with both.`,
+              `${current.name} has a ${modes[0]} version only. This applies once you pick a theme with both.`,
             ),
           ]
         : []),
@@ -271,8 +271,8 @@ function theme(args: string[]): Line[] {
   const p = PALETTES.find((x) => x.id === word);
   if (!p) {
     return [
-      err(`theme: no palette called "${args[0]}"`),
-      out(`Palettes: ${PALETTES.map((x) => x.id).join(", ")}`),
+      err(`theme: no theme called "${args[0]}"`),
+      out(`Themes: ${PALETTES.map((x) => x.id).join(", ")}`),
     ];
   }
   return [
@@ -445,7 +445,7 @@ function registry(): Command[] {
     {
       name: "theme",
       usage: "theme [name|light|dark|auto]",
-      summary: "Pick the site's colours. Saved in this browser.",
+      summary: "Pick the site's theme. Saved in this browser.",
       run: theme,
       takesArgs: true,
     },

@@ -66,7 +66,7 @@ export const ThemePicker = component$(() => {
         onClick$={sync$(() => window.siteTheme?.set())}
       >
         <span class="swatch swatch-current" aria-hidden="true" />
-        Colours
+        Theme
       </button>
 
       <div
@@ -81,7 +81,7 @@ export const ThemePicker = component$(() => {
         })}
       >
         <fieldset class="min-w-0">
-          <legend class="text-text mb-2 font-medium">Colours</legend>
+          <legend class="text-text mb-2 font-medium">Theme</legend>
           <div class="flex flex-col">
             {options.map((o) => (
               <label

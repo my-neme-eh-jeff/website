@@ -519,6 +519,39 @@ check(
   },
 );
 
+// The light/dark button beside it is labelled the same way, from the scheme
+// the theme script paints, which only it can work out for one-mode palettes.
+// On those it is dimmed by CSS and marked aria-disabled by a qinit sync$.
+check(
+  "the light/dark button's label and disabled state hold from first paint",
+  () => {
+    const html = read("dist", "index.html");
+    const head = html.slice(0, html.indexOf("</head>"));
+    for (const attr of ["data-scheme", "data-one-mode"])
+      assert(
+        head.includes(`setAttribute("${attr}"`),
+        `index.html: the theme script no longer sets ${attr} before paint.`,
+      );
+    for (const cls of ["if-light", "if-dark", "if-one-mode", "if-two-modes"])
+      assert(
+        new RegExp(`class="[^"]*\\b${cls}\\b`).test(html) &&
+          new RegExp(`\\.${cls}\\b`).test(head),
+        `index.html: .${cls} is not both in the page and in its CSS.`,
+      );
+    assert(
+      html.includes('id="term-mode"') &&
+        /\[data-one-mode\] #term-mode\{[^}]*opacity/.test(head),
+      "index.html: the one-mode dimming no longer reaches #term-mode.",
+    );
+    assert(
+      html.includes("q-d:qinit=") &&
+        /getElementById\("term-mode"\)[^]*?"aria-disabled"/.test(html),
+      "index.html: nothing marks #term-mode aria-disabled at qinit.",
+    );
+    return "four labels ship, CSS picks one; one-mode dims and disables";
+  },
+);
+
 check("every hero link is also asserted in sameAs", () => {
   // Read Person.sameAs itself: the hero renders the same hrefs as links, so a
   // whole-page search always passes.

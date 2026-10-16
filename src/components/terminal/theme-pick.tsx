@@ -8,8 +8,6 @@ export type PickState = {
   mode: ModeChoice;
   /** The palette saved when the picker opened. */
   saved: string;
-  /** What opened it, which gets focus back. */
-  from: "input" | "chip";
 };
 
 export const PICKS = PALETTES.map((p) => {
@@ -105,7 +103,7 @@ export const ThemePick = component$<{
     >
       <p class="m-0 flex flex-wrap items-baseline gap-x-3">
         <span id="theme-pick-title" class="text-text font-medium">
-          Colours
+          Theme
         </span>
         <span class="text-muted text-[0.6875rem] pointer-coarse:hidden">
           Each one shows as you move.

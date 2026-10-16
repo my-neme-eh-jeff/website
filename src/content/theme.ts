@@ -11,9 +11,11 @@ import {
  * Applies the saved palette before first paint, and is the only place a
  * palette is changed from. It runs inline in <head>, after the theme-color
  * tags it rewrites. On <html> it sets `data-palette` (absent for the default),
- * `data-mode` (absent for "auto") and `data-js`, which shows the footer picker.
+ * `data-mode` (absent for "auto"), `data-js`, which shows the footer picker,
+ * and `data-scheme` and `data-one-mode`, which label the shell's light/dark
+ * button.
  *
- * Both pickers call `window.siteTheme`: the footer's from a sync$ handler,
+ * Every control calls `window.siteTheme`: the footer's from a sync$ handler,
  * which can't import anything, and the shell's, which also calls `preview`.
  * Every change fires `themechange` on document, with `preview: true` for a
  * preview.
@@ -60,6 +62,7 @@ function scheme(s){var p=P[s.name];if(!p.d)return"light";if(!p.l)return"dark";re
 function paint(o){var s=o||state(),c=scheme(s),t=document.querySelectorAll('meta[name="theme-color"]');
 if(s.name===D)r.removeAttribute("data-palette");else r.setAttribute("data-palette",s.name);
 if(s.mode==="auto")r.removeAttribute("data-mode");else r.setAttribute("data-mode",s.mode);
+r.setAttribute("data-scheme",c);if(P[s.name].l&&P[s.name].d)r.removeAttribute("data-one-mode");else r.setAttribute("data-one-mode","");
 for(var i=0;i<t.length;i++)t[i].setAttribute("content",P[s.name][c==="dark"?"d":"l"]);
 document.dispatchEvent(new CustomEvent("themechange",{detail:{name:s.name,mode:s.mode,scheme:c,preview:!!o}}))}
 window.siteTheme={get:function(){var s=state();s.scheme=scheme(s);return s},

@@ -573,6 +573,22 @@
   display: none;
 }
 
+/* The light/dark button's label, from what the theme script painted. */
+:root[data-scheme="dark"] .if-light,
+:root:not([data-scheme="dark"]) .if-dark,
+:root[data-one-mode] .if-two-modes,
+:root:not([data-one-mode]) .if-one-mode {
+  display: none;
+}
+
+/* On a one-mode theme it stays, disabled (aria-disabled is set at qinit). */
+:root[data-one-mode] #term-mode {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: none;
+  scale: none;
+}
+
 /* Shown off `[data-busy]`, which keyGuard sets before Qwik has loaded. */
 .term-pending {
   display: none;
@@ -1035,6 +1051,18 @@
   .swatch-current {
     --swatch-bg: var(--sem-bg);
     --swatch-accent: var(--sem-accent);
+  }
+  .swatch-split {
+    flex: none;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 9999px;
+    background: linear-gradient(
+      135deg,
+      var(--sem-bg) 50%,
+      var(--sem-accent) 50%
+    );
+    box-shadow: 0 0 0 1px var(--sem-line);
   }
 
   .theme-panel {

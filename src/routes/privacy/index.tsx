@@ -55,8 +55,8 @@ export default component$(() => {
           If you turn analytics off above, that choice is saved the same way.
         </li>
         <li>
-          If you pick the site&apos;s colours, or light or dark, that choice is
-          saved the same way too.
+          If you pick a theme, or light or dark, that choice is saved the same
+          way too.
         </li>
       </ul>
 

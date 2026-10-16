@@ -34,6 +34,7 @@ writing a new doc.
 | Overflowing sideways scrollers get a tab stop (the layout's handler)      | per page (2.1.1)     |
 | No control is named by a `<label>` that wraps a live region               | per page (4.1.2)     |
 | The shell's mute button is labelled from storage before first paint       | home (4.1.2)         |
+| Its light/dark button: labelled likewise, disabled on one-mode themes     | home (4.1.2)         |
 
 The accent bar is not cosmetic bookkeeping: **`:focus-visible` is drawn in
 `--sem-accent`**, so the accent's contrast IS the focus indicator's contrast.
