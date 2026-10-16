@@ -1,10 +1,5 @@
-# Gate only. Deploys stay with Cloudflare Workers Builds, which watches `main`
-# directly -- so there is no Cloudflare API token in this repo's secrets and
-# nothing here can publish. See README "Deploys".
-#
-# The last two steps are the interesting ones: scripts/verify-build.mjs asserts
-# the invariants written down in CLAUDE.md against the real build output, and the
-# Lighthouse step is a performance budget.
+# Gate only: Cloudflare Workers Builds deploys `main`, so this repo's secrets
+# hold no Cloudflare token and nothing here can publish.
 name: CI
 
 on:
@@ -12,12 +7,9 @@ on:
     branches: [main]
   pull_request:
 
-# Least privilege: this workflow only ever reads the repo.
 permissions:
   contents: read
 
-# A newer push makes an in-flight run irrelevant. Cancel it rather than paying
-# for both.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -30,34 +22,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Must come BEFORE setup-node: `cache: pnpm` needs the pnpm binary to
-      # already exist so it can resolve the store path.
+      # Before setup-node, whose `cache: pnpm` needs the pnpm binary to find
+      # the store.
       - uses: pnpm/action-setup@v6
         with:
           version: 10.12.1
 
       - uses: actions/setup-node@v7
         with:
-          # 24 is Active LTS and satisfies the `>=21` branch of package.json
-          # engines. Pinned to a major so a Node patch cannot change the build.
           node-version: "24"
           cache: pnpm
 
-      # `--frozen-lockfile` is pnpm's `npm ci`: installs exactly the lockfile and
-      # fails if package.json disagrees. On a repo that pins every dependency
-      # exactly, that disagreement is the bug worth catching.
-      #
-      # No `--ignore-scripts` needed: pnpm blocks dependency postinstall scripts
-      # by default, and this project builds with none of them approved. sharp
-      # runs in the build (the blog's `?jsx` cover images) from its prebuilt
-      # @img/* binary, which needs no script. esbuild, workerd and
-      # @parcel/watcher are unused here or only needed by tooling this build
-      # never runs.
+      # No `--ignore-scripts`: pnpm 10 blocks dependency install scripts by
+      # default, and `pnpm.onlyBuiltDependencies` in package.json approves none.
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      # Ordered cheapest-first so an obvious failure reports in seconds rather
-      # than after a full SSG pass.
       - name: Format check
         run: pnpm run fmt.check
 
@@ -73,9 +53,6 @@ jobs:
       - name: Verify build invariants
         run: node scripts/verify-build.mjs
 
-      # Performance budget against the build just produced. `--local` because it
-      # must gate THIS build, not whatever is deployed; its floors are relaxed
-      # accordingly, since the local server has no compression or cache headers.
-      # It writes nothing; the site does not publish its scores.
+      # `--local`: gate this build, not whatever is deployed.
       - name: Lighthouse budget
         run: node scripts/audit.mjs --check --local
