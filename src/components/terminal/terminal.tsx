@@ -6,6 +6,7 @@ import {
   $,
   sync$,
   Slot,
+  type QRL,
   type Signal,
 } from "@qwik.dev/core";
 import { haptic } from "./haptics";
@@ -28,6 +29,7 @@ import lightUrl from "~/components/desk/light.ts?worker&url";
 const INTRO: Line = {
   kind: "hint",
   text: "Type a question, `help` for the commands, or `theme` to switch themes.",
+  cmds: ["theme"],
 };
 
 const PROMPT = "~ $";
@@ -117,6 +119,7 @@ export type Group = {
   text: string;
   link?: Line["link"];
   live?: Line["live"];
+  cmds?: Line["cmds"];
 };
 
 export function renderGroups(items: Line[]): Group[] {
@@ -126,7 +129,13 @@ export function renderGroups(items: Line[]): Group[] {
     if (l.kind === "art" && prev?.kind === "art") {
       prev.text += `\n${l.text}`;
     } else {
-      groups.push({ kind: l.kind, text: l.text, link: l.link, live: l.live });
+      groups.push({
+        kind: l.kind,
+        text: l.text,
+        link: l.link,
+        live: l.live,
+        cmds: l.cmds,
+      });
     }
   }
   return groups;
@@ -213,13 +222,31 @@ function links(text: string, allow?: ReadonlySet<string>) {
   );
 }
 
-/** A hint, with each `command` it suggests drawn as commands are. */
-function hintText(text: string) {
+/**
+ * A hint, with each `command` it suggests drawn as commands are. Those in
+ * `cmds` are buttons that type themselves in and run.
+ */
+function hintText(
+  text: string,
+  cmds: readonly string[] = [],
+  type$?: QRL<(cmd: string) => void>,
+) {
   return text.split("`").map((part, j) =>
     j % 2 ? (
-      <span class="text-alt" key={j}>
-        {part}
-      </span>
+      type$ && cmds.includes(part) ? (
+        <button
+          type="button"
+          class="text-alt cursor-pointer underline decoration-1 underline-offset-3 hover:decoration-2"
+          key={j}
+          onClick$={() => type$(part)}
+        >
+          {part}
+        </button>
+      ) : (
+        <span class="text-alt" key={j}>
+          {part}
+        </span>
+      )
     ) : (
       <span key={j}>{links(part)}</span>
     ),
@@ -360,6 +387,7 @@ export const Terminal = component$(() => {
   });
 
   const recalled = useSignal(false);
+  const typing = useSignal(false);
 
   /** Run before `cmdHistory.past` is read or written. */
   const ensureHistory = $(async () => {
@@ -576,6 +604,29 @@ export const Terminal = component$(() => {
       return;
     }
     await runLine(q, "suggestion");
+  });
+
+  /** Types `cmd` into the prompt a key at a time, then enters it. */
+  const typeIn = $(async (cmd: string) => {
+    const field = document.getElementById("term-input");
+    if (!(field instanceof HTMLInputElement)) return;
+    if (typing.value || convo.streaming || pick.open) return;
+    typing.value = true;
+    try {
+      field.focus();
+      field.value = "";
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        for (const ch of cmd) {
+          field.value += ch;
+          await feedback("key");
+          await new Promise((r) => setTimeout(r, 45));
+        }
+      }
+      field.value = cmd;
+      await submit(field);
+    } finally {
+      typing.value = false;
+    }
   });
 
   /**
@@ -947,7 +998,7 @@ export const Terminal = component$(() => {
                     {g.kind === "ai"
                       ? prose(g.text, KNOWN_HREFS)
                       : g.kind === "hint"
-                        ? hintText(g.text)
+                        ? hintText(g.text, g.cmds, typeIn)
                         : g.kind === "out"
                           ? links(g.text)
                           : g.kind === "in"

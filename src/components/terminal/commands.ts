@@ -29,6 +29,8 @@ export type Line = {
   live?: boolean;
   /** A colour change for the shell to apply; handlers only say what changes. */
   theme?: { name?: string; mode?: ModeChoice };
+  /** Of a hint's `commands`, those a click types in and runs. */
+  cmds?: readonly string[];
 };
 
 const out = (text: string): Line => ({ kind: "out", text });
