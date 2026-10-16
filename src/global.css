@@ -27,7 +27,8 @@
  * ---------------------------------------------------------------------------
  */
 
-@import "tailwindcss";
+/* Tailwind 4.3.3 makes CSS from class-like words in every file it scans, prose included, so scan src/ only. */
+@import "tailwindcss" source(".");
 
 /*
  * Self-hosted webfonts. Files and licences: public/fonts/
