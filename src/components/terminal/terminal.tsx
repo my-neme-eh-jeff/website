@@ -443,7 +443,6 @@ export const Terminal = component$(() => {
   const lines = useStore<{ items: Line[] }>({ items: [INTRO] });
   /** The answer while it streams; see converseInner. */
   const partial = useSignal("");
-  const value = useSignal("");
 
   /*
    * Whether the shell is muted, for the toggle's ICON only.
@@ -768,11 +767,11 @@ export const Terminal = component$(() => {
     }
   });
 
-  const submit = $(async () => {
+  const submit = $(async (field: HTMLInputElement) => {
     // One answer at a time. What they typed stays in the field.
     if (convo.streaming) return;
-    const raw = value.value;
-    value.value = "";
+    const raw = field.value;
+    field.value = "";
     await runLine(raw);
   });
 
@@ -812,8 +811,15 @@ export const Terminal = component$(() => {
      */
     if (e.key !== "Tab") tab.armed = false;
 
+    /*
+     * The field is the only copy of what was typed. A signal mirrored it from
+     * `input` events, and in Chrome the first Enter of a page could run before
+     * those had landed: the shell echoed an empty line and kept the text.
+     */
+    const field = e.target as HTMLInputElement;
+
     if (e.key === "Enter") {
-      await submit();
+      await submit(field);
       return;
     }
 
@@ -847,9 +853,9 @@ export const Terminal = component$(() => {
         }
         lines.items = [
           ...lines.items,
-          { kind: "in", text: `${PROMPT} ${value.value}^C` },
+          { kind: "in", text: `${PROMPT} ${field.value}^C` },
         ];
-        value.value = "";
+        field.value = "";
         cmdHistory.cursor = -1;
         stickToBottom(renderGroups(lines.items).length);
         await feedback("error");
@@ -866,7 +872,7 @@ export const Terminal = component$(() => {
           ? Math.min(cmdHistory.cursor + 1, cmdHistory.past.length - 1)
           : Math.max(cmdHistory.cursor - 1, -1);
       cmdHistory.cursor = next;
-      value.value = next === -1 ? "" : (cmdHistory.past.at(-1 - next) ?? "");
+      field.value = next === -1 ? "" : (cmdHistory.past.at(-1 - next) ?? "");
       return;
     }
 
@@ -890,15 +896,15 @@ export const Terminal = component$(() => {
     if (e.key === "Tab") {
       if (e.shiftKey) return;
 
-      const continuing = tab.armed && value.value === tab.last;
-      const base = continuing ? tab.base : value.value.trimStart();
+      const continuing = tab.armed && field.value === tab.last;
+      const base = continuing ? tab.base : field.value.trimStart();
       if (!base) return;
 
       const matches = completions().filter((c) => c.startsWith(base));
       if (matches.length === 0) return;
 
       if (matches.length === 1) {
-        value.value = matches[0]!;
+        field.value = matches[0]!;
         tab.armed = false;
         await feedback("key");
         return;
@@ -906,15 +912,15 @@ export const Terminal = component$(() => {
 
       if (continuing) {
         tab.i = (tab.i + 1) % matches.length;
-        value.value = matches[tab.i]!;
-        tab.last = value.value;
+        field.value = matches[tab.i]!;
+        tab.last = field.value;
         await feedback("key");
         return;
       }
 
       const common = commonPrefix(matches);
       if (common.length > base.length) {
-        value.value = common;
+        field.value = common;
         tab.armed = false;
         await feedback("key");
         return;
@@ -930,7 +936,7 @@ export const Terminal = component$(() => {
       stickToBottom(renderGroups(lines.items).length);
       tab.base = base;
       tab.i = -1;
-      tab.last = value.value;
+      tab.last = field.value;
       tab.armed = true;
       return;
     }
@@ -1292,7 +1298,6 @@ export const Terminal = component$(() => {
           <input
             id="term-input"
             type="text"
-            value={value.value}
             spellcheck={false}
             autoComplete="off"
             autoCorrect="off"
@@ -1325,7 +1330,6 @@ export const Terminal = component$(() => {
              * prompt, so nothing misaligns.
              */
             class="text-text placeholder:text-muted min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-base focus:outline-none sm:text-[0.8125rem]"
-            onInput$={(_, el) => (value.value = el.value)}
             /* Sync guard first: it must run before the default, and before
              * the lazily-fetched async handler below. */
             onKeyDown$={[keyGuard, onKeyDown]}
