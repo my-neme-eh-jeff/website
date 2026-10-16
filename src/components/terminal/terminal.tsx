@@ -1,4 +1,12 @@
-import { component$, useSignal, useStore, $, sync$, Slot } from "@qwik.dev/core";
+import {
+  component$,
+  useOnDocument,
+  useSignal,
+  useStore,
+  $,
+  sync$,
+  Slot,
+} from "@qwik.dev/core";
 import { haptic } from "./haptics";
 import { sound, isMuted, setMuted, type Tone } from "./sounds";
 import { load as loadHistory, save as saveHistory } from "./history";
@@ -6,6 +14,7 @@ import { run, completions, ASK, type Line } from "./commands";
 import { abortChat, sendChat, type Outcome, type Turn } from "./chat";
 import { KNOWN_HREFS } from "~/content/chat";
 import { profile } from "~/content/profile";
+import lightUrl from "~/components/desk/light.ts?worker&url";
 
 /**
  * An interactive shell. The command registry lives in `commands.ts`.
@@ -868,10 +877,32 @@ export const Terminal = component$(() => {
     el.closest("[data-shell]")?.setAttribute("data-busy", "");
   });
 
+  /*
+   * The desk's light (src/components/desk/light.ts), started once the page is
+   * idle. A sync$ runs from the loader without waking Qwik; it only checks the
+   * browser can draw off the main thread and adds the script.
+   */
+  useOnDocument(
+    "qidle",
+    sync$((_: Event, el: Element) => {
+      const src = el.getAttribute("data-light");
+      if (
+        !src ||
+        matchMedia("(prefers-reduced-motion: reduce)").matches ||
+        !("transferControlToOffscreen" in HTMLCanvasElement.prototype)
+      )
+        return;
+      const script = document.createElement("script");
+      script.src = src;
+      document.head.append(script);
+    }),
+  );
+
   return (
     <div
-      class="glass flex h-[max(30rem,calc(100svh_-_8rem))] flex-col overflow-hidden rounded-2xl"
+      class="glass relative flex h-[max(30rem,calc(100svh_-_8rem))] flex-col overflow-hidden rounded-2xl"
       data-shell
+      data-light={lightUrl}
     >
       <div class="border-line/60 flex items-center gap-2 border-b py-1.5 pr-3 pl-4">
         <span class="text-muted font-mono text-xs" aria-hidden="true">

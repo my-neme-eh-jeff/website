@@ -945,6 +945,28 @@
   color: var(--sem-accent);
 }
 
+/*
+ * Once the light has drawn its first frame (light.ts sets data-lit), it draws
+ * the desk and the frame, so the text desk and the CSS border step aside.
+ */
+.desk-light {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+}
+[data-shell][data-lit] {
+  border-color: transparent;
+}
+[data-lit] > .desk-light {
+  opacity: 1;
+}
+[data-lit] .desk-grid {
+  visibility: hidden;
+}
+
 /* The shell takes the space once it is in use: focused, or past its intro. */
 [data-shell]:has(#term-input:focus, [aria-live] > pre:nth-child(2))
   .desk-slot {
