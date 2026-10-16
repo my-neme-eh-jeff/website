@@ -350,12 +350,34 @@
 .field {
   --wash-l: 0px;
   --wash-r: 100%;
+  --wash-fade: 18rem;
+  --wash-a: max(0px, var(--wash-l) - var(--wash-fade));
+  --wash-b: calc(var(--wash-l) + var(--column-gutter));
+  --wash-c: calc(var(--wash-r) - var(--column-gutter));
+  --wash-d: min(100%, var(--wash-r) + var(--wash-fade));
+  /* Eased, not linear: a short straight ramp reads as a line. */
   mask-image: linear-gradient(
     to right,
-    #000 var(--wash-l),
-    transparent calc(var(--wash-l) + var(--column-gutter)),
-    transparent calc(var(--wash-r) - var(--column-gutter)),
-    #000 var(--wash-r)
+    #000 var(--wash-a),
+    rgb(0 0 0 / 0.896)
+      calc(var(--wash-a) + (var(--wash-b) - var(--wash-a)) * 0.2),
+    rgb(0 0 0 / 0.648)
+      calc(var(--wash-a) + (var(--wash-b) - var(--wash-a)) * 0.4),
+    rgb(0 0 0 / 0.352)
+      calc(var(--wash-a) + (var(--wash-b) - var(--wash-a)) * 0.6),
+    rgb(0 0 0 / 0.104)
+      calc(var(--wash-a) + (var(--wash-b) - var(--wash-a)) * 0.8),
+    transparent var(--wash-b),
+    transparent var(--wash-c),
+    rgb(0 0 0 / 0.104)
+      calc(var(--wash-c) + (var(--wash-d) - var(--wash-c)) * 0.2),
+    rgb(0 0 0 / 0.352)
+      calc(var(--wash-c) + (var(--wash-d) - var(--wash-c)) * 0.4),
+    rgb(0 0 0 / 0.648)
+      calc(var(--wash-c) + (var(--wash-d) - var(--wash-c)) * 0.6),
+    rgb(0 0 0 / 0.896)
+      calc(var(--wash-c) + (var(--wash-d) - var(--wash-c)) * 0.8),
+    #000 var(--wash-d)
   );
 }
 /* The widths are .site-column's, from the same custom properties. */
@@ -375,7 +397,7 @@
   .field:has(~ .site-column[data-column="reading"]) {
     --wash-l: calc(
       50% - var(--column-reading) / 2 - var(--rail-gap) - var(--rail-width) -
-        var(--column-gutter)
+        var(--column-gutter) * 2
     );
   }
 }
