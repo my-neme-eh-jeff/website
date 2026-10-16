@@ -92,7 +92,7 @@ node -e 'const h=require("fs").readFileSync("dist/index.html","utf8");
 
 ## Where the site is weakest, structurally
 
-For "recruiter asks an AI about this person", LinkedIn and GitHub are
+For "someone asks an AI about this person", LinkedIn and GitHub are
 higher-leverage surfaces than this site — they're searched directly and indexed
 heavily. This site's distinctive job is being the one canonical, self-authored
 page an engine can quote _accurately_ rather than reconstructing from a profile

@@ -34,11 +34,8 @@ Allow: /
 User-agent: Perplexity-User
 Allow: /
 
-# --- Training corpora. Allowed deliberately: for a job-seeking portfolio,
-# --- being in a model's weights is upside, and everything here is a public
-# --- resume we want copied. To opt out of training while keeping every
-# --- citation pathway intact, flip these four to "Disallow: /" and change
-# --- nothing above.
+# Training crawlers, allowed. To opt out of training and keep every citation
+# path above, change these four to "Disallow: /".
 
 User-agent: GPTBot
 Allow: /
