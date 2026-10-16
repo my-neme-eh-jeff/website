@@ -1,17 +1,15 @@
 import { component$ } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
-import { CircledChoice } from "~/components/circled-choice/circled-choice";
 import { DeskArt } from "~/components/desk/desk-art";
 import { Terminal } from "~/components/terminal/terminal";
-import { CopyEmail } from "~/components/copy-email";
 import { profile, projects, roles } from "~/content/profile";
 import { homeGraph, ld, seoMeta } from "~/content/seo";
 
 const current = roles[0];
 
 /**
- * The first screen is the shell, with the desk drawn inside it. Who this is
- * and how to reach him come straight after, for anyone who scrolls instead.
+ * The first screen is the shell, with the desk drawn inside it. What he does
+ * now and his selected work come after, for anyone who scrolls instead.
  */
 export default component$(() => {
   return (
@@ -20,21 +18,8 @@ export default component$(() => {
         <DeskArt q:slot="idle" />
       </Terminal>
 
-      <section class="max-w-measure mt-16">
-        <p class="text-xl leading-snug font-medium">{profile.name}</p>
-        <p class="text-muted mt-2 text-lg leading-snug">{profile.tagline}</p>
-        <div class="mt-6 flex flex-wrap items-center gap-3">
-          {/*
-           * The address itself, not the word "Email" — a mailto: link is a
-           * no-op on any machine with no mail handler registered. See CopyEmail.
-           */}
-          <CopyEmail email={profile.email} />
-          <CircledChoice label="say hi" />
-        </div>
-      </section>
-
       {current && (
-        <section class="max-w-measure mt-20">
+        <section class="max-w-measure mt-16">
           <p class="eyebrow mb-4">Now</p>
           <div class="hairline flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span class="font-medium">{current.title}</span>

@@ -36,13 +36,16 @@ export const profile = {
   name: "Aman Nambisan",
 
   /**
-   * Renders in the hero AND becomes the meta description, og:description and
-   * schema.org Person.description. 120–160 chars is the useful range.
+   * The meta description, og:description and schema.org Person.description.
+   * 120–160 chars is the useful range.
    */
   tagline:
     "Platform engineer at Atlan. I build the Kubernetes and Terraform machinery that provisions enterprise infrastructure, and the agents that operate it.",
 
-  /** The homepage's h1: the first line the shell prints, before any prompt. */
+  /** The home page's h1, in the shell's title bar: "<name>, <headline> at <employer>". */
+  headline: "Platform Engineer",
+
+  /** The first line the shell prints. It folds away at the first command. */
   motd: "I build infrastructure, and a small box on my desk will tell you about it.",
 
   bio: "I work on internal platform and infrastructure at Atlan — Kubernetes, Terraform, Crossplane, Temporal — making provisioning reliable enough that nobody has to think about it. Lately most of my time goes to agentic tooling: MCP servers, upgrade agents, and the plumbing that lets a model touch production safely. Outside work I build MLOps systems, like a GPU-aware autoscaler for vLLM and a training loop that promotes its own models.",
@@ -99,7 +102,10 @@ export const profile = {
     "MLOps",
   ] as string[],
 
-  /** Visible links in the hero. Every entry carries rel="me" (RelMeAuth). */
+  /**
+   * The header's links; LinkedIn and X sit under its "say hi" (SAY_HI in
+   * src/components/circled-choice/). Every entry carries rel="me" (RelMeAuth).
+   */
   links: [
     { label: "GitHub", href: "https://github.com/my-neme-eh-jeff" },
     { label: "LinkedIn", href: "https://www.linkedin.com/in/amannambisan/" },

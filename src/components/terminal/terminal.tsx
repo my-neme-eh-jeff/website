@@ -58,9 +58,6 @@ const SUGGESTIONS = [
   "How does this chat work?",
 ];
 
-/** Under the h1: who, and the tagline's first sentence. */
-const BYLINE = `${profile.name} · ${profile.tagline.slice(0, profile.tagline.indexOf(".") + 1)}`;
-
 /** Matches the Worker's cap, so the visitor hears it here first. */
 const MAX_CHAT_CHARS = 800;
 
@@ -1010,9 +1007,27 @@ export const Terminal = component$(() => {
       data-light={lightUrl}
     >
       <div class="border-line/60 flex items-center gap-2 border-b py-1.5 pr-3 pl-4">
-        <span class="text-muted font-mono text-xs" aria-hidden="true">
-          aman@desk: ~
-        </span>
+        {/*
+         * The page's h1, as the window's title. The employer opens in a new
+         * tab, like every link in the shell: leaving the page ends the session.
+         */}
+        <h1 class="text-muted m-0 min-w-0 font-mono text-xs leading-relaxed font-normal tracking-normal">
+          <span class="text-text">{profile.name}</span>, {profile.headline}
+          {profile.employer && (
+            <>
+              {" at "}
+              <a
+                href={profile.employer.url}
+                target="_blank"
+                rel="noopener"
+                class="no-underline hover:underline"
+              >
+                {profile.employer.name}
+                <span class="sr-only"> (opens in a new tab)</span>
+              </a>
+            </>
+          )}
+        </h1>
         {/*
          * Mute. Sound ships ON, so the control that turns it off has to be
          * findable without hunting — hence a permanent button in the chrome.
@@ -1050,11 +1065,12 @@ export const Terminal = component$(() => {
         </button>
       </div>
 
-      <div class="px-4 pt-4 font-mono text-[0.8125rem] leading-relaxed">
-        <h1 class="text-text m-0 font-mono text-[0.8125rem] leading-relaxed font-normal tracking-normal">
-          {profile.motd}
-        </h1>
-        <p class="text-muted m-0">{BYLINE}</p>
+      <div class="term-intro">
+        <div>
+          <p class="text-text m-0 px-4 pt-4 font-mono text-[0.8125rem] leading-relaxed">
+            {profile.motd}
+          </p>
+        </div>
       </div>
 
       <div class="relative min-h-0 flex-1">

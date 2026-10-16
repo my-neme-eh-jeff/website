@@ -120,7 +120,7 @@ function page() {
   };
 
   /* The same condition the stylesheet clears the text desk on. */
-  const IN_USE = ":has(#term-input:focus, [aria-live] > pre:nth-child(2))";
+  const IN_USE = ':has(#term-input:focus, [aria-live] > pre[data-kind="in"])';
   const state = () => post({ type: "state", clear: shell.matches(IN_USE) });
 
   let busy = shell.hasAttribute("data-busy");
@@ -156,7 +156,11 @@ function page() {
   // Fired by src/content/theme.ts for a new palette or mode, and for the OS
   // switching light/dark while the visitor follows it.
   document.addEventListener("themechange", colors);
-  new ResizeObserver(() => void layout()).observe(shell);
+  // The slot as well: it grows when the shell's intro folds away.
+  const ro = new ResizeObserver(() => void layout());
+  ro.observe(shell);
+  const slot = shell.querySelector(".desk-slot");
+  if (slot) ro.observe(slot);
 
   colors();
   state();

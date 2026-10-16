@@ -47,18 +47,29 @@ export const CopyEmail = component$<{ email: string }>(({ email }) => {
   });
 
   return (
-    <span class="inline-flex items-center gap-1">
-      {/* 13px under 360px: at 15px the pill and button are 304px in a 280px column. */}
+    <span class="flex items-center gap-1">
       <a
-        class="pill hover:border-accent font-mono max-[22.5rem]:text-[0.8125rem]"
+        class="hover:bg-line text-text flex flex-1 items-center gap-2.5 rounded-lg px-2.5 py-1.5 font-mono text-[0.8125rem] no-underline"
         href={`mailto:${email}`}
       >
+        <svg
+          viewBox="0 0 16 16"
+          class="text-muted size-3.5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.4"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="1.5" y="3.5" width="13" height="9" rx="1.5" />
+          <path d="M2 4.5l6 4.5 6-4.5" />
+        </svg>
         {email}
       </a>
       <button
         type="button"
         onClick$={copy}
-        class="hover:border-accent text-muted hover:text-text grid size-9 place-items-center rounded-full border border-transparent transition duration-150 active:scale-90"
+        class="hover:bg-line text-muted hover:text-text grid size-8 shrink-0 place-items-center rounded-lg transition duration-150 active:scale-90"
       >
         <span class="sr-only">
           {copied.value ? "Email address copied" : "Copy email address"}

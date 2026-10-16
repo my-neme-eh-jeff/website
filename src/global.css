@@ -827,7 +827,32 @@
 }
 
 /*
- * Output scrolls up under the shell's heading. Fading its top edge means a
+ * The shell's first line, until the first command. It folds rather than
+ * vanishing, so the log grows into the space instead of jumping into it.
+ */
+.term-intro {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows 300ms ease,
+    opacity 200ms ease;
+}
+.term-intro > * {
+  min-height: 0;
+  overflow: hidden;
+}
+[data-shell]:has([aria-live] > pre[data-kind="in"]) .term-intro {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 300ms ease,
+    opacity 200ms ease,
+    visibility 0s 300ms;
+}
+
+/*
+ * Output scrolls up under the shell's title bar. Fading its top edge means a
  * line leaves gradually instead of being sliced through by the panel.
  */
 .term-log {
@@ -946,7 +971,8 @@
 }
 
 /* The shell takes the space once it is in use: focused, or past its intro. */
-[data-shell]:has(#term-input:focus, [aria-live] > pre:nth-child(2)) .desk-slot {
+[data-shell]:has(#term-input:focus, [aria-live] > pre[data-kind="in"])
+  .desk-slot {
   opacity: 0;
 }
 

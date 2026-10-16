@@ -7,10 +7,21 @@ import {
   useSignal,
   $,
 } from "@qwik.dev/core";
+import { CopyEmail } from "~/components/copy-email";
 import { profile } from "~/content/profile";
 
+/** The profile links that sit under "say hi" rather than in the header row. */
+export const SAY_HI = ["LinkedIn", "X"];
+
+/** Simple Icons (CC0), 24x24: https://github.com/simple-icons/simple-icons */
+const ICONS: Record<string, string> = {
+  LinkedIn:
+    "M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z",
+  X: "M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z",
+};
+
 /**
- * A hand-drawn circle around a label that opens a two-way choice.
+ * A hand-drawn circle around a label that opens the ways to reach him.
  *
  * The annotation is an SVG path, not a font or an image. A rough ellipse is
  * three cubic curves with deliberately uneven control points and a small
@@ -72,9 +83,7 @@ export const CircledChoice = component$<{ label?: string }>(
       }),
     );
 
-    const choices = profile.links.filter((l) =>
-      ["LinkedIn", "X"].includes(l.label),
-    );
+    const choices = profile.links.filter((l) => SAY_HI.includes(l.label));
 
     return (
       <div class="relative inline-block" data-circled-choice>
@@ -84,7 +93,7 @@ export const CircledChoice = component$<{ label?: string }>(
           aria-expanded={open.value}
           aria-controls={panelId}
           onClick$={() => (open.value = !open.value)}
-          class="text-text relative inline-flex cursor-pointer items-center border-0 bg-transparent px-3 py-1 text-base"
+          class="text-text relative inline-flex cursor-pointer items-center border-0 bg-transparent px-3 py-1 text-sm"
         >
           {label}
           {/*
@@ -110,28 +119,35 @@ export const CircledChoice = component$<{ label?: string }>(
         </button>
 
         {/*
-         * `hidden` rather than conditional rendering: the panel is two links,
-         * so keeping it in the DOM costs nothing and avoids a layout jump on
-         * first open.
+         * `hidden` rather than conditional rendering: the panel is three
+         * links, so keeping it in the DOM costs nothing, and rel="me" stays in
+         * the HTML for anything verifying the profiles.
          */}
         <div
           id={panelId}
           data-choice-panel
           hidden={!open.value}
-          class="border-line bg-surface absolute top-full left-0 z-20 mt-2 flex min-w-max flex-col gap-1 rounded-xl border p-2 shadow-lg"
+          class="border-line bg-surface absolute top-full right-0 z-20 mt-2 flex min-w-max flex-col gap-0.5 rounded-xl border p-1.5 shadow-lg"
         >
-          <span class="eyebrow px-2 pt-1 pb-1">where?</span>
           {choices.map((c) => (
             <a
               key={c.href}
               href={c.href}
               rel="me noopener"
-              class="hover:border-accent border-line flex items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-sm no-underline"
+              class="hover:bg-line text-text flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm no-underline"
             >
-              <span class="text-accent font-mono text-xs">→</span>
+              <svg
+                viewBox="0 0 24 24"
+                class="text-muted size-3.5 shrink-0"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d={ICONS[c.label]} />
+              </svg>
               {c.label}
             </a>
           ))}
+          <CopyEmail email={profile.email} />
         </div>
       </div>
     );

@@ -1,6 +1,10 @@
 import { component$, Slot, sync$, useOnDocument } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
 import { Link, useDocumentHead, useLocation } from "@qwik.dev/router";
+import {
+  CircledChoice,
+  SAY_HI,
+} from "~/components/circled-choice/circled-choice";
 import { ThemePicker } from "~/components/theme-picker";
 import { profile } from "~/content/profile";
 
@@ -148,7 +152,8 @@ export default component$(() => {
          * Links sit inline at the top of the column, not in a rail. Small,
          * horizontal, no border — an index line rather than a chrome band.
          */}
-        <header class="flex flex-wrap items-baseline gap-x-5 gap-y-2 pt-8 lg:pt-14">
+        {/* Above main, so the "say hi" panel is not drawn under the shell. */}
+        <header class="relative z-10 flex flex-wrap items-baseline gap-x-5 gap-y-2 pt-6 lg:pt-8">
           <nav
             aria-label="Site"
             class="flex flex-wrap items-baseline gap-x-5 gap-y-2 text-sm"
@@ -175,32 +180,35 @@ export default component$(() => {
           </nav>
 
           <span
-            class="ml-auto flex flex-wrap gap-x-4 gap-y-2"
+            class="ml-auto flex flex-wrap items-baseline gap-x-3 gap-y-2"
             style={{ viewTransitionName: "site-links" }}
           >
-            {profile.links.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
-                rel="me noopener"
-                class="text-muted hover:text-text text-sm no-underline"
-              >
-                {l.label}
-                <span
-                  class="text-accent font-arrow ml-1 text-xs"
-                  aria-hidden="true"
+            {profile.links
+              .filter((l) => !SAY_HI.includes(l.label))
+              .map((l) => (
+                <a
+                  key={l.href}
+                  href={l.href}
+                  rel="me noopener"
+                  class="text-muted hover:text-text text-sm no-underline"
                 >
-                  ↗
-                </span>
-              </a>
-            ))}
+                  {l.label}
+                  <span
+                    class="text-accent font-arrow ml-1 text-xs"
+                    aria-hidden="true"
+                  >
+                    ↗
+                  </span>
+                </a>
+              ))}
+            <CircledChoice label="say hi" />
           </span>
         </header>
 
         <main
           id="main"
           tabIndex={-1}
-          class="min-w-0 flex-1 pt-14 pb-16 focus:outline-none in-data-[column=stage]:pt-6"
+          class="min-w-0 flex-1 pt-14 pb-16 focus:outline-none in-data-[column=stage]:pt-10"
           style={{
             viewTransitionName: doc.frontmatter.transitionName,
             viewTransitionClass: "page",
