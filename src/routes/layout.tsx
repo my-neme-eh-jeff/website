@@ -148,13 +148,20 @@ export default component$(() => {
   );
 
   /*
-   * The header sticks, hides while the page scrolls down and comes back on
-   * any scroll up. Off the top it gets a ground and a rule (data-pinned); on
+   * On a post the header sticks, hides while the page scrolls down and comes
+   * back on any scroll up. Elsewhere it scrolls away with the page: the home
+   * page scrolls less than the header's height, so a sticky one sat over the
+   * shell with no ground. Off the top it gets a ground and a rule (data-pinned); on
    * a post it names the post once the title has gone by (data-past-title).
    */
   const headroom = sync$(() => {
     const h = document.querySelector<HTMLElement>("[data-site-header]");
     if (!h) return;
+    if (!h.classList.contains("sticky")) {
+      h.removeAttribute("data-pinned");
+      h.removeAttribute("data-hidden");
+      return;
+    }
     const w = window as unknown as { headroomY?: number };
     const y = Math.max(0, scrollY);
     const dy = y - (w.headroomY ?? y);
@@ -224,7 +231,10 @@ export default component$(() => {
         {/* Above main, so the "say hi" panel is not drawn under the shell. */}
         <header
           data-site-header
-          class="sticky top-0 z-10 flex items-baseline gap-x-5 pt-6 lg:pt-8"
+          class={[
+            post ? "sticky top-0" : "relative",
+            "z-10 flex items-baseline gap-x-5 pt-6 lg:pt-8",
+          ]}
         >
           <nav
             aria-label="Site"
