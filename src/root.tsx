@@ -7,6 +7,7 @@ import {
 } from "@qwik.dev/router";
 
 import { analyticsLoader } from "~/content/analytics";
+import { fieldScript } from "~/content/field";
 import { DEFAULT_PALETTE, PALETTES, paletteCss } from "~/content/palettes";
 import { staleTabScript } from "~/content/stale-tab";
 import { themeScript } from "~/content/theme";
@@ -45,6 +46,7 @@ export default component$(() => {
         <style dangerouslySetInnerHTML={paletteCss} />
         <script dangerouslySetInnerHTML={themeScript} />
         <script dangerouslySetInnerHTML={staleTabScript} />
+        <script dangerouslySetInnerHTML={fieldScript} />
 
         {/* Fonts load in CORS mode even same-origin, so without crossorigin this downloads twice. */}
         <link

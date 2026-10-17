@@ -17,6 +17,7 @@ import {
   SYSTEM_PROMPT,
 } from "../src/content/chat.ts";
 import { bestWork } from "../src/content/context.ts";
+import { FIELD_ANIMATION, fieldScript } from "../src/content/field.ts";
 import { projects } from "../src/content/profile.ts";
 import { staleTabScript } from "../src/content/stale-tab.ts";
 
@@ -1409,6 +1410,34 @@ check("field's static fallback matches the 0% keyframe", () => {
   );
   return `${names.length} declarations identical`;
 });
+
+check(
+  "every page steps the field's drift instead of repainting each frame",
+  () => {
+    const css = readdirSync(p("dist", "assets"))
+      .filter((f) => f.endsWith(".css"))
+      .map((f) => read("dist", "assets", f))
+      .join("\n");
+    assert(
+      css.includes(`@keyframes ${FIELD_ANIMATION}{`),
+      `no @keyframes ${FIELD_ANIMATION} in the built CSS, so fieldScript ` +
+        `(src/content/field.ts) steps nothing. Rename FIELD_ANIMATION with it.`,
+    );
+    const runs = [...css.matchAll(/\.field\{animation:([^;}]*)/g)].map(
+      (m) => m[1],
+    );
+    assert(
+      runs.length > 0 &&
+        runs.every((a) => a.split(/\s+/).includes(FIELD_ANIMATION)),
+      `.field runs ${runs.join(", ") || "no animation"}, not ${FIELD_ANIMATION}`,
+    );
+    for (const page of [...PAGES, "404.html"]) {
+      const head = read("dist", page).match(/<head[\s\S]*?<\/head>/)?.[0] ?? "";
+      assert(head.includes(fieldScript), `${page}: no field script in <head>`);
+    }
+    return `${PAGES.length + 1} pages`;
+  },
+);
 
 // Navigation and view transitions
 
