@@ -39,6 +39,7 @@ const facts = [
   `Title: ${profile.jobTitle}${profile.employer ? ` at ${profile.employer.name}` : ""}`,
   `Based in: ${profile.city}`,
   ...(profile.email ? [`Email: ${profile.email}`] : []),
+  `Resume, to read or download as a PDF: ${profile.resume}`,
   ...profile.links.map((l) => `${l.label}: ${l.href}`),
   "",
   `Bio: ${profile.bio}`,
@@ -143,6 +144,7 @@ ${facts.join("\n")}`;
 export const KNOWN_HREFS: ReadonlySet<string> = new Set(
   [
     profile.email ? `mailto:${profile.email}` : "",
+    profile.resume,
     profile.employer?.url ?? "",
     ...profile.links.map((l) => l.href),
     ...roles.map((r) => r.companyUrl ?? ""),

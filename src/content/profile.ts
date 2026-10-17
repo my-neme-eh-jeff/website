@@ -34,6 +34,12 @@ export const profile = {
 
   email: "aman2003nambisan@gmail.com",
 
+  /**
+   * Read or downloaded as a PDF on FlowCV. It shows his phone number, which
+   * he chose to link anyway (2026-10-17).
+   */
+  resume: "https://flowcv.com/resume/1j98lweerbqr",
+
   employer: { name: "Atlan", url: "https://atlan.com" } as {
     name: string;
     url: string;

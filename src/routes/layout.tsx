@@ -289,16 +289,28 @@ export default component$(() => {
                   {ICONS[l.label] && (
                     <svg
                       viewBox="0 0 24 24"
-                      class="mr-1.5 inline-block size-3.5 align-[-0.15em]"
+                      class="mr-1.5 inline-block size-3.5 align-[-0.15em] max-[22rem]:mr-0"
                       fill="currentColor"
                       aria-hidden="true"
                     >
                       <path d={ICONS[l.label]} />
                     </svg>
                   )}
-                  {l.label}
+                  {/* Under 22rem the row has no room for the word beside its icon. */}
+                  <span
+                    class={ICONS[l.label] ? "max-[22rem]:sr-only" : undefined}
+                  >
+                    {l.label}
+                  </span>
                 </a>
               ))}
+            <a
+              href={profile.resume}
+              rel="noopener"
+              class="site-link text-muted hover:text-text text-sm no-underline"
+            >
+              Resume
+            </a>
             <CircledChoice label="say hi" />
           </span>
         </header>

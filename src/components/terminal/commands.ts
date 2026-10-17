@@ -479,6 +479,12 @@ function registry(): Command[] {
         ]),
     },
     {
+      name: "resume",
+      usage: "resume",
+      summary: "His resume, to read or download as a PDF.",
+      run: () => [out(`Resume: ${profile.resume}`)],
+    },
+    {
       name: "theme",
       usage: "theme [name|light|dark|auto]",
       summary: "Pick the site's theme. Saved in this browser.",
@@ -615,6 +621,7 @@ export function completions(): string[] {
     "ollama run aman",
     "clear",
     "whoami",
+    "resume",
     "k get",
     "k describe",
     ...RESOURCES.map((r) => `k get ${r.name}`),
