@@ -1,5 +1,5 @@
 /**
- * One file that runs twice: as a classic <script> in the page, which starts a
+ * One file that runs twice: as a module <script> in the page, which starts a
  * worker from its own URL, and in that worker, which draws the desk's grid
  * with WebGL2 cell for cell over the text the page shipped.
  */
@@ -27,13 +27,22 @@ type Msg =
 const FIRST = 32;
 const COUNT = 95;
 
+declare global {
+  interface Window {
+    /** Set by the first run; a module runs once, so later visits call this. */
+    deskLight?: () => void;
+  }
+}
+
 if (typeof document === "undefined") worker();
-else page();
+else {
+  window.deskLight = page;
+  page();
+}
 
 function page() {
-  const script = document.currentScript as HTMLScriptElement | null;
   const shell = document.querySelector<HTMLElement>("[data-shell]");
-  if (!script || !shell) return;
+  if (!shell || shell.querySelector(".desk-light")) return;
 
   const canvas = document.createElement("canvas");
   canvas.className = "desk-light";
@@ -46,18 +55,28 @@ function page() {
   }
   shell.append(canvas);
 
-  const w = new Worker(script.src);
+  const w = new Worker(import.meta.url, { type: "module" });
   const post = (m: Msg, t: Transferable[] = []) => w.postMessage(m, t);
   post({ type: "init", canvas: off }, [off]);
 
+  const stop = () => {
+    io.disconnect();
+    mo.disconnect();
+    ro.disconnect();
+    document.removeEventListener("visibilitychange", onVisibility);
+    document.removeEventListener("themechange", colors);
+    w.terminate();
+  };
+  const lost = () => {
+    shell.removeAttribute("data-lit");
+    canvas.remove();
+    stop();
+  };
   w.onmessage = (e: MessageEvent<string>) => {
     if (e.data === "drawn") shell.setAttribute("data-lit", "");
-    if (e.data === "lost") {
-      shell.removeAttribute("data-lit");
-      canvas.remove();
-      w.terminate();
-    }
+    if (e.data === "lost") lost();
   };
+  w.onerror = lost;
 
   const visible = () =>
     [...shell.querySelectorAll<HTMLElement>("[data-desk-grid]")].find(
@@ -113,12 +132,13 @@ function page() {
   const state = () => post({ type: "state", clear: shell.matches(IN_USE) });
 
   let busy = shell.hasAttribute("data-busy");
-  new MutationObserver(() => {
+  const mo = new MutationObserver(() => {
     const now = shell.hasAttribute("data-busy");
     if (now !== busy) post({ type: "state", think: now, flash: busy && !now });
     busy = now;
     state();
-  }).observe(shell, { attributes: true, subtree: true, childList: true });
+  });
+  mo.observe(shell, { attributes: true, subtree: true, childList: true });
   shell.addEventListener("focusin", state);
   shell.addEventListener("focusout", () => setTimeout(state, 0));
 
@@ -127,19 +147,16 @@ function page() {
   const run = () => post({ type: "run", on: shown && onScreen });
   const io = new IntersectionObserver(([e]) => {
     // Gone after a client-side navigation away; the next visit starts its own.
-    if (!shell.isConnected) {
-      io.disconnect();
-      w.terminate();
-      return;
-    }
+    if (!shell.isConnected) return stop();
     onScreen = !!e?.isIntersecting;
     run();
   });
   io.observe(shell);
-  document.addEventListener("visibilitychange", () => {
+  const onVisibility = () => {
     shown = !document.hidden;
     run();
-  });
+  };
+  document.addEventListener("visibilitychange", onVisibility);
 
   document.addEventListener("themechange", colors);
   const ro = new ResizeObserver(() => void layout());
@@ -513,9 +530,12 @@ function worker() {
     }
   }
 
+  /** Full rate while something eases; the idle drift and breath hold up at 30 fps. */
   function loop(now: number) {
     if (!running) return;
-    draw(now);
+    const easing =
+      thinkTarget > 0 || think > 0.01 || flash > 0.01 || clear !== clearTarget;
+    if (easing || now - last >= 29) draw(now);
     frame(loop);
   }
 

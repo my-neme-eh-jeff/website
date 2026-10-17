@@ -948,7 +948,9 @@ export const Terminal = component$(() => {
         !("transferControlToOffscreen" in HTMLCanvasElement.prototype)
       )
         return;
+      if (window.deskLight) return window.deskLight();
       const script = document.createElement("script");
+      script.type = "module";
       script.src = src;
       document.head.append(script);
     }),

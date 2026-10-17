@@ -4,9 +4,12 @@
  *
  * Loads every sitemap page at phone width (4x CPU throttle) and desktop width,
  * waits for the preloader's idle work to finish, then traces 5s and reports
- * the renderer main thread's busy time per second, median of 3. A still page
- * is a few ms/s; anything animating on the main thread (a custom property, a
- * gradient, a JS loop) shows up here, compositor-only work does not.
+ * CPU ms per second, median of 3: the page's main thread, and every thread of
+ * the page and the GPU process (compositor, workers, raster). A still page is
+ * a few ms/s on its main thread; a main-thread animation (a custom property,
+ * a gradient, a JS loop) shows up in both columns, a canvas redrawn in a
+ * worker or a compositor animation only in the second. The second depends on
+ * the machine's GPU, so compare builds on one machine.
  *
  *   --url <base>   a deployed site; analytics and /api/ are answered locally,
  *                  so nothing is sent
@@ -62,7 +65,7 @@ async function waitFor(url, timeoutMs = 15000) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function busyPerSecond(browser, path, profile) {
+async function cpuPerSecond(browser, path, profile) {
   const page = await browser.newPage();
   await page.setViewport({
     width: profile.width,
@@ -91,19 +94,35 @@ async function busyPerSecond(browser, path, profile) {
   const trace = JSON.parse(Buffer.from(await page.tracing.stop()).toString());
   await page.close();
 
-  const main = new Set(
-    trace.traceEvents
-      .filter(
-        (e) => e.name === "thread_name" && e.args.name === "CrRendererMain",
-      )
-      .map((e) => `${e.pid}:${e.tid}`),
+  const names = new Map();
+  for (const e of trace.traceEvents)
+    if (e.name === "thread_name") names.set(`${e.pid}:${e.tid}`, e.args.name);
+  const pids = new Set(
+    [...names]
+      .filter(([, n]) => n === "CrRendererMain" || n === "CrGpuMain")
+      .map(([k]) => k.split(":")[0]),
   );
-  let us = 0;
-  for (const e of trace.traceEvents) {
-    if (e.ph === "X" && e.name === "RunTask" && main.has(`${e.pid}:${e.tid}`))
-      us += e.dur;
+  // Top-level tasks only: a task can nest inside another on the same thread.
+  const tasks = trace.traceEvents
+    .filter(
+      (e) =>
+        e.ph === "X" &&
+        (e.name === "RunTask" || e.name === "ThreadControllerImpl::RunTask") &&
+        pids.has(String(e.pid)),
+    )
+    .sort((a, b) => a.ts - b.ts);
+  const end = new Map();
+  let main = 0;
+  let all = 0;
+  for (const e of tasks) {
+    const thread = `${e.pid}:${e.tid}`;
+    if (e.ts < (end.get(thread) ?? 0)) continue;
+    end.set(thread, e.ts + e.dur);
+    const cpu = e.tdur ?? e.dur;
+    all += cpu;
+    if (names.get(thread) === "CrRendererMain") main += cpu;
   }
-  return us / 1000 / SECONDS;
+  return { main: main / 1000 / SECONDS, all: all / 1000 / SECONDS };
 }
 
 const server = URL_ARG
@@ -134,20 +153,21 @@ try {
   });
   try {
     console.log(
-      `${BASE}: idle main-thread ms per second, median of ${RUNS}\n\n` +
-        `  ${"".padEnd(34)} ${PROFILES.map((p) => p.name.padStart(9)).join(" ")}`,
+      `${BASE}: idle CPU ms per second, median of ${RUNS}: main thread / all\n\n` +
+        `  ${"".padEnd(34)} ${PROFILES.map((p) => p.name.padStart(13)).join(" ")}`,
     );
     for (const path of paths) {
       const cells = [];
       for (const profile of PROFILES) {
         const runs = [];
         for (let i = 0; i < RUNS; i++)
-          runs.push(await busyPerSecond(browser, path, profile));
-        runs.sort((a, b) => a - b);
-        cells.push(Math.round(runs[Math.floor(RUNS / 2)]));
+          runs.push(await cpuPerSecond(browser, path, profile));
+        const median = (k) =>
+          Math.round(runs.map((r) => r[k]).sort((a, b) => a - b)[RUNS >> 1]);
+        cells.push(`${median("main")} / ${median("all")}`);
       }
       console.log(
-        `  ${path.padEnd(34)} ${cells.map((c) => String(c).padStart(9)).join(" ")}`,
+        `  ${path.padEnd(34)} ${cells.map((c) => c.padStart(13)).join(" ")}`,
       );
     }
   } finally {
