@@ -50,14 +50,22 @@ const offer = (fresh: string[], before: readonly string[], asked: string) =>
 
 type Phase = "idle" | "answering" | "suggesting";
 
+/**
+ * `open` is worked out here, not in the button's attributes. With Qwik rc.3
+ * an attribute reading `convo.phase` updated on its own and kept each slot's
+ * previous `q`, so the empty slots stayed clickable (2026-10-17).
+ */
 const chipSlots = (
   asks: readonly string[],
   landed: readonly string[],
   phase: Phase,
-): readonly string[] =>
+): { q: string; open: boolean }[] =>
   phase === "suggesting"
-    ? [...landed, ...asks.slice(landed.length).map(() => "")]
-    : asks;
+    ? [
+        ...landed.map((q) => ({ q, open: true })),
+        ...asks.slice(landed.length).map(() => ({ q: "", open: false })),
+      ]
+    : asks.map((q) => ({ q, open: phase === "idle" }));
 
 const CHIP =
   "border-line text-muted hover:text-text hover:border-muted inline-flex min-h-6 items-center rounded-full border px-2.5 font-mono text-[0.6875rem] transition-colors duration-150 aria-disabled:text-muted/45 aria-disabled:pointer-events-none";
@@ -356,6 +364,17 @@ function followIfPinned() {
   setTimeout(() => (body.scrollTop = body.scrollHeight), 0);
 }
 
+/**
+ * The chip row only grows until `clear`: each change of height moves every
+ * chip under the pointer, and questions can be clicked while others land.
+ */
+function holdChipRow(hold: boolean) {
+  const row = document.querySelector<HTMLElement>(
+    '[aria-labelledby="term-suggest"]',
+  );
+  if (row) row.style.minHeight = hold ? `${row.offsetHeight}px` : "";
+}
+
 function clearBusy() {
   const shell = document.querySelector("[data-shell]");
   shell?.removeAttribute("data-busy");
@@ -375,12 +394,15 @@ export const Terminal = component$(() => {
     asks: readonly string[];
     /** The questions written after the latest answer, as they arrived. */
     landed: readonly string[];
+    /** One of those, clicked before the rest were written: asked next. */
+    queued: string;
   }>({
     phase: "idle",
     turns: [],
     note: "",
     asks: SEED_QUESTIONS,
     landed: [],
+    queued: "",
   });
 
   const pick = useStore<PickState>({
@@ -477,6 +499,7 @@ export const Terminal = component$(() => {
         answered: () => {
           settle();
           clearBusy();
+          holdChipRow(true);
           convo.phase = "suggesting";
         },
         next: (q) => {
@@ -485,7 +508,8 @@ export const Terminal = component$(() => {
       });
     } finally {
       settle();
-      convo.phase = "idle";
+      // Busy straight through to a queued question, so nothing slips in.
+      convo.phase = convo.queued ? "answering" : "idle";
     }
 
     if (outcome.ok) {
@@ -499,7 +523,7 @@ export const Terminal = component$(() => {
       if (outcome.next.length) {
         convo.asks = offer(outcome.next, convo.asks, text);
       }
-      // Stats come with `done`, which a reply cut off by Ctrl+C never gets.
+      // Stats come with `done`, which a reply cut off early never gets.
       if (outcome.stats) say([{ kind: "meta", text: statsLine(outcome) }]);
     } else if (outcome.code !== "aborted") {
       say(chatError(outcome.code));
@@ -509,9 +533,26 @@ export const Terminal = component$(() => {
     }
   });
 
+  const record = $(async (raw: string) => {
+    const shown =
+      lines.items[0]?.text === INTRO.text ? lines.items.slice(1) : lines.items;
+    lines.items = [...shown, { kind: "in", text: `${PROMPT} ${raw}` }];
+    if (raw.trim()) {
+      await ensureHistory();
+      cmdHistory.past = [...cmdHistory.past, raw];
+      cmdHistory.cursor = -1;
+      await saveHistory(cmdHistory.past);
+    }
+  });
+
   const converse = $(async (text: string) => {
     try {
-      await converseInner(text);
+      for (let ask = text; ask;) {
+        await converseInner(ask);
+        ask = convo.queued;
+        convo.queued = "";
+        if (ask) await record(ask);
+      }
     } finally {
       clearBusy();
     }
@@ -574,17 +615,7 @@ export const Terminal = component$(() => {
   const runLine = $(async (raw: string, from: From = "input") => {
     let handedOff = false;
     try {
-      const shown =
-        lines.items[0]?.text === INTRO.text
-          ? lines.items.slice(1)
-          : lines.items;
-      lines.items = [...shown, { kind: "in", text: `${PROMPT} ${raw}` }];
-      if (raw.trim()) {
-        await ensureHistory();
-        cmdHistory.past = [...cmdHistory.past, raw];
-        cmdHistory.cursor = -1;
-        await saveHistory(cmdHistory.past);
-      }
+      await record(raw);
 
       if (from === "suggestion") {
         handedOff = true;
@@ -607,6 +638,7 @@ export const Terminal = component$(() => {
         convo.turns = [];
         convo.asks = SEED_QUESTIONS;
         convo.landed = [];
+        holdChipRow(false);
         await feedback("enter");
         return;
       }
@@ -629,8 +661,12 @@ export const Terminal = component$(() => {
   });
 
   const suggest = $(async (q: string) => {
-    if (convo.phase !== "idle") return;
-    await runLine(q, "suggestion");
+    if (convo.phase === "idle") return runLine(q, "suggestion");
+    // The answer is whole, so stop writing the rest and ask this one.
+    if (convo.phase === "suggesting" && convo.landed.includes(q)) {
+      convo.queued = q;
+      abortChat();
+    }
   });
 
   /** Types `cmd` into the prompt a key at a time, then enters it. */
@@ -679,6 +715,7 @@ export const Terminal = component$(() => {
         convo.turns = [];
         convo.asks = SEED_QUESTIONS;
         convo.landed = [];
+        holdChipRow(false);
         await feedback("enter");
         return;
       }
@@ -1118,7 +1155,7 @@ export const Terminal = component$(() => {
         aria-busy={convo.phase === "suggesting"}
         onPointerMove$={pointerMoved}
         hidden={pick.open}
-        class="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-3 pt-2 pb-3 sm:px-4"
+        class="flex flex-wrap content-start items-center gap-x-2 gap-y-1.5 px-3 pt-2 pb-3 sm:px-4"
       >
         {/* As wide as the face, so the chips stay put when it takes over. */}
         <span
@@ -1136,27 +1173,29 @@ export const Terminal = component$(() => {
           )}
         </span>
         {/* By slot, so a clicked button keeps focus as its text changes. */}
-        {chipSlots(convo.asks, convo.landed, convo.phase).map((q, i) => (
-          <button
-            type="button"
-            key={i}
-            aria-disabled={convo.phase === "idle" ? undefined : "true"}
-            onClick$={[clickGuard, $(() => suggest(q))]}
-            class={q ? CHIP : `${CHIP} min-w-14 border-dashed`}
-          >
-            {q ? (
-              convo.landed.includes(q) ? (
-                <span class="term-typed" style={`--len:${q.length}`}>
-                  {q}
-                </span>
+        {chipSlots(convo.asks, convo.landed, convo.phase).map(
+          ({ q, open }, i) => (
+            <button
+              type="button"
+              key={i}
+              aria-disabled={open ? undefined : "true"}
+              onClick$={[clickGuard, $(() => suggest(q))]}
+              class={q ? CHIP : `${CHIP} min-w-14 border-dashed`}
+            >
+              {q ? (
+                convo.landed.includes(q) ? (
+                  <span class="term-typed" style={`--len:${q.length}`}>
+                    {q}
+                  </span>
+                ) : (
+                  q
+                )
               ) : (
-                q
-              )
-            ) : (
-              <span class="sr-only">Being written</span>
-            )}
-          </button>
-        ))}
+                <span class="sr-only">Being written</span>
+              )}
+            </button>
+          ),
+        )}
       </div>
     </div>
   );
