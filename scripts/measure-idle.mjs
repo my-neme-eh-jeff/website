@@ -5,11 +5,12 @@
  * Loads every sitemap page at phone width (4x CPU throttle) and desktop width,
  * waits for the preloader's idle work to finish, then traces 5s and reports
  * CPU ms per second, median of 3: the page's main thread, and every thread of
- * the page and the GPU process (compositor, workers, raster). A still page is
- * a few ms/s on its main thread; a main-thread animation (a custom property,
- * a gradient, a JS loop) shows up in both columns, a canvas redrawn in a
- * worker or a compositor animation only in the second. The second depends on
- * the machine's GPU, so compare builds on one machine.
+ * the page and the GPU process (compositor, workers, raster). A main-thread
+ * animation (a custom property, a gradient, a JS loop) shows up in both
+ * columns, a canvas redrawn in a
+ * worker or a compositor animation only in the second. Both depend on the
+ * machine, so compare builds on one machine in one sitting: running on
+ * battery roughly doubled the phone column (2026-10-17).
  *
  *   --url <base>   a deployed site; analytics and /api/ are answered locally,
  *                  so nothing is sent

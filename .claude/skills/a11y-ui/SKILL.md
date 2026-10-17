@@ -134,11 +134,11 @@ Do not read a green `verify` as "accessible". These need a person:
   anything that must not animate at all needs the variant too.
 - **A looping animation of anything but `transform` or `opacity` runs on the
   main thread on every frame its value changes**, for as long as the page is
-  open. The field's
-  custom-property drift kept an idle page's main thread 80-100 ms/s busy on a
-  4x-throttled phone until `src/content/field.ts` stepped it 4 times a second
-  (Chrome 155, 2026-10-17). A still page measures under ~10 ms/s; check a new
-  one with `node scripts/measure-idle.mjs`.
+  open. The field's custom-property drift cost an idle page's main thread 5x
+  (4x-throttled phone) to 8x (desktop) what it does now that
+  `src/content/field.ts` steps it 4 times a second (Chrome 155, 2026-10-17).
+  Check a change with `node scripts/measure-idle.mjs`, against the current
+  build via `--dist`, in one sitting: the absolute ms/s move with the machine.
 
 ## Verifying a palette or mode deterministically
 
