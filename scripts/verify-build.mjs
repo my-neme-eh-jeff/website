@@ -255,6 +255,69 @@ check(
   },
 );
 
+check("a looping answer is cut before it repeats, and nothing else is", () => {
+  // As gpt-oss-16k:20b wrote it on 2026-10-17: the answer, the previous
+  // reply, and round again.
+  const a =
+    "At Atlan he moved the on-demand infrastructure provisioning flow to " +
+    "Crossplane, raising success rates from about 50% to 90%. For more " +
+    "details, see his work on infrastructure provisioning.";
+  const b =
+    "I don't have a copy of his resume. You can email him at " +
+    "aman@example.com for more information.";
+  const repos = [
+    "He has two side projects:",
+    "- An autoscaler. Repo: https://github.com/my-neme-eh-jeff/llmops-benchmarking",
+    "- A research loop. Repo: https://github.com/my-neme-eh-jeff/deploying-autoresearch",
+  ].join("\n");
+  const asks =
+    "\nWhat is he building?\nWhere did he work before?\nHow can I reach him?";
+  const cases = [
+    { reply: a + b + a + b + a, shown: a + b, looped: true },
+    { reply: a + a + a + `\n${SENTINEL}${asks}`, shown: a, looped: true },
+    { reply: `${repos}\n${SENTINEL}${asks}`, shown: repos, looped: false },
+  ];
+  const line = (content, done = false) =>
+    JSON.stringify({ message: { content }, done, model: "m" });
+  let runs = 0;
+  for (const { reply, shown, looped } of cases) {
+    const splits = [
+      [...reply],
+      ...[...reply].map((_, i) => [reply.slice(0, i), reply.slice(i)]),
+    ];
+    for (const chunks of splits) {
+      const ev = events([]);
+      const out = [
+        ...chunks.flatMap((c) => ev.line(line(c))),
+        ...ev.line(line("", true)),
+        ...ev.end(),
+      ];
+      const what = `${JSON.stringify(chunks.slice(0, 2)).slice(0, 80)}`;
+      const text = out
+        .filter((e) => e.type === "token")
+        .map((e) => e.text)
+        .join("");
+      assert(text === shown, `${what} showed ${JSON.stringify(text)}`);
+      const done = out.filter((e) => e.type === "done");
+      assert(
+        done.length === 1 && out.at(-1) === done[0],
+        `${what}: ${JSON.stringify(out.slice(-2))}`,
+      );
+      assert(ev.stopped === looped, `${what}: stopped is ${ev.stopped}`);
+      if (looped) {
+        assert(done[0].next.length === 0 && done[0].stats === null, what);
+      } else {
+        assert(
+          done[0].next.length === 3,
+          `${what}: ${JSON.stringify(done[0].next)}`,
+        );
+      }
+      runs++;
+    }
+  }
+  return `${runs} splits`;
+});
+
 // Cloudflare applies every matching _headers rule and comma-joins a repeated
 // header (verified on wrangler's asset worker).
 check("_headers sets no Cache-Control in its catch-all block", () => {

@@ -1,4 +1,4 @@
-import { finished, parse, splitter } from "./follow-ups.ts";
+import { finished, loopGuard, parse, splitter } from "./follow-ups.ts";
 
 type Chunk = {
   error?: unknown;
@@ -17,6 +17,8 @@ type Chunk = {
 /** Ollama's NDJSON lines in, the shell's events out. Reasoning is dropped. */
 export function events(asked: readonly string[]) {
   const split = splitter();
+  const guard = loopGuard();
+  let stopped = false;
   let answered = false;
   let sent = 0;
 
@@ -29,15 +31,29 @@ export function events(asked: readonly string[]) {
       } catch {
         return [];
       }
+      if (stopped) return [];
       if (chunk.error) return [{ type: "error", code: "upstream" }];
 
       const out: object[] = [];
       const text = chunk.message?.content && split.push(chunk.message.content);
-      if (text) out.push({ type: "token", text });
       const rest = chunk.done ? split.end().text : "";
-      if (rest) out.push({ type: "token", text: rest });
+      for (const t of [text, rest]) {
+        if (!t) continue;
+        const safe = guard.push(t);
+        if (safe) out.push({ type: "token", text: safe });
+        if (guard.looped) {
+          // The answer so far stands; the rest would only repeat it.
+          stopped = true;
+          out.push({ type: "done", model: chunk.model, stats: null, next: [] });
+          return out;
+        }
+      }
 
       const block = split.block();
+      if (block !== null || chunk.done) {
+        const held = guard.flush();
+        if (held) out.push({ type: "token", text: held });
+      }
       const next =
         block === null
           ? []
@@ -71,8 +87,14 @@ export function events(asked: readonly string[]) {
 
     /** The stream closed: whatever text is still held. */
     end(): object[] {
-      const { text } = split.end();
+      if (stopped) return [];
+      const text = split.end().text + guard.flush();
       return text ? [{ type: "token", text }] : [];
+    },
+
+    /** Once true, nothing more is wanted from the desk. */
+    get stopped() {
+      return stopped;
     },
   };
 }
@@ -100,6 +122,8 @@ export function relay(
         send(ev.line(buffer.slice(0, nl)), out);
         buffer = buffer.slice(nl + 1);
       }
+      // Cancels the request to the desk, which stops generating.
+      if (ev.stopped) out.terminate();
     },
     flush(out) {
       buffer += decoder.decode();

@@ -95,3 +95,58 @@ export function parse(block: string, asked: readonly string[]): string[] {
 export function finished(block: string, asked: readonly string[]): string[] {
   return parse(/^[\s\S]*(?:\n|\?\s)/.exec(block)?.[0] ?? "", asked);
 }
+
+/** A stretch this long that the answer has already said is a loop. */
+export const LOOP_CHARS = 120;
+/** A repeat is noticed once it is this long, so as much is always held back. */
+const ECHO_CHARS = 20;
+
+/**
+ * Holds back answer text that repeats what the answer already said, until
+ * it either moves on, and is shown, or reaches LOOP_CHARS, and is dropped.
+ * The newest ECHO_CHARS - 1 characters wait too, so a repeat is caught from
+ * its first character: about 0.25 s at the desk's 21 tokens a second.
+ * gpt-oss-16k:20b once wrote its answer and the previous reply over and
+ * over, 328 tokens of it (2026-10-17).
+ */
+export function loopGuard() {
+  let text = "";
+  let shown = 0;
+  let run = -1;
+  let looped = false;
+  const said = (from: number) => text.indexOf(text.slice(from)) < from;
+
+  return {
+    /** What can be shown now. Once looping, the answer ends with it. */
+    push(more: string): string {
+      if (looped) return "";
+      const before = text.length;
+      text += more;
+      let from = Math.max(shown, before - ECHO_CHARS + 1);
+      if (run >= 0 && !said(run)) {
+        from = run + 1;
+        run = -1;
+      }
+      for (let s = from; run < 0 && s <= text.length - ECHO_CHARS; s++) {
+        if (said(s)) run = s;
+      }
+      looped = run >= 0 && text.length - run >= LOOP_CHARS;
+      const upto =
+        run >= 0 ? run : Math.max(shown, text.length - ECHO_CHARS + 1);
+      const out = text.slice(shown, upto);
+      shown = upto;
+      return out;
+    },
+    get looped() {
+      return looped;
+    },
+    /** The answer has ended: whatever was held, since it never looped. */
+    flush(): string {
+      if (looped) return "";
+      const out = text.slice(shown);
+      shown = text.length;
+      run = -1;
+      return out;
+    },
+  };
+}

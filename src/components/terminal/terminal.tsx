@@ -40,13 +40,20 @@ const SEED_QUESTIONS: readonly string[] = [
   "How does this chat work?",
 ];
 
-// Topped up from the old row, so the button that was clicked is never removed
-// from under focus.
-const offer = (fresh: string[], before: readonly string[], asked: string) =>
-  [...fresh, ...before.filter((q) => q !== asked && !fresh.includes(q))].slice(
-    0,
-    Math.max(fresh.length, before.length),
-  );
+// Topped up from the old row, then the first three, so the row keeps its
+// length and the button that was clicked is never removed from under focus.
+const offer = (
+  fresh: readonly string[],
+  before: readonly string[],
+  asked: readonly string[],
+) => {
+  const row = [...fresh];
+  for (const q of [...before, ...SEED_QUESTIONS]) {
+    if (row.length >= before.length) break;
+    if (!asked.includes(q) && !row.includes(q)) row.push(q);
+  }
+  return row;
+};
 
 type Phase = "idle" | "answering" | "suggesting";
 
@@ -520,9 +527,12 @@ export const Terminal = component$(() => {
           content: got.slice(0, MAX_ASSISTANT_CHARS),
         },
       ];
-      if (outcome.next.length) {
-        convo.asks = offer(outcome.next, convo.asks, text);
-      }
+      // Even with no new questions, so none already asked is offered again.
+      convo.asks = offer(
+        outcome.next,
+        convo.asks,
+        turns.filter((t) => t.role === "user").map((t) => t.content),
+      );
       // Stats come with `done`, which a reply cut off early never gets.
       if (outcome.stats) say([{ kind: "meta", text: statsLine(outcome) }]);
     } else if (outcome.code !== "aborted") {
