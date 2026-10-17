@@ -364,11 +364,19 @@ function shellColumns(): number {
   return 80;
 }
 
+let following = false;
+
+/** Once a frame: each read forces a layout, and tokens land faster than frames. */
 function followIfPinned() {
+  if (following) return;
   const body = document.querySelector<HTMLElement>("[data-shell] label");
   if (!body) return;
   if (body.scrollHeight - body.scrollTop - body.clientHeight > 32) return;
-  setTimeout(() => (body.scrollTop = body.scrollHeight), 0);
+  following = true;
+  requestAnimationFrame(() => {
+    following = false;
+    body.scrollTop = body.scrollHeight;
+  });
 }
 
 /**
@@ -936,6 +944,22 @@ export const Terminal = component$(() => {
     el.removeAttribute("data-still");
   });
 
+  /*
+   * A cold AudioContext holds the main thread ~100-200 ms while audio starts up
+   * (Chrome 155, 2026-10-17), so it starts on focus, not inside the first key.
+   */
+  const warmAudio = sync$(() => {
+    if (window.shellAudio || !window.AudioContext) return;
+    if (document.documentElement.hasAttribute("data-muted")) return;
+    setTimeout(() => {
+      try {
+        window.shellAudio ??= new AudioContext();
+      } catch {
+        // No sound, as before.
+      }
+    }, 0);
+  });
+
   // A sync$, so qwikloader starts the light on qidle without waking Qwik
   // (@qwik.dev/core rc.3, 2026-10-16).
   useOnDocument(
@@ -1151,6 +1175,7 @@ export const Terminal = component$(() => {
              */
             class="text-text placeholder:text-muted min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-base focus:outline-none sm:text-[0.8125rem]"
             onKeyDown$={[keyGuard, onKeyDown]}
+            onFocus$={warmAudio}
           />
           <span
             class="text-muted hidden shrink-0 font-mono text-[0.6875rem] sm:inline"

@@ -34,9 +34,17 @@ export const setMuted = $((value: boolean) => {
   return value;
 });
 
+declare global {
+  interface Window {
+    /** Started early by the shell's input, so the first key isn't kept waiting. */
+    shellAudio?: AudioContext;
+  }
+}
+
 let ctx: AudioContext | null = null;
 
 function audio(): AudioContext | null {
+  ctx ??= window.shellAudio ?? null;
   if (ctx) {
     // A backgrounded tab can leave it suspended, and it doesn't resume itself.
     if (ctx.state === "suspended") void ctx.resume();
@@ -48,7 +56,7 @@ function audio(): AudioContext | null {
       .webkitAudioContext;
   if (!Ctor) return null;
   try {
-    ctx = new Ctor();
+    ctx = window.shellAudio = new Ctor();
   } catch {
     return null;
   }
