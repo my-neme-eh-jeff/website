@@ -1656,6 +1656,7 @@ check("the root layout's per-page values are bindings, not re-renders", () => {
     "frontmatter.navHref",
     "frontmatter.navCurrent",
     "frontmatter.transitionName",
+    "frontmatter.postTitle",
     "prevUrl",
   ];
   for (const page of PAGES) {

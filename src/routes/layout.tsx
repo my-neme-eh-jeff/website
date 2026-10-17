@@ -21,6 +21,7 @@ export type Frontmatter = {
   navHref?: string;
   navCurrent?: "page" | "true";
   transitionName?: string;
+  postTitle?: string;
 };
 
 /**
@@ -47,7 +48,8 @@ const pages = [
  * `useLocation()` readers only after:
  *   grep -n 'const headUpdated\|forceStoreEffects(routeLocation, "url")' node_modules/@qwik.dev/router/lib/index.qwik.mjs
  * Read from head in JSX, each value is a signal binding (`pnpm run verify`
- * checks), so a click never re-runs this layout.
+ * checks they are). Route state read anywhere else in this component's body
+ * re-runs the whole layout on every click.
  */
 export const head: DocumentHead = ({ url }) => {
   const path = url.pathname;
@@ -59,6 +61,7 @@ export const head: DocumentHead = ({ url }) => {
       navHref: lit?.href,
       navCurrent: lit && (lit.href === path ? "page" : "true"),
       transitionName: pageTransitionName(path),
+      postTitle: posts.find((p) => path === `/blog/${p.slug}/`)?.title,
     },
   };
 };
@@ -167,6 +170,9 @@ export default component$(() => {
     const dy = y - (w.headroomY ?? y);
     w.headroomY = y;
     const atTop = y < h.offsetHeight;
+    const title = document.querySelector(".post > h1");
+    const pastTitle =
+      !!title && title.getBoundingClientRect().bottom < h.offsetHeight;
     h.toggleAttribute("data-pinned", !atTop);
     if (atTop) h.removeAttribute("data-hidden");
     else if (
@@ -175,16 +181,10 @@ export default component$(() => {
     )
       h.setAttribute("data-hidden", "");
     else if (dy < -2) h.removeAttribute("data-hidden");
-    const title = document.querySelector(".post > h1");
-    h.toggleAttribute(
-      "data-past-title",
-      !!title && title.getBoundingClientRect().bottom < h.offsetHeight,
-    );
+    h.toggleAttribute("data-past-title", pastTitle);
   });
   useOnWindow("scroll", headroom, { passive: true });
   useOnDocument("qinit", headroom);
-
-  const post = posts.find((p) => loc.url.pathname === `/blog/${p.slug}/`);
 
   /*
    * A box that scrolls sideways needs a tab stop, or a keyboard cannot scroll
@@ -232,7 +232,7 @@ export default component$(() => {
         <header
           data-site-header
           class={[
-            post ? "sticky top-0" : "relative",
+            doc.frontmatter.postTitle ? "sticky top-0" : "relative",
             "z-10 flex items-baseline gap-x-5 pt-6 lg:pt-8",
           ]}
         >
@@ -259,18 +259,17 @@ export default component$(() => {
                 {p.label}
               </Link>
             ))}
-            {post && (
-              <a
-                href="#main"
-                class="site-crumb text-muted hover:text-text -ml-3 min-w-0 truncate no-underline"
-              >
-                <span aria-hidden="true" class="mr-2">
-                  /
-                </span>
-                {post.title}
-                <span class="sr-only">, back to the top</span>
-              </a>
-            )}
+            <a
+              href="#main"
+              hidden={!doc.frontmatter.postTitle}
+              class="site-crumb text-muted hover:text-text -ml-3 min-w-0 truncate no-underline"
+            >
+              <span aria-hidden="true" class="mr-2">
+                /
+              </span>
+              {doc.frontmatter.postTitle}
+              <span class="sr-only">, back to the top</span>
+            </a>
           </nav>
 
           <span

@@ -20,18 +20,6 @@ export const PICKS = PALETTES.map((p) => {
   };
 });
 
-const NAV = [
-  "ArrowUp",
-  "ArrowDown",
-  "ArrowLeft",
-  "ArrowRight",
-  "Home",
-  "End",
-  "PageUp",
-  "PageDown",
-  " ",
-];
-
 /**
  * Previews each palette on the whole page as it is reached. Nothing is saved
  * until one is kept; Esc puts back what was there.
@@ -47,10 +35,24 @@ export const ThemePick = component$<{
     window.siteTheme?.preview(PICKS[i]!.id, mode);
   });
 
-  /** The arrows and Space would otherwise scroll the log. */
+  /**
+   * The arrows and Space would otherwise scroll the log. A sync$ is shipped as
+   * its source text, so it can't name anything from module scope.
+   */
   const guard = sync$((e: KeyboardEvent) => {
     if ((e.target as Element).closest("button")) return;
-    if (NAV.includes(e.key)) e.preventDefault();
+    const nav = [
+      "ArrowUp",
+      "ArrowDown",
+      "ArrowLeft",
+      "ArrowRight",
+      "Home",
+      "End",
+      "PageUp",
+      "PageDown",
+      " ",
+    ];
+    if (nav.includes(e.key)) e.preventDefault();
   });
 
   const onKey = $(async (e: KeyboardEvent) => {

@@ -151,7 +151,7 @@ export default component$(() => {
                     <Cover
                       src={p.cover.src}
                       alt=""
-                      sizes="11rem"
+                      sizes="(min-width: 64rem) 17rem, (min-width: 40rem) 14rem, 11rem"
                       loading="lazy"
                       decoding="async"
                       class="block h-auto w-full"
