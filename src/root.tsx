@@ -8,6 +8,7 @@ import {
 
 import { analyticsLoader } from "~/content/analytics";
 import { DEFAULT_PALETTE, PALETTES, paletteCss } from "~/content/palettes";
+import { staleTabScript } from "~/content/stale-tab";
 import { themeScript } from "~/content/theme";
 import "./global.css";
 
@@ -43,6 +44,7 @@ export default component$(() => {
         />
         <style dangerouslySetInnerHTML={paletteCss} />
         <script dangerouslySetInnerHTML={themeScript} />
+        <script dangerouslySetInnerHTML={staleTabScript} />
 
         {/* Fonts load in CORS mode even same-origin, so without crossorigin this downloads twice. */}
         <link

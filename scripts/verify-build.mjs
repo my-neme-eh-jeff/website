@@ -18,6 +18,7 @@ import {
 } from "../src/content/chat.ts";
 import { bestWork } from "../src/content/context.ts";
 import { projects } from "../src/content/profile.ts";
+import { staleTabScript } from "../src/content/stale-tab.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const p = (...s) => join(ROOT, ...s);
@@ -1611,6 +1612,19 @@ check("analytics loads only through the guarded loader", () => {
     }
   }
   return `${PAGES.length} pages`;
+});
+
+check("every page ships the stale-tab rescue inline, in its head", () => {
+  // Inline because the lazy chunk it would otherwise live in can be the one
+  // the deploy removed.
+  for (const page of [...PAGES, "404.html"]) {
+    const head = read("dist", page).match(/<head[\s\S]*?<\/head>/)?.[0] ?? "";
+    assert(
+      head.includes(staleTabScript),
+      `${page}: no stale-tab script in <head>`,
+    );
+  }
+  return `${PAGES.length + 1} pages`;
 });
 
 check("every page links the privacy notice from the footer", () => {
