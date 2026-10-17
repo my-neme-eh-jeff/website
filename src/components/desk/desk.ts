@@ -50,7 +50,7 @@ const LED = { x: 294, y: 248, r: 5 };
 const NOTE = {
   x: 18,
   y: 44,
-  lines: ["# this box on my desk", "# answers your questions"],
+  lines: ["# my desktop", "# answers your questions"],
 };
 
 export const GRIDS = {
