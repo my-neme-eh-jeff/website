@@ -1057,7 +1057,9 @@
       width: 14rem;
       opacity: 0;
       pointer-events: none;
-      transform: perspective(40rem) rotateX(10deg) rotateY(-34deg) scale(0.88);
+      transform: perspective(40rem) rotateX(10deg)
+        rotateY(calc(var(--lean-x, 0) * 30deg)) rotateZ(0deg) translateX(0)
+        scale(0.88);
       transition:
         opacity 220ms ease-out,
         transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -1069,18 +1071,33 @@
       height: auto;
       max-width: 100%;
       max-height: 100%;
+    }
+    .backdrop img,
+    .glance {
       border-radius: 0.75rem;
       box-shadow:
         0 0 0 1px color-mix(in oklab, var(--term-fg) 12%, transparent),
         0 18px 36px -18px rgb(0 0 0 / 0.6);
     }
-    /* -0.4 is where the pointer usually is, over the text. */
+    /*
+     * The lean props come from a frame loop (lean, in blog/index.tsx), so
+     * transform has no transition while hovered. --lift goes 0 to 1 as the
+     * card comes up from the resting pose above.
+     */
     .covers > li:is(:hover, :has(:focus-visible)) > .backdrop {
       opacity: 1;
+      transition: opacity 220ms ease-out;
       transform: perspective(40rem)
-        rotateX(calc(3deg - var(--lean-y, 0) * 3deg))
-        rotateY(calc(-10deg + (var(--lean-x, -0.4) + 0.4) * 5deg))
-        rotateZ(-1deg) scale(0.94);
+        rotateX(
+          calc(
+            (1 - var(--lift, 1)) * 10deg - var(--lift, 1) * var(--lean-y, 0) *
+              8deg
+          )
+        )
+        rotateY(calc(var(--lean-x, 0) * (30deg - var(--lift, 1) * 10deg)))
+        rotateZ(calc(var(--lift, 1) * var(--lean-x, 0) * 2deg))
+        translateX(calc(var(--lift, 1) * var(--lean-x, 0) * 1rem))
+        scale(calc(0.88 + var(--lift, 1) * 0.08));
     }
   }
   @media (hover: hover) and (width >= 64rem) {
@@ -1088,10 +1105,38 @@
       width: 17rem;
     }
   }
+  .glance {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    overflow: hidden;
+    background: var(--term-bg);
+    color: var(--term-fg);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1.6;
+  }
+  .glance-bar {
+    display: flex;
+    gap: 0.3rem;
+    padding: 0.45rem 0.6rem;
+    background: var(--term-bar);
+  }
+  .glance-bar i {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: color-mix(in oklab, var(--term-fg) 22%, transparent);
+  }
+  .glance-body {
+    display: flex;
+    flex-direction: column;
+    padding: 0.55rem 0.75rem 0.7rem;
+    white-space: nowrap;
+  }
   @media (prefers-reduced-motion: reduce) {
     .covers > li:is(:hover, :has(:focus-visible)) > .backdrop {
-      transform: perspective(40rem) rotateX(3deg) rotateY(-10deg) rotateZ(-1deg)
-        scale(0.94);
+      transform: perspective(40rem) scale(0.96);
     }
   }
 }

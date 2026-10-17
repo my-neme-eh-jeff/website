@@ -366,6 +366,11 @@ export type Post = {
    * `pnpm run verify` checks the size and that it exists.
    */
   cover?: { src: string; alt: string };
+  /**
+   * What /blog/ shows beside the post on hover, as lines of terminal text.
+   * Without it the cover is shown there too.
+   */
+  glance?: (string | [text: string, ink: "dim" | "cyan" | "yellow"])[][];
 };
 
 /** Real posts only. With none, /blog/ shows an empty state; filler gets indexed. */
@@ -385,5 +390,14 @@ export const posts: Post[] = [
       src: "/blog/claude-code-status-line/cover.jpg",
       alt: "The same Claude Code status line calm, heating up, and at the limit",
     },
+    glance: [
+      ["ctx ", ["64%", "yellow"], " │ $6.42 │ ", ["5h 72% → 100%", "yellow"]],
+      [["● staging (eks)", "cyan"]],
+      [["⎇ api(fix-retries)·wt ⑃ main", "dim"]],
+      [
+        ["⎇ infra(main) ", "dim"],
+        ["⚠×1", "yellow"],
+      ],
+    ],
   },
 ];

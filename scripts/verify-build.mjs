@@ -873,17 +873,24 @@ check("og:image is referenced only if it exists and is a real image", () => {
 });
 
 // An image `?jsx` can't find renders nothing, silently.
-check("every post's cover and backdrop reach /blog/ as WebP srcsets", () => {
-  const covers = (
-    read("src", "content", "profile.ts").match(/^\s+cover: \{/gm) ?? []
-  ).length;
-  const imgs = [
-    ...read("dist", "blog", "index.html").matchAll(/<img\b[^>]*>/g),
-  ];
+check("every post's cover and glance reach /blog/", () => {
+  const entries = read("src", "content", "profile.ts")
+    .split(/\bslug: /)
+    .slice(1);
+  let want = 0;
+  let glances = 0;
+  for (const e of entries) {
+    const cover = /\bcover: \{/.test(e);
+    const glance = /\bglance: \[/.test(e);
+    // The cover is printed on phones, and is the hover card unless a glance is.
+    want += (cover ? 1 : 0) + (cover && !glance ? 1 : 0);
+    glances += glance ? 1 : 0;
+  }
+  const html = read("dist", "blog", "index.html");
+  const imgs = [...html.matchAll(/<img\b[^>]*>/g)];
   assert(
-    imgs.length === covers * 2,
-    `profile.ts gives ${covers} post(s) a cover, each drawn twice (print ` +
-      `and backdrop); /blog/ shows ${imgs.length} images`,
+    imgs.length === want,
+    `profile.ts implies ${want} cover image(s) on /blog/; it shows ${imgs.length}`,
   );
   for (const [img] of imgs) {
     assert(
@@ -891,7 +898,12 @@ check("every post's cover and backdrop reach /blog/ as WebP srcsets", () => {
       `a /blog/ cover is not the ?jsx WebP srcset: ${img.slice(0, 100)}`,
     );
   }
-  return `${imgs.length} image(s) for ${covers} post(s)`;
+  const shown = (html.match(/class="glance"/g) ?? []).length;
+  assert(
+    shown === glances,
+    `profile.ts gives ${glances} post(s) a glance; /blog/ shows ${shown}`,
+  );
+  return `${imgs.length} image(s), ${shown} glance(s)`;
 });
 
 check("every post's reading time matches its built text", () => {
