@@ -968,7 +968,9 @@ export const Terminal = component$(() => {
     sync$((_: Event, el: Element) => {
       const src = el.getAttribute("data-light");
       const net = (
-        navigator as { connection?: { saveData?: boolean; effectiveType?: string } }
+        navigator as {
+          connection?: { saveData?: boolean; effectiveType?: string };
+        }
       ).connection;
       const mem = (navigator as { deviceMemory?: number }).deviceMemory;
       if (
@@ -1000,7 +1002,9 @@ export const Terminal = component$(() => {
       if (!live || !pending || !mid || shell.hasAttribute("data-room")) return;
       shell.setAttribute("data-room", "");
       const fit = () => {
-        const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const rem = parseFloat(
+          getComputedStyle(document.documentElement).fontSize,
+        );
         const need =
           live.offsetHeight +
           (pending.offsetParent ? pending.offsetHeight + 4 : 0) +
@@ -1013,7 +1017,10 @@ export const Terminal = component$(() => {
         const cols = Number(pre.dataset["cols"]);
         const rows = Number(pre.dataset["rows"]);
         const fitH = (h: number) =>
-          Math.min(h, ((mid.clientWidth - 2 * rem) * rows * 1.25) / (cols * 0.6));
+          Math.min(
+            h,
+            ((mid.clientWidth - 2 * rem) * rows * 1.25) / (cols * 0.6),
+          );
         const room = mid.clientHeight - 0.25 * rem;
         const floor = Math.min(fitH(room - 4.75 * rem), 5.5 * rows * 1.25);
         shell.toggleAttribute(

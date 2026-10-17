@@ -28,7 +28,6 @@ const ARM = {
   REST: [440, 116] as Pt,
 } as const;
 
-
 function soft(x: number, lo: number, hi: number, k: number) {
   if (x > hi - k) return hi - k * Math.exp(-(x - (hi - k)) / k);
   if (x < lo + k) return lo + k * Math.exp(-(lo + k - x) / k);
@@ -86,7 +85,9 @@ export class Rig {
       d = maxR;
     }
     const a = Math.atan2(dy, dx);
-    const B = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1));
+    const B = Math.acos(
+      clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1),
+    );
     let sh = Math.sin(a + B) < Math.sin(a - B) ? a + B : a - B;
     sh = soft(wrap(sh), ARM.shoulder[0], ARM.shoulder[1], knee);
     const E: Pt = [S[0] + L1 * Math.cos(sh), S[1] + L1 * Math.sin(sh)];
@@ -131,13 +132,18 @@ export class Rig {
         const q = this.q[j]!;
         let acc = w * w * wrap(goal[j]! - q) - 2 * ARM.z[j]! * w * this.v[j]!;
         const [lo, hi] = lim[j]!;
-        if (q > hi!) acc -= ARM.stiff * (q - hi!) + cs * Math.max(0, this.v[j]!);
-        else if (q < lo!) acc -= ARM.stiff * (q - lo!) + cs * Math.min(0, this.v[j]!);
+        if (q > hi!)
+          acc -= ARM.stiff * (q - hi!) + cs * Math.max(0, this.v[j]!);
+        else if (q < lo!)
+          acc -= ARM.stiff * (q - lo!) + cs * Math.min(0, this.v[j]!);
         this.v[j] = this.v[j]! + acc * h;
         this.q[j] = q + this.v[j]! * h;
       }
     }
-    return this.v.some((v, j) => Math.abs(v) > 0.02 || Math.abs(wrap(goal[j]! - this.q![j]!)) > 0.002);
+    return this.v.some(
+      (v, j) =>
+        Math.abs(v) > 0.02 || Math.abs(wrap(goal[j]! - this.q![j]!)) > 0.002,
+    );
   }
 
   pose(): Pose {

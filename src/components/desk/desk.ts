@@ -282,7 +282,9 @@ function trace(paths: Poly[][], cols: number, rows: number, record = false) {
       for (let k = 0; k < m; k++) {
         const [ax, ay] = pts[k]!;
         const [bx, by] = pts[(k + 1) % pts.length]!;
-        const seg = record ? Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)) : 0;
+        const seg = record
+          ? Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay))
+          : 0;
         const u0 = ((ax - VIEW.x) * cols) / VIEW.w;
         const v0 = ((ay - VIEW.y) * rows) / VIEW.h;
         const du = ((bx - ax) * cols) / VIEW.w;
@@ -479,7 +481,13 @@ export function lampRest(S: Pt) {
 /** Solid things, for the lamp's shadows: the desk top, box, mug, books and legs. */
 export function occupancy(cols: number, rows: number): Uint8Array {
   const c = new Canvas(cols, rows);
-  for (const d of [FILLS[0]![0], STROKES[4]!, STROKES[10]!, STROKES[11]!, STROKES[13]!])
+  for (const d of [
+    FILLS[0]![0],
+    STROKES[4]!,
+    STROKES[10]!,
+    STROKES[11]!,
+    STROKES[13]!,
+  ])
     c.fill(d);
   for (const d of [STROKES[2]!, STROKES[3]!]) c.stroke(d, 2.2);
   const cov = c.cover();

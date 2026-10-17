@@ -129,11 +129,13 @@ function page() {
     if (m === "drawn") {
       shell.setAttribute("data-lit", "");
       placeSwitch();
-    }
-    else if (m === "lost") lost();
+    } else if (m === "lost") lost();
     else if (m === "calm") {
       try {
-        localStorage.setItem(LEVEL, JSON.stringify({ level: m, at: Date.now() }));
+        localStorage.setItem(
+          LEVEL,
+          JSON.stringify({ level: m, at: Date.now() }),
+        );
       } catch {
         // Not remembered: the next visit steps down on its own.
       }
@@ -156,7 +158,8 @@ function page() {
     // Its parent, not offsetParent: hidden until the desk is lit, it has none.
     const box = sw?.parentElement?.getBoundingClientRect();
     const at = switchAt;
-    if (!sw || !pre || !box || !at || pre.dataset["deskGrid"] !== at.size) return;
+    if (!sw || !pre || !box || !at || pre.dataset["deskGrid"] !== at.size)
+      return;
     const { cols, rows } = GRIDS[at.size];
     const pr = pre.getBoundingClientRect();
     const cw = pr.width / cols;
@@ -221,7 +224,10 @@ function page() {
       muted: rgb("--sem-muted"),
       accent: rgb("--sem-accent"),
       alt: rgb("--sem-alt"),
-      warm: warmth(fg, ["--sem-cta", "--sem-accent", "--sem-alt", "--sem-danger"].map(rgb)),
+      warm: warmth(
+        fg,
+        ["--sem-cta", "--sem-accent", "--sem-alt", "--sem-danger"].map(rgb),
+      ),
       dark: 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.5,
     });
   };
@@ -368,7 +374,12 @@ function warmth(fg: Rgb, inks: Rgb[]): Rgb {
     const mx = Math.max(r, g, b);
     const d = mx - Math.min(r, g, b);
     if (d < 40 / 255) continue;
-    const h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    const h =
+      mx === r
+        ? ((g - b) / d) % 6
+        : mx === g
+          ? (b - r) / d + 2
+          : (r - g) / d + 4;
     const hue = (h * 60 + 360) % 360;
     const dist = Math.min(Math.abs(hue - 42), 360 - Math.abs(hue - 42));
     if (dist < bestD) {
@@ -376,7 +387,9 @@ function warmth(fg: Rgb, inks: Rgb[]): Rgb {
       best = [r, g, b];
     }
   }
-  return best ? [0, 1, 2].map((k) => fg[k]! * 0.45 + best![k]! * 0.55) as Rgb : fg;
+  return best
+    ? ([0, 1, 2].map((k) => fg[k]! * 0.45 + best![k]! * 0.55) as Rgb)
+    : fg;
 }
 
 /** Each glyph drawn where the page's text would put it in its cell. */
@@ -944,7 +957,11 @@ function worker() {
       if (!inPoly(quad, x, y)) continue;
       const k = desk.kind[i];
       const outline = owner[i] === PATH.panel && k !== KIND.fill;
-      if (outline || !(k === KIND.empty || k === KIND.fill || owner[i] === PATH.wave)) continue;
+      if (
+        outline ||
+        !(k === KIND.empty || k === KIND.fill || owner[i] === PATH.wave)
+      )
+        continue;
       byRow.set(r, [...(byRow.get(r) ?? []), i]);
     }
 
@@ -1007,7 +1024,13 @@ function worker() {
           if (kind[i]) continue;
           const nz = vnoise(c * 0.42, r * 0.8 + time * 3.2, time * 0.7);
           const thr = 0.5 + k * 0.045 - heat * 0.16;
-          if (nz > thr) put(i, nz > thr + 0.1 ? 126 : 39, INK.muted, heat * (1 - k / 10) * 0.85);
+          if (nz > thr)
+            put(
+              i,
+              nz > thr + 0.1 ? 126 : 39,
+              INK.muted,
+              heat * (1 - k / 10) * 0.85,
+            );
         }
       }
     }
@@ -1028,9 +1051,22 @@ function worker() {
         y = Math.min(0.999, Math.max(0, y));
         const lv = Math.floor(y * levels);
         const top = rowsP.length >= 2 && lv >= 5;
-        const row = rowsP.length >= 2 ? rowsP[rowsP.length - (top ? 2 : 1)]! : rowsP[0]!;
-        const cell = row[Math.min(row.length - 1, Math.round((k / Math.max(1, m - 1)) * (row.length - 1)))]!;
-        put(cell, TRACE[top ? lv - 5 : Math.min(4, lv)]!, INK.alt, think > 0.5 ? 0.6 + 0.4 * rnd() : 0.9, 2);
+        const row =
+          rowsP.length >= 2 ? rowsP[rowsP.length - (top ? 2 : 1)]! : rowsP[0]!;
+        const cell =
+          row[
+            Math.min(
+              row.length - 1,
+              Math.round((k / Math.max(1, m - 1)) * (row.length - 1)),
+            )
+          ]!;
+        put(
+          cell,
+          TRACE[top ? lv - 5 : Math.min(4, lv)]!,
+          INK.alt,
+          think > 0.5 ? 0.6 + 0.4 * rnd() : 0.9,
+          2,
+        );
       }
     }
 
@@ -1047,23 +1083,38 @@ function worker() {
     );
     const xs = pose.shade.map((v) => v[0]);
     const ys = pose.shade.map((v) => v[1]);
-    const c0 = Math.max(0, Math.floor(((Math.min(...xs) - VIEW.x) * cols) / VIEW.w));
-    const c1 = Math.min(cols - 1, Math.ceil(((Math.max(...xs) - VIEW.x) * cols) / VIEW.w));
-    const r0 = Math.max(0, Math.floor(((Math.min(...ys) - VIEW.y) * rows) / VIEW.h));
-    const r1 = Math.min(rows - 1, Math.ceil(((Math.max(...ys) - VIEW.y) * rows) / VIEW.h));
+    const c0 = Math.max(
+      0,
+      Math.floor(((Math.min(...xs) - VIEW.x) * cols) / VIEW.w),
+    );
+    const c1 = Math.min(
+      cols - 1,
+      Math.ceil(((Math.max(...xs) - VIEW.x) * cols) / VIEW.w),
+    );
+    const r0 = Math.max(
+      0,
+      Math.floor(((Math.min(...ys) - VIEW.y) * rows) / VIEW.h),
+    );
+    const r1 = Math.min(
+      rows - 1,
+      Math.ceil(((Math.max(...ys) - VIEW.y) * rows) / VIEW.h),
+    );
     for (let r = r0; r <= r1; r++)
       for (let c = c0; c <= c1; c++) {
         const x = VIEW.x + ((c + 0.5) * VIEW.w) / cols;
         const y = VIEW.y + ((r + 0.5) * VIEW.h) / rows;
-        if (inPoly(pose.shade, x, y)) put(r * cols + c, 58, INK.muted, 0.35 + 0.4 * on);
+        if (inPoly(pose.shade, x, y))
+          put(r * cols + c, 58, INK.muted, 0.35 + 0.4 * on);
       }
     for (let i = 0; i < n; i++)
-      if (lines[i]) put(i, lines[i]!.charCodeAt(0), INK.text, 0.55 + 0.45 * on, 1);
+      if (lines[i])
+        put(i, lines[i]!.charCodeAt(0), INK.text, 0.55 + 0.45 * on, 1);
 
     const breathe = 0.6 + 0.4 * Math.sin(time * 2.4);
     [...base.text].forEach((chr, k) => {
       const i = base.row * cols + base.start + k;
-      if (chr !== "[" && chr !== "I" && chr !== "]") return put(i, chr.charCodeAt(0), INK.text, 0.5 + 0.3 * on);
+      if (chr !== "[" && chr !== "I" && chr !== "]")
+        return put(i, chr.charCodeAt(0), INK.text, 0.5 + 0.3 * on);
       const code = chr === "I" && !lampOn ? 79 : chr.charCodeAt(0);
       if (lampOn) put(i, code, INK.warm, hover ? 1 : 0.85);
       else put(i, code, INK.accent, 0.5 + 0.5 * (hover ? 1 : breathe));
@@ -1075,7 +1126,17 @@ function worker() {
   }
 
   function draw(now: number) {
-    if (!gl || !prog || !layout || !colors || !hasAtlas || !canvas || !G || !rig) return false;
+    if (
+      !gl ||
+      !prog ||
+      !layout ||
+      !colors ||
+      !hasAtlas ||
+      !canvas ||
+      !G ||
+      !rig
+    )
+      return false;
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     const time = (now - t0) / 1000;
@@ -1089,7 +1150,10 @@ function worker() {
     head = (head + dt * 0.14) % 1;
     const breathe = 0.45 + 0.2 * Math.sin(time * 1.4);
     const blink = Math.sin(time * 16) > 0 ? 1 : 0.2;
-    const led = Math.min(1, breathe * (1 - think) + blink * think + flash + ledFlick);
+    const led = Math.min(
+      1,
+      breathe * (1 - think) + blink * think + flash + ledFlick,
+    );
 
     const want = layout.art;
     const ka = 1 - Math.exp(-dt / 0.09);
@@ -1103,7 +1167,10 @@ function worker() {
     // Idle, the lamp drifts over the box; touch screens have no pointer to follow.
     const P: Pt =
       coarse || !aim
-        ? [AIM[0] + 22 * Math.sin(time * 0.37), AIM[1] - 6 + 12 * Math.sin(time * 0.53)]
+        ? [
+            AIM[0] + 22 * Math.sin(time * 0.37),
+            AIM[1] - 6 + 12 * Math.sin(time * 0.53),
+          ]
         : aim;
     rig.step(rig.goal(P), dt, false);
     power += ((lampOn ? 1 : 0) - power) * (1 - Math.exp(-dt * 9));
@@ -1112,8 +1179,10 @@ function worker() {
     pulses = pulses.filter((p) => p.s > -40 && p.s < G!.Lc + 40);
     spikes = spikes.filter((s0) => time - s0 < 3);
     const streaming = time - tokenAt < 0.8;
-    const heatTo = think > 0.5 ? 0.85 : streaming ? 1 : pulses.length ? 0.15 : 0;
-    heat += (heatTo - heat) * (1 - Math.exp(-dt * (heatTo > heat ? 1.6 : 0.45)));
+    const heatTo =
+      think > 0.5 ? 0.85 : streaming ? 1 : pulses.length ? 0.15 : 0;
+    heat +=
+      (heatTo - heat) * (1 - Math.exp(-dt * (heatTo > heat ? 1.6 : 0.45)));
     const busy = think > 0.5 || streaming;
     const loadTo = busy ? 0.82 + 0.16 * vnoise(time * 3, 1, 2) : 0.06;
     load += (loadTo - load) * (1 - Math.exp(-dt * (busy ? 2.2 : 0.8)));
@@ -1122,16 +1191,33 @@ function worker() {
     const { pose, breathe: sb } = overlay(time);
     gl.activeTexture(gl.TEXTURE4);
     gl.bindTexture(gl.TEXTURE_2D, tex[4]!);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, G.cols, G.rows, gl.RGBA, gl.UNSIGNED_BYTE, G.over);
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      G.cols,
+      G.rows,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      G.over,
+    );
 
     const { dpr } = layout;
     const { cols, rows } = G;
     const set1 = (n: string, v: number) => gl!.uniform1f(U.get(n) ?? null, v);
-    const set2 = (n: string, v: Pt) => gl!.uniform2f(U.get(n) ?? null, v[0], v[1]);
+    const set2 = (n: string, v: Pt) =>
+      gl!.uniform2f(U.get(n) ?? null, v[0], v[1]);
     const set3 = (n: string, v: Rgb) => gl!.uniform3f(U.get(n) ?? null, ...v);
     gl.viewport(0, 0, canvas.width, canvas.height);
     set2("uRes", [canvas.width, canvas.height]);
-    gl.uniform4f(U.get("uArt") ?? null, art[0]! * dpr, art[1]! * dpr, art[2]! * dpr, art[3]! * dpr);
+    gl.uniform4f(
+      U.get("uArt") ?? null,
+      art[0]! * dpr,
+      art[1]! * dpr,
+      art[2]! * dpr,
+      art[3]! * dpr,
+    );
     set2("uCell", [(art[2]! * dpr) / cols, (art[3]! * dpr) / rows]);
     set2("uGrid", [cols, rows]);
     set2("uSlot", slot);
@@ -1157,9 +1243,14 @@ function worker() {
       VIEW.x + ((G.base.sw + 1.5) * VIEW.w) / cols,
       VIEW.y + ((G.base.row + 0.5) * VIEW.h) / rows,
     ]);
-    set1("uSwitchGlow", (1 - power) * sb * (colors.dark ? 0.7 : 0.3) + (hover ? 0.25 : 0));
+    set1(
+      "uSwitchGlow",
+      (1 - power) * sb * (colors.dark ? 0.7 : 0.3) + (hover ? 0.25 : 0),
+    );
     const pu = new Float32Array(32);
-    pulses.slice(-8).forEach((p, k) => pu.set([p.s, Math.sign(p.v), p.k, p.tail], k * 4));
+    pulses
+      .slice(-8)
+      .forEach((p, k) => pu.set([p.s, Math.sign(p.v), p.k, p.tail], k * 4));
     gl.uniform4fv(U.get("uPulse[0]") ?? null, pu);
     set1("uLc", G.Lc);
     set1("uFan", fan);
@@ -1173,7 +1264,12 @@ function worker() {
       scope.postMessage("drawn");
     }
     const swing = rig.v.some((v) => Math.abs(v) > 0.15);
-    return easing || swing || pulses.length > 0 || Math.abs(power - (lampOn ? 1 : 0)) > 0.01;
+    return (
+      easing ||
+      swing ||
+      pulses.length > 0 ||
+      Math.abs(power - (lampOn ? 1 : 0)) > 0.01
+    );
   }
 
   /** Long frames for most of the first seconds step the light down a level. */
@@ -1188,7 +1284,9 @@ function worker() {
     if (now - probeFrom < 2500) return;
     const sorted = [...probe].sort((a, b) => a - b);
     const med = sorted[sorted.length >> 1] ?? 16.7;
-    const long = probe.filter((d) => d > Math.max(50, med * 1.8)).length / Math.max(1, probe.length);
+    const long =
+      probe.filter((d) => d > Math.max(50, med * 1.8)).length /
+      Math.max(1, probe.length);
     if (long <= 0.15) {
       probed = true;
       return;
@@ -1287,7 +1385,8 @@ function inPoly(poly: Pt[], x: number, y: number) {
   for (let a = 0, b = poly.length - 1; a < poly.length; b = a++) {
     const [xa, ya] = poly[a]!;
     const [xb, yb] = poly[b]!;
-    if (ya > y !== yb > y && x < ((xb - xa) * (y - ya)) / (yb - ya) + xa) inn = !inn;
+    if (ya > y !== yb > y && x < ((xb - xa) * (y - ya)) / (yb - ya) + xa)
+      inn = !inn;
   }
   return inn;
 }
