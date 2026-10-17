@@ -39,6 +39,10 @@ export function splitter() {
       held = held.slice(cut);
       return shown;
     },
+    /** The block so far, or null until the answer has ended. */
+    block(): string | null {
+      return block;
+    },
     /** Whatever is still held, and the block, or null if none came. */
     end(): { text: string; block: string | null } {
       const text = block === null ? held : "";
@@ -82,4 +86,12 @@ export function parse(block: string, asked: readonly string[]): string[] {
     if (out.length === MAX_FOLLOW_UPS) break;
   }
   return out;
+}
+
+/**
+ * The questions on the finished lines of a block still being written. Each
+ * call's list begins with the last's, and all of them begin `parse(block)`.
+ */
+export function finished(block: string, asked: readonly string[]): string[] {
+  return parse(/^[\s\S]*(?:\n|\?\s)/.exec(block)?.[0] ?? "", asked);
 }

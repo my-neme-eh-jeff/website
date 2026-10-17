@@ -8,6 +8,7 @@ import { grad } from "../src/components/blog/statusline/model.ts";
 import { GRIDS, rasterize } from "../src/components/desk/desk.ts";
 import { DEFAULT_PALETTE, PALETTES, modesOf } from "../src/content/palettes.ts";
 import { SENTINEL, parse, splitter } from "../src/worker/follow-ups.ts";
+import { events } from "../src/worker/relay.ts";
 import {
   MAX_ASSISTANT_CHARS,
   MAX_TURNS,
@@ -194,6 +195,64 @@ check("the follow-up block is cut out of the answer at any token split", () => {
   );
   return `${splits.length} splits`;
 });
+
+check(
+  "the Worker sends each question as its line ends, then all in done",
+  () => {
+    const answer = "He works at Atlan.";
+    const asks = [
+      "What is he building?",
+      "Where did he work before?",
+      "How can I reach him?",
+    ];
+    const replies = [
+      `${answer}\n\n${SENTINEL}\n${asks.join("\n")}`,
+      `${answer}\n${SENTINEL.slice(0, -2)}<|message|>${asks.join("\n")}\n`,
+      `${answer} ${SENTINEL} ${asks.join(" ")}`,
+    ];
+    const line = (content, done = false) =>
+      JSON.stringify({ message: { content }, done, model: "m" });
+    let runs = 0;
+    for (const reply of replies) {
+      const splits = [
+        [...reply],
+        ...[...reply].map((_, i) => [reply.slice(0, i), reply.slice(i)]),
+      ];
+      for (const chunks of splits) {
+        const ev = events([]);
+        const streamed = chunks.flatMap((c) => ev.line(line(c)));
+        const out = [...streamed, ...ev.line(line("", true)), ...ev.end()];
+        const what = `${JSON.stringify(chunks.slice(0, 2))} sent ${JSON.stringify(out)}`;
+        const types = out.map((e) => e.type);
+        const at = types.indexOf("answered");
+        assert(at >= 0 && types.lastIndexOf("answered") === at, what);
+        assert(
+          out.slice(0, at).every((e) => e.type === "token") &&
+            out
+              .slice(0, at)
+              .map((e) => e.text)
+              .join("") === answer,
+          what,
+        );
+        const done = out.at(-1);
+        const sent = out.slice(at + 1, -1);
+        assert(
+          done.type === "done" &&
+            sent.every((e) => e.type === "next") &&
+            JSON.stringify(sent.map((e) => e.text)) === JSON.stringify(asks) &&
+            JSON.stringify(done.next) === JSON.stringify(asks),
+          what,
+        );
+        if (chunks.length > 2) {
+          const early = streamed.filter((e) => e.type === "next").length;
+          assert(early >= 2, `only ${early} sent before done: ${what}`);
+        }
+        runs++;
+      }
+    }
+    return `${runs} splits`;
+  },
+);
 
 // Cloudflare applies every matching _headers rule and comma-joins a repeated
 // header (verified on wrangler's asset worker).

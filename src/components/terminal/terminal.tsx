@@ -48,8 +48,19 @@ const offer = (fresh: string[], before: readonly string[], asked: string) =>
     Math.max(fresh.length, before.length),
   );
 
+type Phase = "idle" | "answering" | "suggesting";
+
+const chipSlots = (
+  asks: readonly string[],
+  landed: readonly string[],
+  phase: Phase,
+): readonly string[] =>
+  phase === "suggesting"
+    ? [...landed, ...asks.slice(landed.length).map(() => "")]
+    : asks;
+
 const CHIP =
-  "border-line text-muted hover:text-text hover:border-muted inline-flex min-h-6 items-center rounded-full border px-2.5 font-mono text-[0.6875rem] transition-colors duration-150";
+  "border-line text-muted hover:text-text hover:border-muted inline-flex min-h-6 items-center rounded-full border px-2.5 font-mono text-[0.6875rem] transition-colors duration-150 aria-disabled:text-muted/45 aria-disabled:pointer-events-none";
 
 // Suggestions are asked as they stand: the model writes them, so never `run`.
 type From = "input" | "suggestion";
@@ -358,15 +369,18 @@ export const Terminal = component$(() => {
   const tab = useStore({ base: "", last: "", i: -1, armed: false });
 
   const convo = useStore<{
-    streaming: boolean;
+    phase: Phase;
     turns: Turn[];
     note: string;
     asks: readonly string[];
+    /** The questions written after the latest answer, as they arrived. */
+    landed: readonly string[];
   }>({
-    streaming: false,
+    phase: "idle",
     turns: [],
     note: "",
     asks: SEED_QUESTIONS,
+    landed: [],
   });
 
   const pick = useStore<PickState>({
@@ -421,7 +435,8 @@ export const Terminal = component$(() => {
       ...convo.turns,
       { role: "user" as const, content: text },
     ].slice(-MAX_TURNS);
-    convo.streaming = true;
+    convo.phase = "answering";
+    convo.landed = [];
     await feedback("enter");
 
     // Created with its first word, so no blank row sits above the busy line.
@@ -431,33 +446,46 @@ export const Terminal = component$(() => {
       convo.note = "cold start, ~20s";
       document.querySelector("[data-shell]")?.setAttribute("data-cold", "");
     }, SLOW_MS);
-    let outcome: Outcome;
-    try {
-      outcome = await sendChat(turns, (t) => {
-        got = (got + t).trimStart();
-        if (!got) return;
-        // gpt-oss uses asterisks for emphasis and bullets even when told not to.
-        partial.value = got.replace(/^(\s*)\* /gm, "$1- ").replace(/\*/g, "");
-        if (answer) {
-          followIfPinned();
-          return;
-        }
-        clearTimeout(slow);
-        convo.note = "";
-        clearBusy();
-        say([{ kind: "ai", text: "", live: true }]);
-        answer = lines.items[lines.items.length - 1]!;
-      });
-    } finally {
+    // Before aria-busy drops, so the finished answer is announced once.
+    const settle = () => {
       clearTimeout(slow);
       convo.note = "";
-      // Before aria-busy drops, so the finished answer is announced once.
       const done = answer as Line | null;
       if (done) {
         done.text = partial.value;
         done.live = false;
       }
-      convo.streaming = false;
+    };
+    let outcome: Outcome;
+    try {
+      outcome = await sendChat(turns, {
+        token: (t) => {
+          got = (got + t).trimStart();
+          if (!got) return;
+          // gpt-oss uses asterisks for emphasis and bullets even when told not to.
+          partial.value = got.replace(/^(\s*)\* /gm, "$1- ").replace(/\*/g, "");
+          if (answer) {
+            followIfPinned();
+            return;
+          }
+          clearTimeout(slow);
+          convo.note = "";
+          clearBusy();
+          say([{ kind: "ai", text: "", live: true }]);
+          answer = lines.items[lines.items.length - 1]!;
+        },
+        answered: () => {
+          settle();
+          clearBusy();
+          convo.phase = "suggesting";
+        },
+        next: (q) => {
+          convo.landed = [...convo.landed, q];
+        },
+      });
+    } finally {
+      settle();
+      convo.phase = "idle";
     }
 
     if (outcome.ok) {
@@ -471,7 +499,8 @@ export const Terminal = component$(() => {
       if (outcome.next.length) {
         convo.asks = offer(outcome.next, convo.asks, text);
       }
-      say([{ kind: "meta", text: statsLine(outcome) }]);
+      // Stats come with `done`, which a reply cut off by Ctrl+C never gets.
+      if (outcome.stats) say([{ kind: "meta", text: statsLine(outcome) }]);
     } else if (outcome.code !== "aborted") {
       say(chatError(outcome.code));
       await feedback("error");
@@ -577,6 +606,7 @@ export const Terminal = component$(() => {
         lines.items = [];
         convo.turns = [];
         convo.asks = SEED_QUESTIONS;
+        convo.landed = [];
         await feedback("enter");
         return;
       }
@@ -592,17 +622,14 @@ export const Terminal = component$(() => {
   });
 
   const submit = $(async (field: HTMLInputElement) => {
-    if (convo.streaming) return;
+    if (convo.phase !== "idle") return;
     const raw = field.value;
     field.value = "";
     await runLine(raw);
   });
 
   const suggest = $(async (q: string) => {
-    if (convo.streaming) {
-      clearBusy();
-      return;
-    }
+    if (convo.phase !== "idle") return;
     await runLine(q, "suggestion");
   });
 
@@ -610,7 +637,7 @@ export const Terminal = component$(() => {
   const typeIn = $(async (cmd: string) => {
     const field = document.getElementById("term-input");
     if (!(field instanceof HTMLInputElement)) return;
-    if (typing.value || convo.streaming || pick.open) return;
+    if (typing.value || convo.phase !== "idle" || pick.open) return;
     typing.value = true;
     try {
       field.focus();
@@ -651,6 +678,7 @@ export const Terminal = component$(() => {
         lines.items = [];
         convo.turns = [];
         convo.asks = SEED_QUESTIONS;
+        convo.landed = [];
         await feedback("enter");
         return;
       }
@@ -851,7 +879,14 @@ export const Terminal = component$(() => {
   });
 
   const clickGuard = sync$((_: MouseEvent, el: HTMLElement) => {
+    // Enter on a focused chip still clicks it.
+    if (el.getAttribute("aria-disabled") === "true") return;
     el.closest("[data-shell]")?.setAttribute("data-busy", "");
+    el.parentElement?.setAttribute("data-still", "");
+  });
+
+  const pointerMoved = sync$((_: PointerEvent, el: HTMLElement) => {
+    el.removeAttribute("data-still");
   });
 
   // A sync$, so qwikloader starts the light on qidle without waking Qwik
@@ -962,7 +997,7 @@ export const Terminal = component$(() => {
             <div
               class="flex flex-col gap-1"
               aria-live="polite"
-              aria-busy={convo.streaming}
+              aria-busy={convo.phase === "answering"}
             >
               {renderGroups(lines.items).map((g, i) =>
                 g.live ? (
@@ -1080,6 +1115,8 @@ export const Terminal = component$(() => {
       <div
         role="group"
         aria-labelledby="term-suggest"
+        aria-busy={convo.phase === "suggesting"}
+        onPointerMove$={pointerMoved}
         hidden={pick.open}
         class="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-3 pt-2 pb-3 sm:px-4"
       >
@@ -1087,14 +1124,28 @@ export const Terminal = component$(() => {
           Try
         </span>
         {/* By slot, so a clicked button keeps focus as its text changes. */}
-        {convo.asks.map((q, i) => (
+        {chipSlots(convo.asks, convo.landed, convo.phase).map((q, i, all) => (
           <button
             type="button"
             key={i}
+            aria-disabled={convo.phase === "idle" ? undefined : "true"}
             onClick$={[clickGuard, $(() => suggest(q))]}
-            class={CHIP}
+            class={q ? CHIP : `${CHIP} min-w-14 border-dashed`}
           >
-            {q}
+            {q ? (
+              convo.landed.includes(q) ? (
+                <span class="term-typed" style={`--len:${q.length}`}>
+                  {q}
+                </span>
+              ) : (
+                q
+              )
+            ) : (
+              <>
+                {all.indexOf("") === i && <Wire />}
+                <span class="sr-only">Being written</span>
+              </>
+            )}
           </button>
         ))}
       </div>

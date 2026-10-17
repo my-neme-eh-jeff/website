@@ -19,6 +19,13 @@ export type Outcome =
     }
   | { ok: false; code: string };
 
+export type Handlers = {
+  token: (text: string) => void;
+  /** The answer is whole; its next questions are being written. */
+  answered: () => void;
+  next: (question: string) => void;
+};
+
 // Module scope: an AbortController can't be serialised into a Qwik store.
 let inflight: AbortController | null = null;
 
@@ -30,15 +37,14 @@ export function abortChat(): boolean {
   return true;
 }
 
-export async function sendChat(
-  turns: Turn[],
-  onToken: (text: string) => void,
-): Promise<Outcome> {
+export async function sendChat(turns: Turn[], on: Handlers): Promise<Outcome> {
   abortChat();
   const controller = new AbortController();
   inflight = controller;
   const started = performance.now();
   let firstTokenMs = -1;
+  let answered = false;
+  const landed: string[] = [];
 
   try {
     const res = await fetch("/api/chat", {
@@ -74,16 +80,26 @@ export async function sendChat(
         if (!line.trim()) continue;
         const event = JSON.parse(line) as
           | { type: "token"; text: string }
+          | { type: "answered" }
+          | { type: "next"; text: unknown }
           | { type: "done"; model: string; stats: Stats; next?: unknown }
           | { type: "error"; code: string };
         if (event.type === "token") {
           if (firstTokenMs < 0) firstTokenMs = performance.now() - started;
-          onToken(event.text);
+          on.token(event.text);
+        } else if (event.type === "answered") {
+          answered = true;
+          on.answered();
+        } else if (event.type === "next") {
+          if (typeof event.text !== "string") continue;
+          landed.push(event.text);
+          on.next(event.text);
         } else if (event.type === "done") {
           done = event;
-        } else {
+        } else if (event.type === "error") {
           return { ok: false, code: event.code };
         }
+        // Any other type is from a Worker newer than this page: skipped.
       }
     }
 
@@ -94,9 +110,13 @@ export async function sendChat(
       firstTokenMs,
       next: Array.isArray(done?.next)
         ? done.next.filter((q): q is string => typeof q === "string")
-        : [],
+        : landed,
     };
   } catch (err) {
+    // Cut off after the answer was whole: keep it, and what questions came.
+    if (answered) {
+      return { ok: true, model: "", stats: null, firstTokenMs, next: landed };
+    }
     return {
       ok: false,
       code:

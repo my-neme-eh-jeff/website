@@ -5,14 +5,18 @@ import {
   NUM_PREDICT,
   SYSTEM_PROMPT,
 } from "../content/chat";
-import { parse, splitter } from "./follow-ups";
+import { relay } from "./relay";
 
 /**
  * `POST /api/chat`, streamed back as NDJSON events:
  *
  *   {"type":"token","text":"..."}
+ *   {"type":"answered"}              the answer is whole; questions follow
+ *   {"type":"next","text":"...?"}    one per question, as its line ends
  *   {"type":"done","model":"...","stats":{...},"next":["...?"]}
  *   {"type":"error","code":"..."}
+ *
+ * `done.next` repeats every `next` event, in order.
  *
  * Errors before the stream starts are a JSON body with a non-200 status. The
  * visitor controls only message text; path, model, sampling and prompt are
@@ -98,86 +102,6 @@ function callDesk(
       signal,
     }),
   );
-}
-
-/** Ollama NDJSON in, the shell's NDJSON events out. Reasoning is dropped. */
-function relay(asked: string[]): TransformStream<Uint8Array, Uint8Array> {
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  const split = splitter();
-  let buffer = "";
-
-  const emit = (
-    line: string,
-    out: TransformStreamDefaultController<Uint8Array>,
-  ) => {
-    if (!line.trim()) return;
-    let chunk: {
-      error?: unknown;
-      done?: boolean;
-      model?: string;
-      message?: { content?: string };
-      total_duration?: number;
-      load_duration?: number;
-      prompt_eval_count?: number;
-      prompt_eval_cached_count?: number;
-      prompt_eval_duration?: number;
-      eval_count?: number;
-      eval_duration?: number;
-    };
-    try {
-      chunk = JSON.parse(line);
-    } catch {
-      return;
-    }
-    const send = (event: unknown) =>
-      out.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
-
-    if (chunk.error) {
-      send({ type: "error", code: "upstream" });
-      return;
-    }
-    const text = chunk.message?.content && split.push(chunk.message.content);
-    if (text) send({ type: "token", text });
-    if (chunk.done) {
-      const { text: rest, block } = split.end();
-      if (rest) send({ type: "token", text: rest });
-      send({
-        type: "done",
-        model: chunk.model,
-        stats: {
-          loadMs: Math.round((chunk.load_duration ?? 0) / 1e6),
-          promptTokens: chunk.prompt_eval_count ?? 0,
-          cachedTokens: chunk.prompt_eval_cached_count ?? 0,
-          promptMs: Math.round((chunk.prompt_eval_duration ?? 0) / 1e6),
-          tokens: chunk.eval_count ?? 0,
-          genMs: Math.round((chunk.eval_duration ?? 0) / 1e6),
-        },
-        next: block === null ? [] : parse(block, asked),
-      });
-    }
-  };
-
-  return new TransformStream({
-    transform(bytes, out) {
-      buffer += decoder.decode(bytes, { stream: true });
-      let nl: number;
-      while ((nl = buffer.indexOf("\n")) >= 0) {
-        emit(buffer.slice(0, nl), out);
-        buffer = buffer.slice(nl + 1);
-      }
-    },
-    flush(out) {
-      buffer += decoder.decode();
-      emit(buffer, out);
-      const { text } = split.end();
-      if (text) {
-        out.enqueue(
-          encoder.encode(JSON.stringify({ type: "token", text }) + "\n"),
-        );
-      }
-    },
-  });
 }
 
 async function chat(request: Request, env: Env): Promise<Response> {

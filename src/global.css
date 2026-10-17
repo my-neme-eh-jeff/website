@@ -623,9 +623,27 @@
   }
 }
 
+/* After a click the pointer rests where the next question lands: until it
+   moves, hover would make that one look chosen. */
+[data-still] > button:hover {
+  border-color: var(--sem-line);
+  color: var(--sem-muted);
+}
+
+.term-typed {
+  animation: term-typed calc(var(--len) * 14ms) steps(var(--len), end) both;
+}
+
+@keyframes term-typed {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+
 /* The global reduce block only shortens durations, which strobes a steps() loop. */
 @media (prefers-reduced-motion: reduce) {
-  .term-wire > span {
+  .term-wire > span,
+  .term-typed {
     animation: none;
   }
 }
