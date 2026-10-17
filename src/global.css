@@ -596,6 +596,8 @@
 }
 
 .term-wire {
+  display: inline-block;
+  vertical-align: top;
   flex: none;
   width: calc(var(--cols) * 1ch);
   height: 1lh;

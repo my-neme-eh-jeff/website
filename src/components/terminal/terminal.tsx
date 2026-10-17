@@ -14,7 +14,7 @@ import { sound, isMuted, setMuted, type Tone } from "./sounds";
 import { load as loadHistory, save as saveHistory } from "./history";
 import { run, completions, ASK, PICK, type Line } from "./commands";
 import { ThemePick, PICKS, type PickState } from "./theme-pick";
-import { Wire } from "./wire";
+import { FACE_COLS, Face, Wire } from "./wire";
 import { abortChat, sendChat, type Outcome, type Turn } from "./chat";
 import {
   KNOWN_HREFS,
@@ -1120,11 +1120,23 @@ export const Terminal = component$(() => {
         hidden={pick.open}
         class="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-3 pt-2 pb-3 sm:px-4"
       >
-        <span id="term-suggest" class="text-muted font-mono text-[0.6875rem]">
-          Try
+        {/* As wide as the face, so the chips stay put when it takes over. */}
+        <span
+          id="term-suggest"
+          class={`shrink-0 font-mono text-[0.6875rem] transition-colors duration-150 ${convo.phase === "answering" ? "text-muted/45" : "text-muted"}`}
+          style={`width:${FACE_COLS}ch`}
+        >
+          {convo.phase === "suggesting" ? (
+            <>
+              <Face />
+              <span class="sr-only">Try</span>
+            </>
+          ) : (
+            "Try"
+          )}
         </span>
         {/* By slot, so a clicked button keeps focus as its text changes. */}
-        {chipSlots(convo.asks, convo.landed, convo.phase).map((q, i, all) => (
+        {chipSlots(convo.asks, convo.landed, convo.phase).map((q, i) => (
           <button
             type="button"
             key={i}
@@ -1141,10 +1153,7 @@ export const Terminal = component$(() => {
                 q
               )
             ) : (
-              <>
-                {all.indexOf("") === i && <Wire />}
-                <span class="sr-only">Being written</span>
-              </>
+              <span class="sr-only">Being written</span>
             )}
           </button>
         ))}

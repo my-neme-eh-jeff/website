@@ -35,8 +35,11 @@ const ASLEEP: readonly Frame[] = [
   ["------", "-_-", "  z"],
 ];
 
+const FACES: readonly Frame[] = AWAKE.map(([, face]) => ["", face]);
+
 const width = (f: Frame) => f[0].length + f[1].length + 2 + (f[2]?.length ?? 0);
 const COLS = Math.max(...[...AWAKE, ...ASLEEP].map(width));
+export const FACE_COLS = Math.max(...FACES.map(width));
 
 const Strip = ({
   frames,
@@ -73,5 +76,11 @@ export const Wire = component$(() => (
   <span class="term-wire" aria-hidden="true" style={`--cols:${COLS}`}>
     <Strip frames={AWAKE} ms={120} class="term-wire-awake" />
     <Strip frames={ASLEEP} ms={380} class="term-wire-asleep" />
+  </span>
+));
+
+export const Face = component$(() => (
+  <span class="term-wire" aria-hidden="true" style={`--cols:${FACE_COLS}`}>
+    <Strip frames={FACES} ms={120} class="term-wire-awake" />
   </span>
 ));
