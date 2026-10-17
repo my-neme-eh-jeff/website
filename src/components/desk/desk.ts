@@ -6,7 +6,7 @@
  */
 
 /** Paths from the "Desk" artboard of the Portfolio Directions canvas. */
-const VIEW = { x: 0, y: 24, w: 560, h: 356 };
+export const VIEW = { x: 0, y: 24, w: 560, h: 356 } as const;
 
 const STROKES = [
   "M8 268 C 140 264, 420 271, 552 266",
@@ -69,6 +69,9 @@ export const KIND = {
   joint: 6,
 } as const;
 
+/** Indices into the traced paths: STROKES, then THIN. */
+export const PATH = { box: 4, cable: 9, panel: 18, wave: 19 } as const;
+
 export type Desk = {
   cols: number;
   rows: number;
@@ -77,13 +80,17 @@ export type Desk = {
   kind: Uint8Array;
   /** Fill density, 0..1. */
   dens: Float32Array;
+  /** With `record`: the first path through each cell (-1 for none), and how far along it, in drawing units. */
+  owner?: Int16Array;
+  along?: Float32Array;
 };
 
-type Pt = [number, number];
+export type Pt = [number, number];
+export type Poly = { pts: Pt[]; closed: boolean };
 
-function parse(d: string): { pts: Pt[]; closed: boolean }[] {
+function parse(d: string): Poly[] {
   const tok = d.match(/[MLCZ]|-?\d*\.?\d+/g) ?? [];
-  const out: { pts: Pt[]; closed: boolean }[] = [];
+  const out: Poly[] = [];
   let pts: Pt[] = [];
   let i = 0;
   const num = () => Number(tok[i++]);
@@ -255,19 +262,27 @@ class Canvas {
  * wide. Directions are summed as doubled angles, so a line counts the same
  * drawn either way, and where two paths cross the sum cancels to a joint.
  */
-function trace(paths: string[], cols: number, rows: number): string[] {
+/** Characters for polylines on the grid, as the desk's own lines are drawn. */
+export function traceLines(paths: Poly[][], cols: number, rows: number) {
+  return trace(paths, cols, rows).chars;
+}
+
+function trace(paths: Poly[][], cols: number, rows: number, record = false) {
   const n = cols * rows;
   const A = new Float64Array(n);
   const B = new Float64Array(n);
   const hits = new Uint16Array(n);
   const owner = new Int16Array(n).fill(-1);
   const crossed = new Uint8Array(n);
-  paths.forEach((d, id) => {
-    for (const { pts, closed } of parse(d)) {
+  const along = new Float32Array(record ? n : 0);
+  paths.forEach((polys, id) => {
+    let walked = 0;
+    for (const { pts, closed } of polys) {
       const m = closed ? pts.length : pts.length - 1;
       for (let k = 0; k < m; k++) {
         const [ax, ay] = pts[k]!;
         const [bx, by] = pts[(k + 1) % pts.length]!;
+        const seg = record ? Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)) : 0;
         const u0 = ((ax - VIEW.x) * cols) / VIEW.w;
         const v0 = ((ay - VIEW.y) * rows) / VIEW.h;
         const du = ((bx - ax) * cols) / VIEW.w;
@@ -289,9 +304,12 @@ function trace(paths: string[], cols: number, rows: number): string[] {
           A[i] = A[i]! + c2;
           B[i] = B[i]! + s2;
           hits[i] = hits[i]! + 1;
-          if (owner[i] === -1) owner[i] = id;
-          else if (owner[i] !== id) crossed[i] = 1;
+          if (owner[i] === -1) {
+            owner[i] = id;
+            if (record) along[i] = walked + (s / steps) * seg;
+          } else if (owner[i] !== id) crossed[i] = 1;
         }
+        walked += seg;
       }
     }
   });
@@ -307,14 +325,20 @@ function trace(paths: string[], cols: number, rows: number): string[] {
     else if (a <= -0.7071 * m) out[i] = "|";
     else out[i] = b > 0 ? "\\" : "/";
   }
-  return out;
+  return { chars: out, owner, along };
 }
 
-export function rasterize(cols: number, rows: number): Desk {
+export function rasterize(
+  cols: number,
+  rows: number,
+  // `lamp: false` leaves the lamp out, for a renderer that draws it moving.
+  { lamp = true, record = false }: { lamp?: boolean; record?: boolean } = {},
+): Desk {
   const n = cols * rows;
   const cellW = VIEW.w / cols;
 
-  const line = trace([...STROKES, ...THIN], cols, rows);
+  const traced = trace([...STROKES, ...THIN].map(parse), cols, rows, record);
+  const line = traced.chars;
   const fills = FILLS.map(([d, a]) => {
     const c = new Canvas(cols, rows);
     c.fill(d);
@@ -361,7 +385,107 @@ export function rasterize(cols: number, rows: number): Desk {
     }
   });
 
-  return { cols, rows, chars, kind, dens };
+  if (lamp) {
+    const base = lampBase(chars, cols, rows);
+    const rest = lampRest(base.S);
+    const drawn = trace(
+      [
+        [{ pts: [base.S, rest.E, rest.H], closed: false }],
+        [{ pts: rest.shade, closed: true }],
+        [{ pts: rest.neck, closed: false }],
+      ],
+      cols,
+      rows,
+    ).chars;
+    const put = (i: number, ch: string) => {
+      if (i < 0 || i >= n) return;
+      kind[i] = KIND.line;
+      chars[i] = ch;
+    };
+    drawn.forEach((ch, i) => ch && put(i, ch));
+    [...base.text].forEach((ch, k) =>
+      put(base.row * cols + base.start + k, ch === "I" ? "O" : ch),
+    );
+    put(base.pivot, "o");
+    put(cellOf(rest.E, cols, rows), "o");
+  }
+
+  const out: Desk = { cols, rows, chars, kind, dens };
+  if (record) {
+    out.owner = traced.owner;
+    out.along = traced.along;
+  }
+  return out;
+}
+
+const cellOf = ([x, y]: Pt, cols: number, rows: number) => {
+  const c = Math.floor(((x - VIEW.x) * cols) / VIEW.w);
+  const r = Math.floor(((y - VIEW.y) * rows) / VIEW.h);
+  return c < 0 || r < 0 || c >= cols || r >= rows ? -1 : r * cols + c;
+};
+
+/** Where the shade points at rest and while idle: the box. */
+export const AIM: Pt = [236, 214];
+
+/**
+ * The lamp's base on the desk top at the right, ending before the desk's
+ * raised end, with the switch in it (I on, O off) and the pivot above it.
+ */
+export function lampBase(chars: string[], cols: number, rows: number) {
+  const text = cols >= 120 ? "/====[I]===\\" : "/=[I]=\\";
+  const cw = VIEW.w / cols;
+  const ch = VIEW.h / rows;
+  const row = Math.floor((268 - VIEW.y) / ch) - 1;
+  let end = Math.round((512 - VIEW.x) / cw) + Math.ceil(text.length / 2);
+  while (end > 0 && chars[row * cols + end] !== " ") end--;
+  const start = end - text.length;
+  const sw = start + text.indexOf("[");
+  return {
+    row,
+    start,
+    text,
+    /** The switch's first cell, "[". */
+    sw,
+    S: [VIEW.x + (sw + 1.5) * cw, VIEW.y + (row - 0.5) * ch] as Pt,
+    pivot: (row - 1) * cols + sw + 1,
+  };
+}
+
+/** The shade, its bulb and the neck, for a head position and direction. */
+export function lampHead(H: Pt, dir: Pt) {
+  const p: Pt = [-dir[1], dir[0]];
+  const at = (s: number, k: number): Pt => [
+    H[0] + dir[0] * s + p[0] * k,
+    H[1] + dir[1] * s + p[1] * k,
+  ];
+  return {
+    bulb: at(22, 0),
+    shade: [at(0, 4.5), at(30, 18), at(30, -18), at(0, -4.5)],
+    neck: [H, at(-8, 0)],
+  };
+}
+
+/** The lamp at rest, leaning over the desk with the shade on the box. */
+export function lampRest(S: Pt) {
+  const E: Pt = [S[0] - 26, S[1] - 110];
+  const H: Pt = [E[0] - 99, E[1] - 7];
+  const ax = AIM[0] - H[0];
+  const ay = AIM[1] - H[1];
+  const len = Math.sqrt(ax * ax + ay * ay);
+  const dir: Pt = [ax / len, ay / len];
+  return { E, H, dir, ...lampHead(H, dir) };
+}
+
+/** Solid things, for the lamp's shadows: the desk top, box, mug, books and legs. */
+export function occupancy(cols: number, rows: number): Uint8Array {
+  const c = new Canvas(cols, rows);
+  for (const d of [FILLS[0]![0], STROKES[4]!, STROKES[10]!, STROKES[11]!, STROKES[13]!])
+    c.fill(d);
+  for (const d of [STROKES[2]!, STROKES[3]!]) c.stroke(d, 2.2);
+  const cov = c.cover();
+  const occ = new Uint8Array(cols * rows);
+  for (let i = 0; i < occ.length; i++) occ[i] = cov[i]! > 0.28 ? 1 : 0;
+  return occ;
 }
 
 /** The grid as text, one line per row, with the LED cells split out. */

@@ -816,7 +816,7 @@
  */
 .desk-slot {
   position: absolute;
-  inset: 0.25rem 1rem 4.75rem;
+  inset: 0.25rem 1rem max(4.75rem, var(--log-h, 0px));
   pointer-events: none;
   transition: opacity 300ms ease;
 }
@@ -871,9 +871,25 @@
   visibility: hidden;
 }
 
-[data-shell]:has(#term-input:focus, [aria-live] > pre[data-kind="in"])
-  .desk-slot {
+[data-shell][data-desk-gone] .desk-slot {
   opacity: 0;
+}
+
+/* The lamp's switch: a button over its three cells, which the light draws. */
+.lamp-switch {
+  position: absolute;
+  z-index: 1;
+  display: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+[data-shell][data-lit]:not([data-desk-gone]) .lamp-switch {
+  display: block;
+}
+
+/* While the desk shows the box thinking, the busy line's wire stands down. */
+[data-shell][data-lit]:not([data-desk-gone]) .term-pending .term-wire {
+  display: none;
 }
 
 /*

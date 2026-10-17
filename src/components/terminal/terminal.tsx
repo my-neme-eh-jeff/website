@@ -961,15 +961,23 @@ export const Terminal = component$(() => {
   });
 
   // A sync$, so qwikloader starts the light on qidle without waking Qwik
-  // (@qwik.dev/core rc.3, 2026-10-16).
+  // (@qwik.dev/core rc.3, 2026-10-16). Asking for less data or motion, a 2G
+  // link or 1 GB of memory keeps the desk as text.
   useOnDocument(
     "qidle",
     sync$((_: Event, el: Element) => {
       const src = el.getAttribute("data-light");
+      const net = (
+        navigator as { connection?: { saveData?: boolean; effectiveType?: string } }
+      ).connection;
+      const mem = (navigator as { deviceMemory?: number }).deviceMemory;
       if (
         !src ||
         matchMedia("(prefers-reduced-motion: reduce)").matches ||
-        !("transferControlToOffscreen" in HTMLCanvasElement.prototype)
+        !("transferControlToOffscreen" in HTMLCanvasElement.prototype) ||
+        net?.saveData ||
+        /2g$/.test(net?.effectiveType ?? "") ||
+        (mem !== undefined && mem <= 1)
       )
         return;
       if (window.deskLight) return window.deskLight();
@@ -977,6 +985,45 @@ export const Terminal = component$(() => {
       script.type = "module";
       script.src = src;
       document.head.append(script);
+    }),
+  );
+
+  // The desk's box ends where the log begins, so the desk steps back as lines
+  // arrive, and gives way once its characters would be under 5.5px.
+  useOnDocument(
+    "qinit",
+    sync$((_: Event, el: Element) => {
+      const shell = el as HTMLElement;
+      const live = shell.querySelector<HTMLElement>("[aria-live]");
+      const pending = shell.querySelector<HTMLElement>(".term-pending");
+      const mid = shell.querySelector(".desk-slot")?.parentElement;
+      if (!live || !pending || !mid || shell.hasAttribute("data-room")) return;
+      shell.setAttribute("data-room", "");
+      const fit = () => {
+        const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const need =
+          live.offsetHeight +
+          (pending.offsetParent ? pending.offsetHeight + 4 : 0) +
+          1.5 * rem;
+        shell.style.setProperty("--log-h", `${need}px`);
+        const pre = [
+          ...shell.querySelectorAll<HTMLElement>("[data-desk-grid]"),
+        ].find((p) => p.offsetParent !== null);
+        if (!pre) return;
+        const cols = Number(pre.dataset["cols"]);
+        const rows = Number(pre.dataset["rows"]);
+        const fitH = (h: number) =>
+          Math.min(h, ((mid.clientWidth - 2 * rem) * rows * 1.25) / (cols * 0.6));
+        const room = mid.clientHeight - 0.25 * rem;
+        const floor = Math.min(fitH(room - 4.75 * rem), 5.5 * rows * 1.25);
+        shell.toggleAttribute(
+          "data-desk-gone",
+          fitH(room - Math.max(4.75 * rem, need)) < floor - 0.5,
+        );
+      };
+      const ro = new ResizeObserver(fit);
+      for (const box of [live, pending, mid]) ro.observe(box);
+      fit();
     }),
   );
 
@@ -1141,6 +1188,13 @@ export const Terminal = component$(() => {
             </div>
           </div>
         </label>
+        <button
+          type="button"
+          class="lamp-switch"
+          aria-pressed="true"
+          aria-label="Desk lamp"
+          title="Desk lamp"
+        />
       </div>
 
       {pick.open && (

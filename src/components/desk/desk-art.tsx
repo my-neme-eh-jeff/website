@@ -2,6 +2,7 @@ import { GRIDS, rasterize, segments } from "./desk";
 
 const ART = (["wide", "narrow"] as const).map((size) => ({
   size,
+  ...GRIDS[size],
   parts: segments(rasterize(GRIDS[size].cols, GRIDS[size].rows)),
 }));
 
@@ -11,8 +12,14 @@ const ART = (["wide", "narrow"] as const).map((size) => ({
  */
 export const DeskArt = () => (
   <div class="desk" aria-hidden="true">
-    {ART.map(({ size, parts }) => (
-      <pre class={`desk-grid desk-${size}`} data-desk-grid={size} key={size}>
+    {ART.map(({ size, cols, rows, parts }) => (
+      <pre
+        class={`desk-grid desk-${size}`}
+        data-desk-grid={size}
+        data-cols={cols}
+        data-rows={rows}
+        key={size}
+      >
         {parts.map((s, i) =>
           s.led ? (
             <span class="desk-led" key={i}>
