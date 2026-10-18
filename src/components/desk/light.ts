@@ -679,6 +679,8 @@ uniform sampler2D uGlow;
 uniform sampler2D uAtlas;
 uniform sampler2D uAux;
 uniform sampler2D uOver;
+uniform sampler2D uShadow;
+uniform vec4 uSView;
 out vec4 outColor;
 
 const vec4 VIEW = vec4(${VIEW.x}.0, ${VIEW.y}.0, ${VIEW.w}.0, ${VIEW.h}.0);
@@ -731,10 +733,42 @@ float glyph(float gi, vec2 f) {
 vec3 inkOf(float k) {
   return k < 0.5 ? uFg : k < 1.5 ? uMuted : k < 2.5 ? uAccent : k < 3.5 ? uAlt : uWarm;
 }
-float occAt(vec2 d) {
-  vec2 c = floor((d - VIEW.xy) * uGrid / VIEW.zw);
-  if (c.x < 0.0 || c.y < 0.0 || c.x >= uGrid.x || c.y >= uGrid.y) return 0.0;
-  return texture(uAux, (c + 0.5) / uGrid).r > 0.5 ? 1.0 : 0.0;
+// Signed distance to the nearest solid thing, in drawing units, negative inside.
+float sdAt(vec2 d) {
+  return texture(uShadow, (d - uSView.xy) / uSView.zw).r * 80.0 - 24.0;
+}
+// Soft shadow from d toward the bulb, as far as tMax drawing units: sphere
+// traced on the distance field, so thin legs aren't stepped over, and the
+// penumbra widens with the distance from d to whatever blocks (k is the
+// lamp's apparent size). Returns how much light is blocked, 0 to 1, and in
+// tHit how far from d the blocker is.
+float castShadow(vec2 d, float tMax, float k, int steps, out float tHit) {
+  vec2 toB = uBulb - d;
+  float len = length(toB);
+  vec2 dir = toB / max(len, 1e-3);
+  tMax = min(tMax, len - 4.0);
+  float res = 1.0;
+  float t = 1.5;
+  tHit = tMax;
+  for (int i = 0; i < 16; i++) {
+    if (i >= steps || t >= tMax) break;
+    float h = sdAt(d + dir * t);
+    float r = h / (k * t);
+    if (r < res) { res = r; tHit = t; }
+    if (res < -1.0) break;
+    t += clamp(h, 1.0 + 0.5 * k * t, 40.0);
+  }
+  res = max(res, -1.0);
+  return 1.0 - 0.25 * (1.0 + res) * (1.0 + res) * (2.0 - res);
+}
+// How much of a wall cell's light the solid things take: each fills the space
+// from the wall out to its face, so the shadow starts at its feet, sharp there
+// and softer further out, and thrown far it fills with the room's light.
+float grounded(vec2 d) {
+  float tHit;
+  // Calm takes fewer steps, but enough to reach the desk top from under it.
+  float s = castShadow(d, DEPTH * length(uBulb - d), 0.12, uCalm > 0.5 ? 6 : 10, tHit);
+  return s * (1.0 - 0.55 * smoothstep(50.0, 200.0, tHit));
 }
 float cone(vec2 d) {
   vec2 v = d - uBulb;
@@ -763,6 +797,15 @@ void main() {
   vec2 dp = VIEW.xy + q * VIEW.zw / uGrid;
   bool on = keep > 0.001 && uPower > 0.01;
   float reach = on ? cone(dp) + spill(dp) : 0.0;
+  // Shadowed per pixel as well, with a short trace, so a shadow reads as a
+  // shape across the wall, the floor and the prompt, not only as missing dots.
+  if (uCalm < 0.5 && reach * mix(0.06, 0.16, dark) > 0.002) {
+    float wall = smoothstep(0.0, 3.0, sdAt(dp));
+    if (wall > 0.0) {
+      float hh;
+      reach *= 1.0 - 0.85 * wall * castShadow(dp, DEPTH * length(uBulb - dp), 0.16, 5, hh);
+    }
+  }
   float haze = 0.0;
   // The bulb's own glow goes with the lamp when it scrolls up out of sight; its light stays.
   if (on && uCalm < 0.5)
@@ -788,19 +831,14 @@ void main() {
     float along = floor(mk.a * 255.0 + 0.5);
     vec2 d = VIEW.xy + (cell + 0.5) * VIEW.zw / uGrid;
 
-    // The lamp: a cone from the bulb. A wall cell is in shadow when the line
-    // to the bulb crosses something solid, one point at the cards' depth.
+    // The lamp: a cone from the bulb, and a wall cell's shadow.
     float L = 0.0;
     float shade = 0.0;
     if (uPower > 0.01) {
       L = cone(d);
       if (L < 0.012) L = 0.0;
       else if (kind == 0.0 && ax.r < 0.5) {
-        vec2 sp = d - (d - uBulb) * DEPTH;
-        float s = occAt(sp);
-        if (uCalm < 0.5)
-          s = (s + occAt(sp + vec2(3.2, 1.6)) + occAt(sp - vec2(3.2, 1.6))
-            + occAt(sp + vec2(1.6, -3.2)) + occAt(sp + vec2(-1.6, 3.2))) / 5.0;
+        float s = grounded(d);
         shade = L * s;
         L *= 1.0 - s;
       }
@@ -922,17 +960,23 @@ void main() {
     float ga = gi > 0.0 ? glyph(gi, f) * a : 0.0;
     col = vec4(gc, 1.0) * ga + col * (1.0 - ga);
     col *= smoothstep(uClip, uClip + 20.0 * uDpr, p.y);
-  } else if (dark > 0.5 && reach > 0.0 && p.y > uClip && q.y >= 0.0 && q.y < uGrid.y) {
-    // Either side of the drawing, the pool's dither carries on across the wall.
+  } else if (reach > 0.0 && p.y > uClip && q.y >= 0.0 && q.y < uGrid.y) {
+    // Either side of the drawing the wall carries on, its pool and shadows with it.
     vec2 cell = floor(q);
-    float L = cone(VIEW.xy + (cell + 0.5) * VIEW.zw / uGrid) * low
-      * smoothstep(12.0 * uDpr, 40.0 * uDpr, min(p.x, uRes.x - p.x));
-    // Offset, so the Bayer index never comes from a negative cell.
-    ivec2 ci = ivec2(cell) + 4096;
-    float th = BAYER[(ci.y & 3) * 4 + (ci.x & 3)];
-    if (L >= 0.012 && L * 1.15 > th && hash21(cell + 7.0) >= uClear) {
-      float ga = glyph(L * 1.15 > th + 0.55 ? 26.0 : 14.0, fract(q)) * (0.14 + L * 0.7);
-      col = vec4(uWarm, 1.0) * ga;
+    vec2 cd = VIEW.xy + (cell + 0.5) * VIEW.zw / uGrid;
+    float L = cone(cd) * smoothstep(12.0 * uDpr, 40.0 * uDpr, min(p.x, uRes.x - p.x));
+    if (L >= 0.012 && hash21(cell + 7.0) >= uClear) {
+      float s = grounded(cd);
+      float shade = L * s;
+      L *= 1.0 - s;
+      // Offset, so the Bayer index never comes from a negative cell.
+      ivec2 ci = ivec2(cell) + 4096;
+      float th = BAYER[(ci.y & 3) * 4 + (ci.x & 3)];
+      if (dark > 0.5 && L * low * 1.15 > th)
+        col = vec4(uWarm, 1.0) * glyph(L * low * 1.15 > th + 0.55 ? 26.0 : 14.0, fract(q))
+          * (0.14 + L * 0.7);
+      else if (dark < 0.5 && shade * 1.5 > th)
+        col = vec4(uMuted, 1.0) * glyph(15.0, fract(q)) * (0.25 + shade * 0.6);
     }
   }
   // Under all of it, the lamp's haze.
@@ -1139,18 +1183,37 @@ function worker() {
       U.set(name, gl.getUniformLocation(prog, name)!);
     }
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    ["uMask", "uGlow", "uAtlas", "uAux", "uOver"].forEach((name, unit) => {
-      const t = gl!.createTexture();
-      gl!.activeTexture(gl!.TEXTURE0 + unit);
-      gl!.bindTexture(gl!.TEXTURE_2D, t);
-      const filter = unit === 1 || unit === 2 ? gl!.LINEAR : gl!.NEAREST;
-      gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MIN_FILTER, filter);
-      gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MAG_FILTER, filter);
-      gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_WRAP_S, gl!.CLAMP_TO_EDGE);
-      gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_WRAP_T, gl!.CLAMP_TO_EDGE);
-      gl!.uniform1i(U.get(name)!, unit);
-      tex.push(t);
-    });
+    // The glow, the atlas and the shadows' distance field are smooth between cells.
+    ["uMask", "uGlow", "uAtlas", "uAux", "uOver", "uShadow"].forEach(
+      (name, unit) => {
+        const t = gl!.createTexture();
+        gl!.activeTexture(gl!.TEXTURE0 + unit);
+        gl!.bindTexture(gl!.TEXTURE_2D, t);
+        const filter =
+          unit === 1 || unit === 2 || unit === 5 ? gl!.LINEAR : gl!.NEAREST;
+        gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MIN_FILTER, filter);
+        gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MAG_FILTER, filter);
+        gl!.texParameteri(
+          gl!.TEXTURE_2D,
+          gl!.TEXTURE_WRAP_S,
+          gl!.CLAMP_TO_EDGE,
+        );
+        gl!.texParameteri(
+          gl!.TEXTURE_2D,
+          gl!.TEXTURE_WRAP_T,
+          gl!.CLAMP_TO_EDGE,
+        );
+        gl!.uniform1i(U.get(name)!, unit);
+        tex.push(t);
+      },
+    );
+    gl.uniform4f(
+      U.get("uSView") ?? null,
+      VIEW.x - VIEW.w / 2,
+      VIEW.y - VIEW.h / 2,
+      VIEW.w * 2,
+      VIEW.h * 2,
+    );
   }
 
   function upload(unit: number, w: number, h: number, data: Uint8Array) {
@@ -1240,6 +1303,8 @@ function worker() {
     upload(1, cols, rows, glow);
     upload(3, cols, rows, aux);
     upload(4, cols, rows, over);
+    const sdf = distanceField(occ, cols, rows);
+    upload(5, sdf.W, sdf.H, sdf.data);
     const base = lampBase(desk.chars, cols, rows);
     G = {
       cols,
@@ -1679,6 +1744,51 @@ function inPoly(poly: Pt[], x: number, y: number) {
       inn = !inn;
   }
   return inn;
+}
+
+/**
+ * What the shadows trace: per cell, over the drawing and half a drawing round
+ * it, the signed distance from the cell's centre to the nearest solid cell's
+ * edge in drawing units (negative inside), as (sd + 24) / 80 in R. Nothing
+ * outside the drawing is solid.
+ */
+function distanceField(occ: Uint8Array, cols: number, rows: number) {
+  const W = cols * 2;
+  const H = rows * 2;
+  const ox = cols / 2;
+  const oy = rows / 2;
+  const cw = VIEW.w / cols;
+  const ch = VIEW.h / rows;
+  const LO = -24;
+  const HI = 56;
+  const at = (x: number, y: number) => {
+    const c = x - ox;
+    const r = y - oy;
+    return c >= 0 && r >= 0 && c < cols && r < rows ? occ[r * cols + c]! : 0;
+  };
+  const rx = Math.ceil(HI / cw) + 1;
+  const ry = Math.ceil(HI / ch) + 1;
+  const out = new Uint8Array(W * H * 4);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const inside = at(x, y);
+      // The nearest cell of the other kind, measured to its edge.
+      let best = HI;
+      for (let dy = -ry; dy <= ry; dy++) {
+        const ey = Math.max(0, Math.abs(dy) * ch - ch / 2);
+        if (ey >= best) continue;
+        for (let dx = -rx; dx <= rx; dx++) {
+          if (at(x + dx, y + dy) === inside) continue;
+          const e = Math.hypot(Math.max(0, Math.abs(dx) * cw - cw / 2), ey);
+          if (e < best) best = e;
+        }
+      }
+      const sd = inside ? -best : best;
+      out[(y * W + x) * 4] = Math.round(
+        ((Math.min(HI, Math.max(LO, sd)) - LO) / (HI - LO)) * 255,
+      );
+    }
+  return { W, H, data: out };
 }
 
 function blur(src: Float32Array, w: number, h: number, rx: number, ry: number) {
