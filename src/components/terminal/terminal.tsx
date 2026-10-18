@@ -998,7 +998,7 @@ export const Terminal = component$(() => {
   );
 
   // Once the log starts, the desk keeps the size it had at rest, and scrolls
-  // up above the log as lines arrive.
+  // with the log: up above it as lines arrive, back into view scrolling up.
   useOnDocument(
     "qinit",
     sync$((_: Event, el: Element) => {
@@ -1006,12 +1006,45 @@ export const Terminal = component$(() => {
       const live = shell.querySelector<HTMLElement>("[aria-live]");
       const pending = shell.querySelector<HTMLElement>(".term-pending");
       const slot = shell.querySelector<HTMLElement>(".desk-slot");
+      const room = shell.querySelector<HTMLElement>("[data-desk-room]");
       const mid = slot?.parentElement;
-      if (!live || !pending || !slot || !mid || shell.hasAttribute("data-room"))
+      const log = room?.offsetParent as HTMLElement | null | undefined;
+      if (
+        !live ||
+        !pending ||
+        !slot ||
+        !room ||
+        !mid ||
+        !log ||
+        shell.hasAttribute("data-room")
+      )
         return;
       shell.setAttribute("data-room", "");
       let rest = slot.offsetHeight;
+      // Gone for the visit (broken, or hidden as text once answered), the desk
+      // gives its room back once it has crumbled.
+      let gone = false;
+      let wait = 0;
+      new MutationObserver(() => {
+        if (gone || wait) return;
+        const lit = shell.hasAttribute("data-lit");
+        if (
+          shell.hasAttribute("data-desk-broken") ||
+          (shell.hasAttribute("data-answered") && !lit)
+        )
+          wait = window.setTimeout(() => {
+            gone = true;
+            fit();
+          }, 500);
+      }).observe(shell, {
+        attributes: true,
+        attributeFilter: ["data-desk-broken", "data-answered", "data-lit"],
+      });
       const fit = () => {
+        if (gone) {
+          room.hidden = true;
+          return;
+        }
         // The intro folds away with the first question, which would grow the desk.
         if (!live.querySelector('pre[data-kind="in"]')) {
           rest = slot.offsetHeight;
@@ -1022,19 +1055,23 @@ export const Terminal = component$(() => {
           ...slot.querySelectorAll<HTMLElement>("[data-desk-grid]"),
         ].find((p) => p.offsetParent !== null);
         if (!pre) return;
+        // The log holds room for the desk above its lines, the desk's height
+        // and 0.75rem of air, and the desk sits wherever that room has scrolled.
         const rem = parseFloat(
           getComputedStyle(document.documentElement).fontSize,
         );
-        const need =
-          live.offsetHeight +
-          (pending.offsetParent ? pending.offsetHeight + 4 : 0) +
-          1.5 * rem;
+        const gap = parseFloat(getComputedStyle(room.parentElement!).rowGap);
+        const air = 0.75 * rem - (gap || 0);
         const bottom = slot.offsetTop + pre.offsetTop + pre.offsetHeight;
-        const up = Math.max(0, Math.round(bottom - (mid.clientHeight - need)));
+        const top = parseFloat(getComputedStyle(log).paddingTop) || 0;
+        room.style.height = `${Math.max(0, Math.round(bottom - top + air))}px`;
+        const at = room.offsetTop + room.offsetHeight - air - log.scrollTop;
+        const up = Math.max(0, Math.round(bottom - at));
         shell.style.setProperty("--desk-up", `${up}px`);
       };
       const ro = new ResizeObserver(fit);
       for (const box of [live, pending, mid]) ro.observe(box);
+      log.addEventListener("scroll", fit, { passive: true });
       fit();
     }),
   );
@@ -1125,6 +1162,7 @@ export const Terminal = component$(() => {
           for="term-input"
         >
           <div class="flex min-h-full flex-col justify-end gap-1 font-mono text-[0.8125rem] leading-relaxed">
+            <div class="shrink-0" data-desk-room aria-hidden="true" />
             {/* aria-busy while streaming: the answer is announced once, whole. */}
             <div
               class="flex flex-col gap-1"

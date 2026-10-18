@@ -34,6 +34,8 @@ type Msg =
       art: [number, number, number, number];
       /** The top of the shell's middle: the desk scrolls up out of sight there. */
       clip: number;
+      /** Scrolled by hand: the desk goes where the log is, without easing. */
+      snap: boolean;
       /** The prompt's box and its corner radius, which the lamp's light catches; zero while hidden. */
       box: [number, number, number, number, number];
     }
@@ -209,6 +211,7 @@ function page() {
     if (!pr.width || !pr.height) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const mid = shell.querySelector(".desk-slot")?.parentElement;
+    const log = shell.querySelector(".term-log");
     const cr = composer?.getBoundingClientRect();
     post({
       type: "layout",
@@ -218,6 +221,8 @@ function page() {
       size,
       art: [pr.left - sr.left, pr.top - sr.top, pr.width, pr.height],
       clip: mid ? mid.getBoundingClientRect().top - sr.top : 0,
+      // Following the newest line, the desk steps back smoothly; anywhere else, it was scrolled.
+      snap: !!log && log.scrollHeight - log.scrollTop - log.clientHeight > 32,
       box:
         composer && cr?.width
           ? [
@@ -1103,6 +1108,8 @@ function worker() {
   let target: Pt | null = null;
   let lampOn = true;
   let power = 1;
+  /** Scrolled out of sight with the log, the lamp's light goes out with it. */
+  let seen = 1;
   let hover = false;
   let pulses: { s: number; v: number; k: number; tail: number }[] = [];
   let spikes: number[] = [];
@@ -1629,6 +1636,7 @@ function worker() {
 
     // Once the desk has broken, the shell's outline is all that's left to draw.
     const gone = clearTarget === 1 && clear >= 1;
+    const seenTo = art[1]! + art[3]! > layout.clip ? 1 : 0;
     if (!gone) {
       // Idle, the lamp drifts over the box; touch screens have no pointer to follow.
       const on = !coarse && !!aim;
@@ -1656,6 +1664,7 @@ function worker() {
       target = P;
       rig.step(rig.goal(P, dt), dt, false);
       power += ((lampOn ? 1 : 0) - power) * (1 - Math.exp(-dt * 9));
+      seen += (seenTo - seen) * (1 - Math.exp(-dt * 9));
 
       for (const p of pulses) p.s += p.v * dt;
       pulses = pulses.filter((p) => p.s > -40 && p.s < G!.Lc + 40);
@@ -1702,7 +1711,7 @@ function worker() {
       set3("uWarm", colors.warm);
       set2("uBulb", pose.bulb);
       set2("uDir", pose.dir);
-      set1("uPower", power);
+      set1("uPower", power * seen);
       const box = layout.box;
       gl.uniform4f(
         U.get("uBox") ?? null,
@@ -1742,7 +1751,8 @@ function worker() {
     const swing =
       rig.v.some((v) => Math.abs(v) > 0.15) ||
       rig.settling ||
-      Math.hypot(hand[0]!, hand[1]!) > 0.5;
+      Math.hypot(hand[0]!, hand[1]!) > 0.5 ||
+      Math.abs(seen - seenTo) > 0.01;
     return (
       easing ||
       swing ||
@@ -1840,7 +1850,7 @@ function worker() {
     } else if (m.type === "layout") {
       const first = !layout || layout.size !== m.size;
       layout = m;
-      if (first) art.splice(0, 4, ...m.art);
+      if (first || m.snap) art.splice(0, 4, ...m.art);
       const w = Math.max(1, Math.round(m.w * m.dpr));
       const h = Math.max(1, Math.round(m.h * m.dpr));
       // The frames in flight were drawn at the old size.
