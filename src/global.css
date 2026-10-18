@@ -871,7 +871,9 @@
   visibility: hidden;
 }
 
-[data-shell][data-desk-gone] .desk-slot {
+[data-shell][data-desk-gone] .desk-slot,
+[data-shell]:has(#term-input:focus, [aria-live] > pre[data-kind="in"])
+  .desk-slot {
   opacity: 0;
 }
 
@@ -883,13 +885,12 @@
   border-radius: 0.375rem;
   cursor: pointer;
 }
-[data-shell][data-lit]:not([data-desk-gone]) .lamp-switch {
+[data-shell][data-lit]:not(
+    [data-desk-gone],
+    :has(#term-input:focus, [aria-live] > pre[data-kind="in"])
+  )
+  .lamp-switch {
   display: block;
-}
-
-/* While the desk shows the box thinking, the busy line's wire stands down. */
-[data-shell][data-lit]:not([data-desk-gone]) .term-pending .term-wire {
-  display: none;
 }
 
 /*

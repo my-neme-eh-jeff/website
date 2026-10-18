@@ -232,8 +232,12 @@ function page() {
     });
   };
 
+  const IN_USE = ':has(#term-input:focus, [aria-live] > pre[data-kind="in"])';
   const state = () =>
-    post({ type: "state", clear: shell.hasAttribute("data-desk-gone") });
+    post({
+      type: "state",
+      clear: shell.matches(IN_USE) || shell.hasAttribute("data-desk-gone"),
+    });
 
   // A question going up the cable, and each streamed piece of an answer coming down.
   const live = shell.querySelector("[aria-live]");
@@ -274,6 +278,8 @@ function page() {
     childList: true,
     characterData: true,
   });
+  shell.addEventListener("focusin", state);
+  shell.addEventListener("focusout", () => setTimeout(state, 0));
 
   const toDrawing = (x: number, y: number): Pt | null => {
     const pre = visible();
