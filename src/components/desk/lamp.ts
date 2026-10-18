@@ -34,13 +34,12 @@ function soft(x: number, lo: number, hi: number, k: number) {
   return x;
 }
 
-/** An angle kept inside [lo, hi] (0..2PI); outside, the bound nearer the current one. */
-function keepIn(a: number, lo: number, hi: number, cur: number | null) {
-  const TAU = Math.PI * 2;
-  const n = ((a % TAU) + TAU) % TAU;
-  if (n >= lo && n <= hi) return n;
-  const ref = cur === null ? n : ((cur % TAU) + TAU) % TAU;
-  return Math.abs(wrap(ref - lo)) < Math.abs(wrap(ref - hi)) ? lo : hi;
+/** A critical spring taking x, at rate v, to zero: halfway in about h seconds. */
+export function decay(x: number, v: number, h: number, dt: number) {
+  const y = (2 * Math.LN2) / h;
+  const e = Math.exp(-y * dt);
+  const j = v + x * y;
+  return [e * (x + j * dt), e * (v - j * y * dt)] as const;
 }
 
 export type Pose = {
@@ -54,6 +53,13 @@ export class Rig {
   q: [number, number, number] | null = null;
   v: [number, number, number] = [0, 0, 0];
   readonly S: Pt;
+  /** Which end of its arc the beam is held at: -1 neither, 0 the low end, 1 the high. */
+  private end = -1;
+  private last: number | null = null;
+  private lastDist = Infinity;
+  /** Eases out a jump in where the beam wants to point. */
+  private off = 0;
+  private offV = 0;
   constructor(S: Pt) {
     this.S = S;
   }
@@ -64,9 +70,17 @@ export class Rig {
     const ua = Math.atan2(H[1] - E[1], H[0] - E[0]);
     this.q = [sh, wrap(ua - sh), wrap(Math.atan2(dir[1], dir[0]) - ua)];
     this.v = [0, 0, 0];
+    this.end = -1;
+    this.last = null;
+    this.off = this.offV = 0;
   }
 
-  goal(P: Pt): [number, number, number] {
+  /** Still easing out a jump in the beam's aim. */
+  get settling() {
+    return Math.abs(this.off) > 0.005;
+  }
+
+  goal(P: Pt, dt: number): [number, number, number] {
     const { L1, L2, REST, knee } = ARM;
     const S = this.S;
     let H: Pt = [
@@ -99,20 +113,62 @@ export class Rig {
     );
     const ua = sh + el;
     const Hc: Pt = [E[0] + L2 * Math.cos(ua), E[1] + L2 * Math.sin(ua)];
-    const now = this.q ? this.q[0] + this.q[1] + this.q[2] : null;
-    const want = keepIn(
-      Math.atan2(P[1] - Hc[1], P[0] - Hc[0]),
-      ARM.beam[0],
-      ARM.beam[1],
-      now,
-    );
     const [lo, hi] = ARM.head;
-    let hd = wrap(want - ua);
-    if (hd < lo || hd > hi) {
-      const cur = this.q ? this.q[2] : hd;
-      hd = Math.abs(wrap(cur - lo)) < Math.abs(wrap(cur - hi)) ? lo : hi;
-    }
+    let hd = wrap(this.beam(P, Hc, ua, dt) - ua);
+    // Only while a jump eases out can the aim be past the head's reach.
+    if (hd < lo || hd > hi)
+      hd = Math.abs(wrap(hd - lo)) < Math.abs(wrap(hd - hi)) ? lo : hi;
     return [sh, el, soft(hd, lo, hi, knee)];
+  }
+
+  /**
+   * The beam's world angle from H toward P, inside both its own range and
+   * what the head can turn to from the forearm's angle ua. Past them it stops
+   * at the end nearer P, not the end nearer where it points now, and holds
+   * that end until the other is 15deg nearer. A jump, from switching ends or
+   * from P passing over the head, eases out instead of whipping the head round.
+   */
+  private beam(P: Pt, H: Pt, ua: number, dt: number) {
+    const TAU = Math.PI * 2;
+    const turn = (a: number) => ((a % TAU) + TAU) % TAU;
+    const [b0, b1] = ARM.beam;
+    const span = ARM.head[1] - ARM.head[0];
+    // Both arcs measured from the beam's start. Together under a turn, they meet once.
+    const rs = turn(ua + ARM.head[0] - b0);
+    let lo = Math.max(0, rs);
+    let hi = Math.min(b1 - b0, rs + span);
+    if (lo > hi) {
+      lo = Math.max(0, rs - TAU);
+      hi = Math.min(b1 - b0, rs - TAU + span);
+    }
+    if (lo > hi) {
+      lo = rs;
+      hi = rs + span;
+    }
+    const d = turn(Math.atan2(P[1] - H[1], P[0] - H[0]) - b0);
+    const was = this.end;
+    if (d >= lo && d <= hi) this.end = -1;
+    else {
+      const dl = Math.abs(wrap(d - lo));
+      const dh = Math.abs(wrap(d - hi));
+      const hold = deg(15);
+      if (this.end === 0 && dl < dh + hold) this.end = 0;
+      else if (this.end === 1 && dh < dl + hold) this.end = 1;
+      else this.end = dl <= dh ? 0 : 1;
+    }
+    const want = b0 + (this.end < 0 ? d : this.end ? hi : lo);
+    const dist = Math.hypot(P[0] - H[0], P[1] - H[1]);
+    if (this.last !== null) {
+      const flipped = was >= 0 && this.end >= 0 && was !== this.end;
+      const crossed =
+        Math.min(dist, this.lastDist) < 40 &&
+        Math.abs(wrap(want - this.last)) > deg(40);
+      if (flipped || crossed) this.off = wrap(this.last + this.off - want);
+    }
+    this.last = want;
+    this.lastDist = dist;
+    [this.off, this.offV] = decay(this.off, this.offV, 0.12, dt);
+    return want + this.off;
   }
 
   /** Sub-stepped, so the stiff spring past a limit stays stable on a long frame. */

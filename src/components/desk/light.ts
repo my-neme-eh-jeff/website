@@ -16,7 +16,7 @@ import {
   traceLines,
   type Pt,
 } from "./desk";
-import { AIM, Rig } from "./lamp";
+import { AIM, decay, Rig } from "./lamp";
 import { xray } from "./xray";
 
 type Size = keyof typeof GRIDS;
@@ -1093,6 +1093,14 @@ function worker() {
   let calm = false;
   let rig: Rig | null = null;
   let aim: Pt | null = null;
+  let lastAim: Pt | null = null;
+  /**
+   * Picking the pointer up or letting it go, the lamp's target eases over from
+   * where it was, [dx, dy, vx, vy], instead of jumping.
+   */
+  const hand = [0, 0, 0, 0];
+  let aimed = false;
+  let target: Pt | null = null;
   let lampOn = true;
   let power = 1;
   let hover = false;
@@ -1353,9 +1361,15 @@ function worker() {
       meters: inside.meters,
       over,
     };
+    const was = rig;
     rig = new Rig(base.S);
     const rest = lampRest(base.S);
     rig.from(rest.E, rest.H, rest.dir);
+    // A new size keeps the lamp's pose; the first one starts from the text's.
+    if (was?.q) {
+      rig.q = was.q;
+      rig.v = was.v;
+    }
     const out: Switch = {
       type: "switch",
       size,
@@ -1614,14 +1628,30 @@ function worker() {
     const gone = clearTarget === 1 && clear >= 1;
     if (!gone) {
       // Idle, the lamp drifts over the box; touch screens have no pointer to follow.
-      const P: Pt =
-        coarse || !aim
-          ? [
-              AIM[0] + 22 * Math.sin(time * 0.37),
-              AIM[1] - 6 + 12 * Math.sin(time * 0.53),
-            ]
-          : aim;
-      rig.step(rig.goal(P), dt, false);
+      const on = !coarse && !!aim;
+      const src: Pt = on
+        ? aim!
+        : [
+            AIM[0] + 22 * Math.sin(time * 0.37),
+            AIM[1] - 6 + 12 * Math.sin(time * 0.53),
+          ];
+      // Let go, it eases back from where the pointer last was: 0.25 s, and 0.12 s to pick it up.
+      if (target && on !== aimed) {
+        const from = !on && lastAim ? lastAim : target;
+        hand.splice(0, 4, from[0] - src[0], from[1] - src[1], 0, 0);
+      }
+      aimed = on;
+      const h = on ? 0.12 : 0.25;
+      const ease = () => {
+        [hand[0], hand[2]] = decay(hand[0]!, hand[2]!, h, dt / 2);
+        [hand[1], hand[3]] = decay(hand[1]!, hand[3]!, h, dt / 2);
+      };
+      // The joints step the whole frame toward one goal: the blend at its middle.
+      ease();
+      const P: Pt = [src[0] + hand[0]!, src[1] + hand[1]!];
+      ease();
+      target = P;
+      rig.step(rig.goal(P, dt), dt, false);
       power += ((lampOn ? 1 : 0) - power) * (1 - Math.exp(-dt * 9));
 
       for (const p of pulses) p.s += p.v * dt;
@@ -1706,7 +1736,10 @@ function worker() {
       gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
     if (f) fences.push({ s: f, at: now });
     if (gone) return easing;
-    const swing = rig.v.some((v) => Math.abs(v) > 0.15);
+    const swing =
+      rig.v.some((v) => Math.abs(v) > 0.15) ||
+      rig.settling ||
+      Math.hypot(hand[0]!, hand[1]!) > 0.5;
     return (
       easing ||
       swing ||
@@ -1828,8 +1861,10 @@ function worker() {
         last = performance.now();
         frame(loop);
       }
-    } else if (m.type === "aim") aim = m.at;
-    else if (m.type === "lamp") lampOn = m.on;
+    } else if (m.type === "aim") {
+      aim = m.at;
+      if (m.at) lastAim = m.at;
+    } else if (m.type === "lamp") lampOn = m.on;
     else if (m.type === "hover") hover = m.on;
     else if (m.type === "send" && G)
       pulses.push({ s: G.Lc + 8, v: -G.Lc / 1.25, k: 1, tail: 26 });
