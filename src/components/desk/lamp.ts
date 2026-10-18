@@ -23,7 +23,7 @@ const ARM = {
   beam: [deg(25), deg(200)],
   knee: deg(14),
   w: [7.5, 9.5, 13],
-  z: [0.78, 0.72, 0.62],
+  z: [0.95, 0.9, 0.62],
   stiff: 1400,
   REST: [440, 116] as Pt,
 } as const;
