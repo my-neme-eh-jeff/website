@@ -684,9 +684,9 @@ uniform vec4 uSView;
 out vec4 outColor;
 
 const vec4 VIEW = vec4(${VIEW.x}.0, ${VIEW.y}.0, ${VIEW.w}.0, ${VIEW.h}.0);
-const float COS_IN = ${Math.cos((22 * Math.PI) / 180)};
-const float COS_OUT = ${Math.cos((36 * Math.PI) / 180)};
-const float COS_WIDE = ${Math.cos((64 * Math.PI) / 180)};
+const float COS_IN = ${Math.cos((19 * Math.PI) / 180)};
+const float COS_OUT = ${Math.cos((31 * Math.PI) / 180)};
+const float COS_WIDE = ${Math.cos((52 * Math.PI) / 180)};
 const float DEPTH = 34.0 / 64.0;
 const float BAYER[16] = float[16](0.03125, 0.53125, 0.15625, 0.65625, 0.78125, 0.28125, 0.90625, 0.40625, 0.21875, 0.71875, 0.09375, 0.59375, 0.96875, 0.46875, 0.84375, 0.34375);
 const float FAN[4] = float[4](92.0, 15.0, 13.0, 60.0);
@@ -781,7 +781,7 @@ float spill(vec2 d) {
   vec2 v = d - uBulb;
   float dist = length(v) + 1e-3;
   float k = dist / 300.0;
-  return smoothstep(COS_WIDE, COS_IN, dot(v, uDir) / dist) * 0.3 * uPower / (1.0 + k * k);
+  return smoothstep(COS_WIDE, COS_IN, dot(v, uDir) / dist) * 0.27 * uPower / (1.0 + k * k);
 }
 
 void main() {
@@ -799,7 +799,7 @@ void main() {
   float reach = on ? cone(dp) + spill(dp) : 0.0;
   // Shadowed per pixel as well, with a short trace, so a shadow reads as a
   // shape across the wall, the floor and the prompt, not only as missing dots.
-  if (uCalm < 0.5 && reach * mix(0.06, 0.16, dark) > 0.002) {
+  if (uCalm < 0.5 && reach * mix(0.054, 0.14, dark) > 0.002) {
     float wall = smoothstep(0.0, 3.0, sdAt(dp));
     if (wall > 0.0) {
       float hh;
@@ -809,8 +809,8 @@ void main() {
   float haze = 0.0;
   // The bulb's own glow goes with the lamp when it scrolls up out of sight; its light stays.
   if (on && uCalm < 0.5)
-    haze = clamp((reach * mix(0.06, 0.16, dark)
-        + exp(-length(dp - uBulb) / 9.0) * uPower * mix(0.4, 0.9, dark)
+    haze = clamp((reach * mix(0.054, 0.14, dark)
+        + exp(-length(dp - uBulb) / 9.0) * uPower * mix(0.36, 0.8, dark)
           * smoothstep(uClip, uClip + 20.0 * uDpr, p.y)) * keep, 0.0, 1.0)
       * (1.0 - smoothstep(-0.5 * uDpr, 0.5 * uDpr, frame));
   // The pool's dither thins out toward the drawing's bottom, so it has no edge there.
