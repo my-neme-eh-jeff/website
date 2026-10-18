@@ -567,7 +567,7 @@ function page() {
     });
   }
 
-  let shown = true;
+  let shown = !document.hidden;
   let onScreen = true;
   const run = () => post({ type: "run", on: shown && onScreen });
   const io = new IntersectionObserver(([e]) => {
@@ -1512,11 +1512,14 @@ function worker() {
   /**
    * The first frame waits on the frames that decide the level, drawn while the
    * canvas is still hidden: a device past FULL_MS is calm, and one whose calm
-   * frame is past CALM_MS keeps the text without the light ever showing.
+   * frame is past CALM_MS keeps the text without the light ever showing. They
+   * wait for the desk to be on screen in a shown tab, which a browser doesn't
+   * slow down.
    */
   function draw(now: number) {
     if (out) return false;
     if (drawn) return paint(now) ?? false;
+    if (!running) return false;
     let c = cost();
     if (c === null) return false;
     if (!calm && c > FULL_MS) {
