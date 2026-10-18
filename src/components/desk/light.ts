@@ -34,6 +34,8 @@ type Msg =
       art: [number, number, number, number];
       /** The top of the shell's middle: the desk scrolls up out of sight there. */
       clip: number;
+      /** The prompt's box and its corner radius, which the lamp's light catches; zero while hidden. */
+      box: [number, number, number, number, number];
     }
   | {
       type: "colors";
@@ -114,6 +116,7 @@ function page() {
   post({ type: "init", canvas: off, coarse, calm }, [off]);
 
   const sw = shell.querySelector<HTMLButtonElement>(".lamp-switch");
+  const composer = shell.querySelector<HTMLElement>(".term-composer");
   let switchAt: Switch | null = null;
 
   const stop = () => {
@@ -196,6 +199,7 @@ function page() {
     if (!pr.width || !pr.height) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const mid = shell.querySelector(".desk-slot")?.parentElement;
+    const cr = composer?.getBoundingClientRect();
     post({
       type: "layout",
       w: sr.width,
@@ -204,6 +208,16 @@ function page() {
       size,
       art: [pr.left - sr.left, pr.top - sr.top, pr.width, pr.height],
       clip: mid ? mid.getBoundingClientRect().top - sr.top : 0,
+      box:
+        composer && cr?.width
+          ? [
+              cr.left - sr.left,
+              cr.top - sr.top,
+              cr.width,
+              cr.height,
+              parseFloat(getComputedStyle(composer).borderTopLeftRadius) || 0,
+            ]
+          : [0, 0, 0, 0, 0],
     });
     placeSwitch();
     const cellW = (pr.width / cols) * dpr;
@@ -474,6 +488,21 @@ function page() {
     held = on;
     post({ type: "hover", on });
   };
+  /*
+   * To its right the lamp would turn its back to follow the pointer, so there
+   * it lets go as if the pointer had left: seen from its pivot, from 68deg
+   * above the horizon round to 28deg past straight down. Once let go, the
+   * pointer comes back 6deg further before the lamp picks it up again.
+   */
+  let away = false;
+  const behind = (P: Pt) => {
+    if (!switchAt) return false;
+    const [x, y] = switchAt.at;
+    const pivotY = y - VIEW.h / GRIDS[switchAt.size].rows;
+    const deg = (Math.atan2(P[1] - pivotY, P[0] - x) * 180) / Math.PI;
+    const m = away ? 6 : 0;
+    return deg > -68 - m && deg < 118 + m;
+  };
   // Near its switch the lamp holds still, so the switch stays where you reach for it.
   const onMove = (e: PointerEvent) => {
     if (e.pointerType === "touch") return;
@@ -484,10 +513,15 @@ function page() {
       Math.abs(P[0] - switchAt.at[0]) < 30 &&
       Math.abs(P[1] - switchAt.at[1]) < 20;
     hold(near);
-    if (!near) post({ type: "aim", at: P });
+    if (near) return;
+    const was = away;
+    away = behind(P);
+    if (!away) post({ type: "aim", at: P });
+    else if (!was) post({ type: "aim", at: null });
   };
   const onLeave = () => {
     hold(false);
+    away = false;
     post({ type: "aim", at: null });
   };
   shell.addEventListener("pointermove", onMove, { passive: true });
@@ -546,6 +580,8 @@ function page() {
   if (slot) ro.observe(slot);
   // It grows when the intro folds away, which moves where the desk is clipped.
   if (slot?.parentElement) ro.observe(slot.parentElement);
+  // The prompt's box can move or hide while the shell keeps its size.
+  if (composer) ro.observe(composer);
 
   colors();
   state();
@@ -631,6 +667,8 @@ uniform vec2 uDir;
 uniform float uPower;
 uniform vec2 uSwitch;
 uniform float uSwitchGlow;
+uniform vec4 uBox;
+uniform float uBoxR;
 uniform vec4 uPulse[8];
 uniform float uLc;
 uniform float uFan;
@@ -646,6 +684,7 @@ out vec4 outColor;
 const vec4 VIEW = vec4(${VIEW.x}.0, ${VIEW.y}.0, ${VIEW.w}.0, ${VIEW.h}.0);
 const float COS_IN = ${Math.cos((22 * Math.PI) / 180)};
 const float COS_OUT = ${Math.cos((36 * Math.PI) / 180)};
+const float COS_WIDE = ${Math.cos((64 * Math.PI) / 180)};
 const float DEPTH = 34.0 / 64.0;
 const float BAYER[16] = float[16](0.03125, 0.53125, 0.15625, 0.65625, 0.78125, 0.28125, 0.90625, 0.40625, 0.21875, 0.71875, 0.09375, 0.59375, 0.96875, 0.46875, 0.84375, 0.34375);
 const float FAN[4] = float[4](92.0, 15.0, 13.0, 60.0);
@@ -703,12 +742,37 @@ float cone(vec2 d) {
   float k = dist / 165.0;
   return smoothstep(COS_OUT, COS_IN, dot(v, uDir) / dist) * uPower / (1.0 + k * k);
 }
+// Wider and softer than the cone, so the light carries to the far side of the shell.
+float spill(vec2 d) {
+  vec2 v = d - uBulb;
+  float dist = length(v) + 1e-3;
+  float k = dist / 300.0;
+  return smoothstep(COS_WIDE, COS_IN, dot(v, uDir) / dist) * 0.3 * uPower / (1.0 + k * k);
+}
 
 void main() {
   vec2 p = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
   vec4 col = vec4(0.0);
+  vec2 size = uRes;
+  float frame = sdRoundBox(p - 0.5 * size, 0.5 * size - 0.75 * uDpr, uRadius);
+  float dark = uDark > 0.5 ? 1.0 : 0.0;
+  float keep = 1.0 - uClear;
 
   vec2 q = (p - uArt.xy) / uCell;
+  // The lamp lights the whole shell, on the drawing and off it, in the drawing's units.
+  vec2 dp = VIEW.xy + q * VIEW.zw / uGrid;
+  bool on = keep > 0.001 && uPower > 0.01;
+  float reach = on ? cone(dp) + spill(dp) : 0.0;
+  float haze = 0.0;
+  // The bulb's own glow goes with the lamp when it scrolls up out of sight; its light stays.
+  if (on && uCalm < 0.5)
+    haze = clamp((reach * mix(0.06, 0.16, dark)
+        + exp(-length(dp - uBulb) / 9.0) * uPower * mix(0.4, 0.9, dark)
+          * smoothstep(uClip, uClip + 20.0 * uDpr, p.y)) * keep, 0.0, 1.0)
+      * (1.0 - smoothstep(-0.5 * uDpr, 0.5 * uDpr, frame));
+  // The pool's dither thins out toward the drawing's bottom, so it has no edge there.
+  float low = smoothstep(uGrid.y, uGrid.y - 5.0, q.y);
+
   // Fully broken, the desk has nothing left to draw. Scrolled up, it fades out at the clip.
   if (uClear < 0.999 && p.y > uClip
       && q.x >= 0.0 && q.y >= 0.0 && q.x < uGrid.x && q.y < uGrid.y) {
@@ -723,7 +787,6 @@ void main() {
     float dens = mk.b;
     float along = floor(mk.a * 255.0 + 0.5);
     vec2 d = VIEW.xy + (cell + 0.5) * VIEW.zw / uGrid;
-    float dark = uDark > 0.5 ? 1.0 : 0.0;
 
     // The lamp: a cone from the bulb. A wall cell is in shadow when the line
     // to the bulb crosses something solid, one point at the cards' depth.
@@ -771,9 +834,9 @@ void main() {
     } else if (kind == ${KIND.line}.0 || kind == ${KIND.joint}.0) {
       gc = mix(mix(uFg, uAccent, smoothstep(0.3, 0.75, band)), uWarm, clamp(L * 1.3, 0.0, 0.9));
       a = ambient + (1.0 - ambient) * clamp(L * 1.7, 0.0, 1.0);
-    } else if (dark > 0.5 && L * 1.15 > th) {
+    } else if (dark > 0.5 && L * low * 1.15 > th) {
       // Ordered dither, so the pool of light reads as a gradient, not noise.
-      gi = L * 1.15 > th + 0.55 ? 26.0 : 14.0;
+      gi = L * low * 1.15 > th + 0.55 ? 26.0 : 14.0;
       gc = uWarm;
       a = 0.14 + L * 0.7;
     } else if (dark < 0.5 && shade * 1.5 > th) {
@@ -845,19 +908,11 @@ void main() {
     if (h < uClear) gi = 0.0;
     else if (h < uClear + crumble && gi > 0.0) { gi = 14.0; gc = uMuted; }
 
-    float keep = 1.0 - uClear;
     if (uCalm < 0.5) {
       vec2 gl2 = texture(uGlow, q / uGrid).rg * keep;
       float glow = gl2.r * (0.35 + 0.65 * band) * mix(0.06, 0.14, dark) * ambient
         + gl2.g * uLed * mix(0.28, 0.55, dark) * (1.6 - 0.8 * uPower);
       col = vec4(uAccent, 1.0) * clamp(glow, 0.0, 1.0);
-      vec2 dp = VIEW.xy + q * VIEW.zw / uGrid;
-      if (uPower > 0.01) {
-        float haze = cone(dp) * mix(0.06, 0.16, dark)
-          + exp(-length(dp - uBulb) / 9.0) * uPower * mix(0.4, 0.9, dark);
-        float wa = clamp(haze * keep, 0.0, 1.0);
-        col = vec4(uWarm, 1.0) * wa + col * (1.0 - wa);
-      }
       if (uSwitchGlow > 0.0) {
         float sg = clamp(exp(-length((dp - uSwitch) * vec2(1.0, 1.6)) / 7.0) * uSwitchGlow * keep, 0.0, 1.0);
         col = vec4(uAccent, 1.0) * sg + col * (1.0 - sg);
@@ -867,10 +922,33 @@ void main() {
     float ga = gi > 0.0 ? glyph(gi, f) * a : 0.0;
     col = vec4(gc, 1.0) * ga + col * (1.0 - ga);
     col *= smoothstep(uClip, uClip + 20.0 * uDpr, p.y);
+  } else if (dark > 0.5 && reach > 0.0 && p.y > uClip && q.y >= 0.0 && q.y < uGrid.y) {
+    // Either side of the drawing, the pool's dither carries on across the wall.
+    vec2 cell = floor(q);
+    float L = cone(VIEW.xy + (cell + 0.5) * VIEW.zw / uGrid) * low
+      * smoothstep(12.0 * uDpr, 40.0 * uDpr, min(p.x, uRes.x - p.x));
+    // Offset, so the Bayer index never comes from a negative cell.
+    ivec2 ci = ivec2(cell) + 4096;
+    float th = BAYER[(ci.y & 3) * 4 + (ci.x & 3)];
+    if (L >= 0.012 && L * 1.15 > th && hash21(cell + 7.0) >= uClear) {
+      float ga = glyph(L * 1.15 > th + 0.55 ? 26.0 : 14.0, fract(q)) * (0.14 + L * 0.7);
+      col = vec4(uWarm, 1.0) * ga;
+    }
+  }
+  // Under all of it, the lamp's haze.
+  col += vec4(uWarm, 1.0) * haze * (1.0 - col.a);
+
+  // The prompt's box catches the light on its border.
+  if (dark > 0.5 && uBox.z > 0.0 && reach > 0.0) {
+    float db = sdRoundBox(p - uBox.xy - 0.5 * uBox.zw, 0.5 * uBox.zw - 0.5 * uDpr,
+      max(uBoxR - 0.5 * uDpr, 0.0));
+    float ba = (1.0 - smoothstep(0.4 * uDpr, 1.2 * uDpr, abs(db)))
+      * clamp(reach * 2.4, 0.0, 0.85) * keep;
+    col = vec4(uWarm, 1.0) * ba + col * (1.0 - ba);
   }
 
-  vec2 size = uRes;
-  float d = sdRoundBox(p - 0.5 * size, 0.5 * size - 0.75 * uDpr, uRadius);
+  // So does the shell's frame: warmer there, and whole.
+  float caught = clamp(reach * 2.4, 0.0, 1.0) * keep;
   float s = perim(p, size);
   float along = s * 2.0 * (size.x + size.y) / uDpr;
 
@@ -881,16 +959,16 @@ void main() {
   float lit = clamp(comet + 0.5 * uFlash, 0.0, 1.0);
 
   float wn = vnoise(vec3(along * 0.02, 0.0, uTime * 0.18));
-  float halfW = (mix(0.3, 1.3, wn * wn) + lit * 0.25) * uDpr;
-  float brk = mix(smoothstep(0.12, 0.2, vnoise(vec3(along * 0.045, 5.0, uTime * 0.12))), 1.0, lit);
-  float line = (1.0 - smoothstep(halfW - 0.6, halfW + 0.6, abs(d))) * brk;
+  float halfW = (mix(0.3, 1.3, wn * wn) + lit * 0.25 + caught * 0.35) * uDpr;
+  float brk = mix(smoothstep(0.12, 0.2, vnoise(vec3(along * 0.045, 5.0, uTime * 0.12))), 1.0, max(lit, caught));
+  float line = (1.0 - smoothstep(halfW - 0.6, halfW + 0.6, abs(frame))) * brk;
 
-  float halo = exp(-abs(d) / (14.0 * uDpr)) * (comet + uFlash) * 0.15;
+  float halo = exp(-abs(frame) / (14.0 * uDpr)) * (comet + uFlash) * 0.15;
   float hA = clamp(halo * (uDark > 0.5 ? 0.55 : 0.3), 0.0, 1.0);
   col = vec4(uAccent, 1.0) * hA + col * (1.0 - hA);
 
-  float fa = line * clamp((uDark > 0.5 ? 0.5 : 0.4) + lit, 0.0, 1.0);
-  col = vec4(mix(uMuted, uAccent, lit), 1.0) * fa + col * (1.0 - fa);
+  float fa = line * clamp((uDark > 0.5 ? 0.5 : 0.4) + lit + 0.5 * caught, 0.0, 1.0);
+  col = vec4(mix(mix(uMuted, uWarm, caught), uAccent, lit), 1.0) * fa + col * (1.0 - fa);
 
   outColor = col;
 }`;
@@ -1438,6 +1516,15 @@ function worker() {
       set2("uBulb", pose.bulb);
       set2("uDir", pose.dir);
       set1("uPower", power);
+      const box = layout.box;
+      gl.uniform4f(
+        U.get("uBox") ?? null,
+        box[0] * dpr,
+        box[1] * dpr,
+        box[2] * dpr,
+        box[3] * dpr,
+      );
+      set1("uBoxR", box[4] * dpr);
       set2("uSwitch", [
         VIEW.x + ((G.base.sw + 1.5) * VIEW.w) / cols,
         VIEW.y + ((G.base.row + 0.5) * VIEW.h) / rows,
