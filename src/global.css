@@ -816,7 +816,9 @@
  */
 .desk-slot {
   position: absolute;
-  inset: 0.25rem 1rem max(4.75rem, var(--log-h, 0px));
+  inset: auto 1rem 4.75rem;
+  height: var(--desk-h, calc(100% - 5rem));
+  translate: 0 calc(-1 * var(--desk-up, 0px));
   pointer-events: none;
   transition: opacity 300ms ease;
 }
@@ -871,10 +873,24 @@
   visibility: hidden;
 }
 
-[data-shell][data-desk-gone] .desk-slot,
-[data-shell]:has(#term-input:focus, [aria-live] > pre[data-kind="in"])
-  .desk-slot {
+/* Broken for the rest of the visit once the first answer is in. */
+[data-shell][data-desk-broken] .desk-slot,
+[data-shell][data-answered]:not([data-lit]) .desk-slot {
   opacity: 0;
+}
+
+/* An answer's words, until each has come down the cable and dropped into place. */
+::highlight(desk-coming) {
+  color: transparent;
+}
+.desk-fly {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  pointer-events: none;
+  white-space: pre;
+  color: var(--sem-accent);
 }
 
 /* The lamp's switch: a button over its three cells, which the light draws. */
@@ -885,11 +901,7 @@
   border-radius: 0.375rem;
   cursor: pointer;
 }
-[data-shell][data-lit]:not(
-    [data-desk-gone],
-    :has(#term-input:focus, [aria-live] > pre[data-kind="in"])
-  )
-  .lamp-switch {
+[data-shell][data-lit]:not([data-desk-broken]) .lamp-switch {
   display: block;
 }
 

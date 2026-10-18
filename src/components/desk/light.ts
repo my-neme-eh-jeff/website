@@ -4,6 +4,7 @@
  * with WebGL2 cell for cell over the text the page shipped.
  */
 import {
+  CABLE_END,
   GRIDS,
   KIND,
   PATH,
@@ -31,6 +32,8 @@ type Msg =
       dpr: number;
       size: Size;
       art: [number, number, number, number];
+      /** The top of the shell's middle: the desk scrolls up out of sight there. */
+      clip: number;
     }
   | {
       type: "colors";
@@ -61,6 +64,10 @@ const COUNT = 95;
  * can't keep a device on text.
  */
 const LEVEL = "desk:level";
+/** A token's pulse runs the cable's length in this long, and its words fly out of the end. */
+const DOWN_S = 0.95;
+/** At most this often a pulse; the shader draws eight at once. */
+const TOKEN_MS = 120;
 
 declare global {
   interface Window {
@@ -117,6 +124,11 @@ function page() {
     document.removeEventListener("themechange", colors);
     shell.removeEventListener("pointermove", onMove);
     shell.removeEventListener("pointerleave", onLeave);
+    clearTimeout(flush);
+    cancelAnimationFrame(flyFrame);
+    flyers.clear();
+    CSS.highlights?.delete("desk-coming");
+    for (const f of shell.querySelectorAll(".desk-fly")) f.remove();
     w.terminate();
   };
   const lost = () => {
@@ -183,6 +195,7 @@ function page() {
     const pr = pre.getBoundingClientRect();
     if (!pr.width || !pr.height) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const mid = shell.querySelector(".desk-slot")?.parentElement;
     post({
       type: "layout",
       w: sr.width,
@@ -190,6 +203,7 @@ function page() {
       dpr,
       size,
       art: [pr.left - sr.left, pr.top - sr.top, pr.width, pr.height],
+      clip: mid ? mid.getBoundingClientRect().top - sr.top : 0,
     });
     placeSwitch();
     const cellW = (pr.width / cols) * dpr;
@@ -232,43 +246,209 @@ function page() {
     });
   };
 
-  const IN_USE = ':has(#term-input:focus, [aria-live] > pre[data-kind="in"])';
   const state = () =>
-    post({
-      type: "state",
-      clear: shell.matches(IN_USE) || shell.hasAttribute("data-desk-gone"),
-    });
+    post({ type: "state", clear: shell.hasAttribute("data-desk-broken") });
 
-  // A question going up the cable, and each streamed piece of an answer coming down.
+  /*
+   * A question goes up the cable. The answer comes down it a few words at a
+   * time, and each piece drops from its end into its place in the line; until
+   * it lands, a highlight paints its text transparent, so the terminal's DOM
+   * is never touched. Once the first answer is in and has landed, the desk
+   * breaks for the rest of the visit.
+   */
   const live = shell.querySelector("[aria-live]");
+  const hl = CSS.highlights ? new Highlight() : null;
+  if (hl) CSS.highlights.set("desk-coming", hl);
+  const lastAnswer = () => {
+    const ai = live?.querySelectorAll('pre[data-kind="ai"]');
+    return ai?.[ai.length - 1];
+  };
   let asked = live?.querySelectorAll('pre[data-kind="in"]').length ?? 0;
-  let answer: Element | undefined;
-  let said = 0;
+  let answers = live?.querySelectorAll('pre[data-kind="ai"]').length ?? 0;
+  let said = lastAnswer()?.textContent?.length ?? 0;
+  let landed = said;
+  let flying = 0;
   let tokenAt = 0;
+  let flush = 0;
+  let broken = shell.hasAttribute("data-desk-broken");
+  const carrying = () => !!hl && !broken && shell.hasAttribute("data-lit");
+
+  /** From character `i` of an element's text; null at or past its end. */
+  const rangeAt = (el: Element, i: number) => {
+    const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let t = walk.nextNode(); t; t = walk.nextNode()) {
+      const n = (t as Text).length;
+      if (i < n) {
+        const r = document.createRange();
+        r.setStart(t, i);
+        return r;
+      }
+      i -= n;
+    }
+    return null;
+  };
+  const hide = () => {
+    hl?.clear();
+    const pre = lastAnswer();
+    const r = pre && carrying() ? rangeAt(pre, landed) : null;
+    if (!hl || !pre || !r) return;
+    r.setEnd(pre, pre.childNodes.length);
+    hl.add(r);
+  };
+  const breakDesk = () => {
+    const len = lastAnswer()?.textContent?.length ?? 0;
+    if (broken || flying || len > said || !shell.hasAttribute("data-answered"))
+      return;
+    broken = true;
+    hide();
+    setTimeout(() => shell.setAttribute("data-desk-broken", ""), 400);
+  };
+  const landWord = (gen: number, end: number) => {
+    flying--;
+    if (gen === answers) landed = Math.max(landed, end);
+    hide();
+    breakDesk();
+  };
+  /*
+   * Each word heads for its character wherever that is now: new lines push the
+   * log up while words are in the air, and a token can end mid-word, so the
+   * rest of the word rewraps.
+   */
+  type Flyer = {
+    el: HTMLElement;
+    gen: number;
+    at: number;
+    end: number;
+    t0: number;
+    w: number;
+  };
+  const FLY_MS = 560;
+  const flyers = new Set<Flyer>();
+  let flyFrame = 0;
+  const step = (now: number) => {
+    flyFrame = 0;
+    const pre = lastAnswer();
+    const sr = shell.getBoundingClientRect();
+    const pr = visible()?.getBoundingClientRect();
+    for (const f of flyers) {
+      const t = (now - f.t0) / FLY_MS;
+      const at =
+        pre && f.gen === answers && carrying() ? rangeAt(pre, f.at) : null;
+      if (!at || !pr || t >= 1) {
+        f.el.remove();
+        flyers.delete(f);
+        landWord(f.gen, f.end);
+        continue;
+      }
+      at.setEnd(at.startContainer, at.startOffset + 1);
+      const to = at.getBoundingClientRect();
+      // Out of the cable's end, but never past the shell's right edge.
+      const x0 = Math.min(
+        pr.left - sr.left + ((CABLE_END[0] - VIEW.x) / VIEW.w) * pr.width,
+        sr.width - f.w - 16,
+      );
+      const y0 =
+        pr.top -
+        sr.top +
+        ((CABLE_END[1] - VIEW.y) / VIEW.h) * pr.height -
+        to.height;
+      const x1 = to.left - sr.left;
+      const y1 = to.top - sr.top;
+      const cx = x0 + (x1 - x0) * 0.3;
+      const cy = Math.min(y0, y1) - 40;
+      const k = Math.max(0, t);
+      const p = k * k * (3 - 2 * k);
+      const q = 1 - p;
+      const x = q * q * x0 + 2 * q * p * cx + p * p * x1;
+      const y = q * q * y0 + 2 * q * p * cy + p * p * y1;
+      const s = k < 0.35 ? 0.5 + k : 0.85 + (0.15 * (k - 0.35)) / 0.65;
+      f.el.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
+      f.el.style.opacity = String(Math.min(1, k / 0.35));
+    }
+    if (flyers.size) flyFrame = requestAnimationFrame(step);
+  };
+  const fly = (gen: number, from: number, to: number) => {
+    const pre = lastAnswer();
+    const words = [
+      ...(pre?.textContent?.slice(from, to) ?? "").matchAll(/\S+/g),
+    ];
+    if (!pre || !visible() || !words.length || gen !== answers || !carrying())
+      return landWord(gen, to);
+    flying += words.length - 1;
+    const cs = getComputedStyle(pre);
+    // Spread under TOKEN_MS, so words still land in order.
+    const gap = 90 / words.length;
+    const now = performance.now();
+    words.forEach((m, i) => {
+      const el = document.createElement("span");
+      el.className = "desk-fly";
+      el.setAttribute("aria-hidden", "true");
+      el.textContent = m[0];
+      el.style.fontFamily = cs.fontFamily;
+      el.style.fontSize = cs.fontSize;
+      el.style.lineHeight = cs.lineHeight;
+      el.style.opacity = "0";
+      shell.append(el);
+      const next = words[i + 1];
+      flyers.add({
+        el,
+        gen,
+        at: from + m.index,
+        end: next ? from + next.index : to,
+        t0: now + i * gap,
+        w: el.offsetWidth,
+      });
+    });
+    if (!flyFrame) flyFrame = requestAnimationFrame(step);
+  };
+  const send = (len: number) => {
+    clearTimeout(flush);
+    tokenAt = performance.now();
+    post({ type: "token" });
+    const from = said;
+    said = len;
+    if (!carrying()) {
+      landed = len;
+      return;
+    }
+    flying++;
+    const gen = answers;
+    setTimeout(() => fly(gen, from, len), DOWN_S * 1020);
+  };
   const watchChat = () => {
     if (!live) return;
     const n = live.querySelectorAll('pre[data-kind="in"]').length;
-    if (n > asked) post({ type: "send" });
+    if (n > asked && !broken) post({ type: "send" });
     asked = n;
-    const ai = live.querySelectorAll('pre[data-kind="ai"]');
-    const last = ai[ai.length - 1];
-    if (last !== answer) {
-      answer = last;
+    const count = live.querySelectorAll('pre[data-kind="ai"]').length;
+    if (count !== answers) {
+      answers = count;
       said = 0;
+      landed = 0;
     }
-    const len = last?.textContent?.length ?? 0;
-    if (len > said && performance.now() - tokenAt > 45) {
-      tokenAt = performance.now();
-      post({ type: "token" });
-    }
-    said = len;
+    const len = lastAnswer()?.textContent?.length ?? 0;
+    if (len > said && !broken) {
+      const wait = TOKEN_MS - (performance.now() - tokenAt);
+      clearTimeout(flush);
+      if (wait <= 0) send(len);
+      else flush = window.setTimeout(watchChat, wait);
+    } else if (len < said) said = landed = len;
+    hide();
+    breakDesk();
   };
 
   let busy = shell.hasAttribute("data-busy");
+  let up = shell.style.getPropertyValue("--desk-up");
   const mo = new MutationObserver(() => {
     const now = shell.hasAttribute("data-busy");
     if (now !== busy) post({ type: "state", think: now, flash: busy && !now });
     busy = now;
+    // The desk scrolled up with the log: the light draws it where it now is.
+    const u = shell.style.getPropertyValue("--desk-up");
+    if (u !== up) {
+      up = u;
+      layout();
+    }
     watchChat();
     state();
   });
@@ -278,8 +458,6 @@ function page() {
     childList: true,
     characterData: true,
   });
-  shell.addEventListener("focusin", state);
-  shell.addEventListener("focusout", () => setTimeout(state, 0));
 
   const toDrawing = (x: number, y: number): Pt | null => {
     const pre = visible();
@@ -366,6 +544,8 @@ function page() {
   ro.observe(shell);
   const slot = shell.querySelector(".desk-slot");
   if (slot) ro.observe(slot);
+  // It grows when the intro folds away, which moves where the desk is clipped.
+  if (slot?.parentElement) ro.observe(slot.parentElement);
 
   colors();
   state();
@@ -431,6 +611,7 @@ uniform vec2 uCell;
 uniform vec2 uGrid;
 uniform vec2 uSlot;
 uniform float uRadius;
+uniform float uClip;
 uniform float uDpr;
 uniform float uTime;
 uniform float uClear;
@@ -528,7 +709,9 @@ void main() {
   vec4 col = vec4(0.0);
 
   vec2 q = (p - uArt.xy) / uCell;
-  if (q.x >= 0.0 && q.y >= 0.0 && q.x < uGrid.x && q.y < uGrid.y) {
+  // Fully broken, the desk has nothing left to draw. Scrolled up, it fades out at the clip.
+  if (uClear < 0.999 && p.y > uClip
+      && q.x >= 0.0 && q.y >= 0.0 && q.x < uGrid.x && q.y < uGrid.y) {
     vec2 cell = floor(q);
     vec2 f = fract(q);
     vec2 uv = (cell + 0.5) / uGrid;
@@ -683,6 +866,7 @@ void main() {
 
     float ga = gi > 0.0 ? glyph(gi, f) * a : 0.0;
     col = vec4(gc, 1.0) * ga + col * (1.0 - ga);
+    col *= smoothstep(uClip, uClip + 20.0 * uDpr, p.y);
   }
 
   vec2 size = uRes;
@@ -770,6 +954,8 @@ function worker() {
   let head = 0;
   let last = 0;
   const t0 = performance.now();
+  /** The shader's time. */
+  let clock = 0;
 
   let coarse = false;
   let calm = false;
@@ -1169,45 +1355,8 @@ function worker() {
       if (Math.abs(want[k]! - art[k]!) < 0.25) art[k] = want[k]!;
       else easing = true;
     }
-
-    // Idle, the lamp drifts over the box; touch screens have no pointer to follow.
-    const P: Pt =
-      coarse || !aim
-        ? [
-            AIM[0] + 22 * Math.sin(time * 0.37),
-            AIM[1] - 6 + 12 * Math.sin(time * 0.53),
-          ]
-        : aim;
-    rig.step(rig.goal(P), dt, false);
-    power += ((lampOn ? 1 : 0) - power) * (1 - Math.exp(-dt * 9));
-
-    for (const p of pulses) p.s += p.v * dt;
-    pulses = pulses.filter((p) => p.s > -40 && p.s < G!.Lc + 40);
-    spikes = spikes.filter((s0) => time - s0 < 3);
-    const streaming = time - tokenAt < 0.8;
-    const heatTo =
-      think > 0.5 ? 0.85 : streaming ? 1 : pulses.length ? 0.15 : 0;
-    heat +=
-      (heatTo - heat) * (1 - Math.exp(-dt * (heatTo > heat ? 1.6 : 0.45)));
-    const busy = think > 0.5 || streaming;
-    const loadTo = busy ? 0.82 + 0.16 * vnoise(time * 3, 1, 2) : 0.06;
-    load += (loadTo - load) * (1 - Math.exp(-dt * (busy ? 2.2 : 0.8)));
-    fan += dt * (0.9 + load * 4.2) * 4;
-
-    const { pose, breathe: sb } = overlay(time);
-    gl.activeTexture(gl.TEXTURE4);
-    gl.bindTexture(gl.TEXTURE_2D, tex[4]!);
-    gl.texSubImage2D(
-      gl.TEXTURE_2D,
-      0,
-      0,
-      0,
-      G.cols,
-      G.rows,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      G.over,
-    );
+    // Only drawn frames move it on, so an outline held still picks up where it stopped.
+    clock += dt;
 
     const { dpr } = layout;
     const { cols, rows } = G;
@@ -1217,51 +1366,96 @@ function worker() {
     const set3 = (n: string, v: Rgb) => gl!.uniform3f(U.get(n) ?? null, ...v);
     gl.viewport(0, 0, canvas.width, canvas.height);
     set2("uRes", [canvas.width, canvas.height]);
-    gl.uniform4f(
-      U.get("uArt") ?? null,
-      art[0]! * dpr,
-      art[1]! * dpr,
-      art[2]! * dpr,
-      art[3]! * dpr,
-    );
-    set2("uCell", [(art[2]! * dpr) / cols, (art[3]! * dpr) / rows]);
-    set2("uGrid", [cols, rows]);
-    set2("uSlot", slot);
     set1("uRadius", 16 * dpr);
     set1("uDpr", dpr);
-    set1("uTime", time);
+    set1("uTime", clock);
     set1("uClear", clear);
+    set1("uClip", layout.clip * dpr);
     set1("uThink", think);
     set1("uFlash", flash);
     set1("uHead", head);
-    set1("uLed", led);
     set1("uDark", colors.dark ? 1 : 0);
-    set1("uCalm", calm ? 1 : 0);
-    set3("uFg", colors.fg);
     set3("uMuted", colors.muted);
     set3("uAccent", colors.accent);
-    set3("uAlt", colors.alt);
-    set3("uWarm", colors.warm);
-    set2("uBulb", pose.bulb);
-    set2("uDir", pose.dir);
-    set1("uPower", power);
-    set2("uSwitch", [
-      VIEW.x + ((G.base.sw + 1.5) * VIEW.w) / cols,
-      VIEW.y + ((G.base.row + 0.5) * VIEW.h) / rows,
-    ]);
-    set1(
-      "uSwitchGlow",
-      (1 - power) * sb * (colors.dark ? 0.7 : 0.3) + (hover ? 0.25 : 0),
-    );
-    const pu = new Float32Array(32);
-    pulses
-      .slice(-8)
-      .forEach((p, k) => pu.set([p.s, Math.sign(p.v), p.k, p.tail], k * 4));
-    gl.uniform4fv(U.get("uPulse[0]") ?? null, pu);
-    set1("uLc", G.Lc);
-    set1("uFan", fan);
-    set1("uLoad", load);
-    set1("uMeters", G.meters);
+
+    // Once the desk has broken, the shell's outline is all that's left to draw.
+    const gone = clearTarget === 1 && clear >= 1;
+    if (!gone) {
+      // Idle, the lamp drifts over the box; touch screens have no pointer to follow.
+      const P: Pt =
+        coarse || !aim
+          ? [
+              AIM[0] + 22 * Math.sin(time * 0.37),
+              AIM[1] - 6 + 12 * Math.sin(time * 0.53),
+            ]
+          : aim;
+      rig.step(rig.goal(P), dt, false);
+      power += ((lampOn ? 1 : 0) - power) * (1 - Math.exp(-dt * 9));
+
+      for (const p of pulses) p.s += p.v * dt;
+      pulses = pulses.filter((p) => p.s > -40 && p.s < G!.Lc + 40);
+      spikes = spikes.filter((s0) => time - s0 < 3);
+      const streaming = time - tokenAt < 0.8;
+      const heatTo =
+        think > 0.5 ? 0.85 : streaming ? 1 : pulses.length ? 0.15 : 0;
+      heat +=
+        (heatTo - heat) * (1 - Math.exp(-dt * (heatTo > heat ? 1.6 : 0.45)));
+      const busy = think > 0.5 || streaming;
+      const loadTo = busy ? 0.82 + 0.16 * vnoise(time * 3, 1, 2) : 0.06;
+      load += (loadTo - load) * (1 - Math.exp(-dt * (busy ? 2.2 : 0.8)));
+      fan += dt * (0.9 + load * 4.2) * 4;
+
+      const { pose, breathe: sb } = overlay(time);
+      gl.activeTexture(gl.TEXTURE4);
+      gl.bindTexture(gl.TEXTURE_2D, tex[4]!);
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        0,
+        0,
+        G.cols,
+        G.rows,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        G.over,
+      );
+
+      gl.uniform4f(
+        U.get("uArt") ?? null,
+        art[0]! * dpr,
+        art[1]! * dpr,
+        art[2]! * dpr,
+        art[3]! * dpr,
+      );
+      set2("uCell", [(art[2]! * dpr) / cols, (art[3]! * dpr) / rows]);
+      set2("uGrid", [cols, rows]);
+      set2("uSlot", slot);
+      set1("uLed", led);
+      set1("uCalm", calm ? 1 : 0);
+      set3("uFg", colors.fg);
+      set3("uAlt", colors.alt);
+      set3("uWarm", colors.warm);
+      set2("uBulb", pose.bulb);
+      set2("uDir", pose.dir);
+      set1("uPower", power);
+      set2("uSwitch", [
+        VIEW.x + ((G.base.sw + 1.5) * VIEW.w) / cols,
+        VIEW.y + ((G.base.row + 0.5) * VIEW.h) / rows,
+      ]);
+      set1(
+        "uSwitchGlow",
+        (1 - power) * sb * (colors.dark ? 0.7 : 0.3) + (hover ? 0.25 : 0),
+      );
+      const pu = new Float32Array(32);
+      pulses
+        .slice(-8)
+        .forEach((p, k) => pu.set([p.s, Math.sign(p.v), p.k, p.tail], k * 4));
+      gl.uniform4fv(U.get("uPulse[0]") ?? null, pu);
+      set1("uLc", G.Lc);
+      set1("uFan", fan);
+      set1("uLoad", load);
+      set1("uMeters", G.meters);
+    }
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -1269,6 +1463,7 @@ function worker() {
       drawn = true;
       scope.postMessage("drawn");
     }
+    if (gone) return easing;
     const swing = rig.v.some((v) => Math.abs(v) > 0.15);
     return (
       easing ||
@@ -1321,7 +1516,9 @@ function worker() {
       flash > 0.01 ||
       ledFlick > 0.01 ||
       clear !== clearTarget;
-    if ((easing && !calm) || now - last >= 29) active = draw(now);
+    // Calm, with the desk broken: the outline holds still until the comet runs again.
+    const still = calm && clearTarget === 1 && clear >= 1 && !easing;
+    if ((easing && !calm) || (!still && now - last >= 29)) active = draw(now);
     frame(loop);
   }
 
@@ -1376,7 +1573,7 @@ function worker() {
       pulses.push({ s: G.Lc + 8, v: -G.Lc / 1.25, k: 1, tail: 26 });
     else if (m.type === "token" && G) {
       const time = (performance.now() - t0) / 1000;
-      pulses.push({ s: -6, v: G.Lc / 0.95, k: 0.62, tail: 9 });
+      pulses.push({ s: -6, v: G.Lc / DOWN_S, k: 0.62, tail: 9 });
       spikes.push(time);
       tokenAt = time;
       ledFlick = 1;

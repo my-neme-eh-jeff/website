@@ -88,6 +88,11 @@ export type Desk = {
 export type Pt = [number, number];
 export type Poly = { pts: Pt[]; closed: boolean };
 
+/** Where the box's power cable ends, on the floor by the desk's right leg: its path's last point. */
+export const CABLE_END = STROKES[PATH.cable]!.match(/-?[\d.]+/g)!
+  .slice(-2)
+  .map(Number) as Pt;
+
 function parse(d: string): Poly[] {
   const tok = d.match(/[MLCZ]|-?\d*\.?\d+/g) ?? [];
   const out: Poly[] = [];

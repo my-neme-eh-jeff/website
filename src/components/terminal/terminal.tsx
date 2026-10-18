@@ -390,6 +390,11 @@ function holdChipRow(hold: boolean) {
   if (row) row.style.minHeight = hold ? `${row.offsetHeight}px` : "";
 }
 
+/** For the rest of the visit: the desk breaks once an answer is in. */
+function markAnswered() {
+  document.querySelector("[data-shell]")?.setAttribute("data-answered", "");
+}
+
 function clearBusy() {
   const shell = document.querySelector("[data-shell]");
   shell?.removeAttribute("data-busy");
@@ -514,6 +519,7 @@ export const Terminal = component$(() => {
         answered: () => {
           settle();
           clearBusy();
+          if (got) markAnswered();
           holdChipRow(true);
           convo.phase = "suggesting";
         },
@@ -528,6 +534,7 @@ export const Terminal = component$(() => {
     }
 
     if (outcome.ok) {
+      if (got) markAnswered();
       convo.turns = [
         ...turns,
         {
@@ -990,18 +997,31 @@ export const Terminal = component$(() => {
     }),
   );
 
-  // The desk's box ends where the log begins, so the desk steps back as lines
-  // arrive, and gives way once its characters would be under 5.5px.
+  // Once the log starts, the desk keeps the size it had at rest, and scrolls
+  // up above the log as lines arrive.
   useOnDocument(
     "qinit",
     sync$((_: Event, el: Element) => {
       const shell = el as HTMLElement;
       const live = shell.querySelector<HTMLElement>("[aria-live]");
       const pending = shell.querySelector<HTMLElement>(".term-pending");
-      const mid = shell.querySelector(".desk-slot")?.parentElement;
-      if (!live || !pending || !mid || shell.hasAttribute("data-room")) return;
+      const slot = shell.querySelector<HTMLElement>(".desk-slot");
+      const mid = slot?.parentElement;
+      if (!live || !pending || !slot || !mid || shell.hasAttribute("data-room"))
+        return;
       shell.setAttribute("data-room", "");
+      let rest = slot.offsetHeight;
       const fit = () => {
+        // The intro folds away with the first question, which would grow the desk.
+        if (!live.querySelector('pre[data-kind="in"]')) {
+          rest = slot.offsetHeight;
+          shell.style.removeProperty("--desk-h");
+        } else if (!shell.style.getPropertyValue("--desk-h"))
+          shell.style.setProperty("--desk-h", `${rest}px`);
+        const pre = [
+          ...slot.querySelectorAll<HTMLElement>("[data-desk-grid]"),
+        ].find((p) => p.offsetParent !== null);
+        if (!pre) return;
         const rem = parseFloat(
           getComputedStyle(document.documentElement).fontSize,
         );
@@ -1009,24 +1029,9 @@ export const Terminal = component$(() => {
           live.offsetHeight +
           (pending.offsetParent ? pending.offsetHeight + 4 : 0) +
           1.5 * rem;
-        shell.style.setProperty("--log-h", `${need}px`);
-        const pre = [
-          ...shell.querySelectorAll<HTMLElement>("[data-desk-grid]"),
-        ].find((p) => p.offsetParent !== null);
-        if (!pre) return;
-        const cols = Number(pre.dataset["cols"]);
-        const rows = Number(pre.dataset["rows"]);
-        const fitH = (h: number) =>
-          Math.min(
-            h,
-            ((mid.clientWidth - 2 * rem) * rows * 1.25) / (cols * 0.6),
-          );
-        const room = mid.clientHeight - 0.25 * rem;
-        const floor = Math.min(fitH(room - 4.75 * rem), 5.5 * rows * 1.25);
-        shell.toggleAttribute(
-          "data-desk-gone",
-          fitH(room - Math.max(4.75 * rem, need)) < floor - 0.5,
-        );
+        const bottom = slot.offsetTop + pre.offsetTop + pre.offsetHeight;
+        const up = Math.max(0, Math.round(bottom - (mid.clientHeight - need)));
+        shell.style.setProperty("--desk-up", `${up}px`);
       };
       const ro = new ResizeObserver(fit);
       for (const box of [live, pending, mid]) ro.observe(box);
@@ -1111,7 +1116,7 @@ export const Terminal = component$(() => {
         </div>
       </div>
 
-      <div class="relative min-h-0 flex-1">
+      <div class="relative min-h-0 flex-1 overflow-hidden">
         <div class="desk-slot">
           <Slot name="idle" />
         </div>
