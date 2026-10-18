@@ -28,6 +28,7 @@ Then:
     pnpm run build    # client + SSG + type check + lint
     pnpm run verify   # assert build invariants against dist/ (after build)
     pnpm run audit    # Lighthouse against production -> tmp/audit.json (not published)
+    pnpm run bench    # ask the desk model the shell's test questions and score them (usage in the script)
     pnpm run preview  # serve the built output
     pnpm run fmt      # prettier, incl. Tailwind class sorting
     pnpm run icons    # regenerate favicon/touch icon from one geometry source

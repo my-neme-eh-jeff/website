@@ -27,6 +27,7 @@
     "fonts": "node scripts/fetch-fonts.mjs",
     "audit": "node scripts/audit.mjs",
     "audit.check": "node scripts/audit.mjs --check",
+    "bench": "node scripts/bench-chat.mjs",
     "og": "node scripts/make-og.mjs"
   },
   "devDependencies": {
