@@ -139,6 +139,16 @@ function page() {
     canvas.remove();
     stop();
   };
+  // Stepping down to text after it has shown, the light fades out over the text.
+  const dim = () => {
+    if (!shell.hasAttribute("data-lit")) return lost();
+    shell.setAttribute("data-dimming", "");
+    shell.removeAttribute("data-lit");
+    setTimeout(() => {
+      lost();
+      shell.removeAttribute("data-dimming");
+    }, 600);
+  };
   w.onmessage = (e: MessageEvent<Out>) => {
     const m = e.data;
     if (m === "drawn") {
@@ -154,7 +164,7 @@ function page() {
       } catch {
         // Not remembered: the next visit steps down on its own.
       }
-    } else if (m === "text") lost();
+    } else if (m === "text") dim();
     else {
       switchAt = m;
       placeSwitch();
@@ -799,8 +809,8 @@ void main() {
   float reach = on ? cone(dp) + spill(dp) : 0.0;
   // Shadowed per pixel as well, with a short trace, so a shadow reads as a
   // shape across the wall, the floor and the prompt, not only as missing dots.
-  if (uCalm < 0.5 && reach * mix(0.054, 0.14, dark) > 0.002) {
-    float wall = smoothstep(0.0, 3.0, sdAt(dp));
+  if (uCalm < 0.999 && reach * mix(0.054, 0.14, dark) > 0.002) {
+    float wall = smoothstep(0.0, 3.0, sdAt(dp)) * (1.0 - uCalm);
     if (wall > 0.0) {
       float hh;
       reach *= 1.0 - 0.85 * wall * castShadow(dp, DEPTH * length(uBulb - dp), 0.16, 5, hh);
@@ -808,8 +818,8 @@ void main() {
   }
   float haze = 0.0;
   // The bulb's own glow goes with the lamp when it scrolls up out of sight; its light stays.
-  if (on && uCalm < 0.5)
-    haze = clamp((reach * mix(0.054, 0.14, dark)
+  if (on && uCalm < 0.999)
+    haze = (1.0 - uCalm) * clamp((reach * mix(0.054, 0.14, dark)
         + exp(-length(dp - uBulb) / 9.0) * uPower * mix(0.36, 0.8, dark)
           * smoothstep(uClip, uClip + 20.0 * uDpr, p.y)) * keep, 0.0, 1.0)
       * (1.0 - smoothstep(-0.5 * uDpr, 0.5 * uDpr, frame));
@@ -946,13 +956,13 @@ void main() {
     if (h < uClear) gi = 0.0;
     else if (h < uClear + crumble && gi > 0.0) { gi = 14.0; gc = uMuted; }
 
-    if (uCalm < 0.5) {
-      vec2 gl2 = texture(uGlow, q / uGrid).rg * keep;
+    if (uCalm < 0.999) {
+      vec2 gl2 = texture(uGlow, q / uGrid).rg * keep * (1.0 - uCalm);
       float glow = gl2.r * (0.35 + 0.65 * band) * mix(0.06, 0.14, dark) * ambient
         + gl2.g * uLed * mix(0.28, 0.55, dark) * (1.6 - 0.8 * uPower);
       col = vec4(uAccent, 1.0) * clamp(glow, 0.0, 1.0);
       if (uSwitchGlow > 0.0) {
-        float sg = clamp(exp(-length((dp - uSwitch) * vec2(1.0, 1.6)) / 7.0) * uSwitchGlow * keep, 0.0, 1.0);
+        float sg = clamp(exp(-length((dp - uSwitch) * vec2(1.0, 1.6)) / 7.0) * uSwitchGlow * keep * (1.0 - uCalm), 0.0, 1.0);
         col = vec4(uAccent, 1.0) * sg + col * (1.0 - sg);
       }
     }
@@ -1115,11 +1125,36 @@ function worker() {
   };
   let G: Grid | null = null;
 
-  // The first seconds of frames decide whether this device keeps the full light.
-  let probeFrom = 0;
-  let probe: number[] = [];
-  let probed = false;
+  /**
+   * What a frame may cost before the light shows, CPU and GPU together: full
+   * holds 60 fps with the GPU at most 70% busy, calm its 30. Measured
+   * (2026-10-18, Chrome 155, M4, repeated draws standing in for slower GPUs):
+   * at 13 ms full still moved at 60 fps; at 26 ms frames queued and the lamp
+   * trailed the pointer by 150 ms.
+   */
+  const FULL_MS = 12;
+  const CALM_MS = 22;
+  /**
+   * A frame this long from drawn to done means the GPU has fallen behind:
+   * keeping up, it took two ticks, and falling behind, five or more.
+   */
+  const LAG_TICKS = 3.5;
+  /** The calm look, eased, so a step down mid-visit fades in. */
+  let calmMix = 0;
+  /** A frame's measured cost per canvas pixel, which paces the drawing. */
+  let perPx = 0;
+  /** Each drawn frame's fence, oldest first, until the GPU has finished it. */
+  const fences: { s: WebGLSync; at: number }[] = [];
+  let quietTill = 0;
+  let windowFrom = 0;
+  let done = 0;
+  let late = 0;
+  let strikes = 0;
+  /** The time between ticks, eased. */
+  let tick = 16.7;
   let prevRaf = 0;
+  /** Stepped down to text: nothing more to draw. */
+  let out = false;
 
   const frame: (cb: (t: number) => void) => void =
     typeof requestAnimationFrame === "function"
@@ -1350,7 +1385,7 @@ function worker() {
       return c < 0 || r < 0 || c >= cols || r >= rows ? -1 : r * cols + c;
     };
 
-    if (!calm && heat > 0.02) {
+    if (calmMix < 0.5 && heat > 0.02) {
       for (let k = 1; k <= 9; k++) {
         const r = g.boxTop - k;
         if (r < 0) break;
@@ -1460,7 +1495,60 @@ function worker() {
     return { pose, breathe };
   }
 
+  /**
+   * The first frame waits on the frames that decide the level, drawn while the
+   * canvas is still hidden: a device past FULL_MS is calm, and one whose calm
+   * frame is past CALM_MS keeps the text without the light ever showing.
+   */
   function draw(now: number) {
+    if (out) return false;
+    if (drawn) return paint(now) ?? false;
+    let c = cost();
+    if (c === null) return false;
+    if (!calm && c > FULL_MS) {
+      calm = true;
+      calmMix = 1;
+      scope.postMessage("calm");
+      c = cost()!;
+    }
+    if (calm && c > CALM_MS) {
+      running = false;
+      out = true;
+      scope.postMessage("text");
+      return false;
+    }
+    perPx = c / (canvas!.width * canvas!.height);
+    drawn = true;
+    quiet(now);
+    scope.postMessage("drawn");
+    return paint(now) ?? false;
+  }
+
+  /**
+   * A frame's cost, timed to a 1x1 readback, which waits for the GPU to finish,
+   * less a readback alone. The first two frames compile and upload, so the
+   * median of the next five. Null while there's nothing to draw yet.
+   */
+  function cost() {
+    const px = new Uint8Array(4);
+    const read = () =>
+      gl!.readPixels(0, 0, 1, 1, gl!.RGBA, gl!.UNSIGNED_BYTE, px);
+    const t: number[] = [];
+    for (let k = 0; k < 7; k++) {
+      const a = performance.now();
+      read();
+      const b = performance.now();
+      if (paint(b) === null) return null;
+      read();
+      if (k < 2) continue;
+      t.push(performance.now() - b - (b - a));
+      // Far past either level: no need to keep the worker waiting on more.
+      if (t.at(-1)! > CALM_MS * 6) return t.at(-1)!;
+    }
+    return t.sort((x, y) => x - y)[2]!;
+  }
+
+  function paint(now: number) {
     if (
       !gl ||
       !prog ||
@@ -1471,10 +1559,11 @@ function worker() {
       !G ||
       !rig
     )
-      return false;
+      return null;
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     const time = (now - t0) / 1000;
+    calmMix = calm ? Math.min(1, calmMix + dt / 0.6) : 0;
     clear =
       clearTarget > clear
         ? Math.min(clearTarget, clear + dt / 0.45)
@@ -1574,7 +1663,7 @@ function worker() {
       set2("uGrid", [cols, rows]);
       set2("uSlot", slot);
       set1("uLed", led);
-      set1("uCalm", calm ? 1 : 0);
+      set1("uCalm", calmMix);
       set3("uFg", colors.fg);
       set3("uAlt", colors.alt);
       set3("uWarm", colors.warm);
@@ -1611,10 +1700,11 @@ function worker() {
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    if (!drawn) {
-      drawn = true;
-      scope.postMessage("drawn");
-    }
+    const f =
+      drawn &&
+      fences.length < 16 &&
+      gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    if (f) fences.push({ s: f, at: now });
     if (gone) return easing;
     const swing = rig.v.some((v) => Math.abs(v) > 0.15);
     return (
@@ -1625,41 +1715,52 @@ function worker() {
     );
   }
 
-  /** Long frames for most of the first seconds step the light down a level. */
-  function judge(now: number) {
-    if (probed || !drawn) return;
-    if (!probeFrom) {
-      probeFrom = now;
-      probe = [];
-      return;
+  /**
+   * After it shows, a device that falls behind steps down a level, once per
+   * visit: half the frames it finished in a 2 s window took longer than
+   * LAG_TICKS ticks (and 100 ms), two windows in a row. A capped frame rate or
+   * a fast screen leaves the GPU idle, so neither counts.
+   */
+  function watch(now: number) {
+    const lag = Math.max(100, tick * LAG_TICKS);
+    while (
+      fences.length &&
+      gl!.getSyncParameter(fences[0]!.s, gl!.SYNC_STATUS) === gl!.SIGNALED
+    ) {
+      const f = fences.shift()!;
+      gl!.deleteSync(f.s);
+      if (now < quietTill) continue;
+      done++;
+      if (now - f.at > lag) late++;
     }
-    probe.push(now - prevRaf);
-    if (now - probeFrom < 2500) return;
-    const sorted = [...probe].sort((a, b) => a - b);
-    const med = sorted[sorted.length >> 1] ?? 16.7;
-    const long =
-      probe.filter((d) => d > Math.max(50, med * 1.8)).length /
-      Math.max(1, probe.length);
-    if (long <= 0.15) {
-      probed = true;
-      return;
-    }
+    // Hidden or stalled, what was in flight says nothing about the device.
+    if (!drawn || now - prevRaf > 250) return quiet(now);
+    tick += (now - prevRaf - tick) * 0.05;
+    if (now < quietTill || now - windowFrom < 2000) return;
+    strikes = done >= 8 && late >= done / 2 ? strikes + 1 : 0;
+    windowFrom = now;
+    done = late = 0;
+    if (strikes < 2) return;
+    quiet(now);
     if (!calm) {
       calm = true;
-      probeFrom = 0;
       scope.postMessage("calm");
     } else {
       running = false;
-      probed = true;
+      out = true;
       scope.postMessage("text");
     }
+  }
+  function quiet(now: number) {
+    quietTill = windowFrom = now + 2000;
+    done = late = strikes = 0;
   }
 
   /** Full rate while something moves; the idle drift and breath hold up at 30 fps. */
   let active = true;
   function loop(now: number) {
     if (!running) return;
-    judge(now);
+    watch(now);
     prevRaf = now;
     const easing =
       active ||
@@ -1670,7 +1771,11 @@ function worker() {
       clear !== clearTarget;
     // Calm, with the desk broken: the outline holds still until the comet runs again.
     const still = calm && clearTarget === 1 && clear >= 1 && !easing;
-    if ((easing && !calm) || (!still && now - last >= 29)) active = draw(now);
+    // The GPU gets at most 70% of the time, so near its limit a device draws
+    // less often instead of falling behind.
+    const pace = canvas ? (perPx * canvas.width * canvas.height) / 0.7 - 2 : 0;
+    const gap = Math.max(easing && !calm ? 0 : 29, pace);
+    if (!still && now - last >= gap) active = draw(now);
     frame(loop);
   }
 
@@ -1679,6 +1784,7 @@ function worker() {
     if (m.type === "init") {
       coarse = m.coarse;
       calm = m.calm;
+      calmMix = calm ? 1 : 0;
       init(m.canvas);
     } else if (!gl) return;
     else if (m.type === "atlas") {
@@ -1699,8 +1805,12 @@ function worker() {
       const first = !layout || layout.size !== m.size;
       layout = m;
       if (first) art.splice(0, 4, ...m.art);
-      canvas!.width = Math.max(1, Math.round(m.w * m.dpr));
-      canvas!.height = Math.max(1, Math.round(m.h * m.dpr));
+      const w = Math.max(1, Math.round(m.w * m.dpr));
+      const h = Math.max(1, Math.round(m.h * m.dpr));
+      // The frames in flight were drawn at the old size.
+      if (w !== canvas!.width || h !== canvas!.height) quiet(performance.now());
+      canvas!.width = w;
+      canvas!.height = h;
       if (builtFor !== m.size) {
         builtFor = m.size;
         build(m.size);
@@ -1713,7 +1823,7 @@ function worker() {
     } else if (m.type === "run") {
       const was = running;
       running = m.on;
-      probeFrom = 0;
+      quiet(performance.now());
       if (running && !was) {
         last = performance.now();
         frame(loop);

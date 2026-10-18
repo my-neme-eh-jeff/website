@@ -872,6 +872,12 @@
 [data-lit] .desk-grid {
   visibility: hidden;
 }
+[data-shell][data-dimming] {
+  transition: border-color 0.6s ease;
+}
+[data-dimming] > .desk-light {
+  transition: opacity 0.6s ease;
+}
 
 /* Broken for the rest of the visit once the first answer is in. */
 [data-shell][data-desk-broken] .desk-slot,
