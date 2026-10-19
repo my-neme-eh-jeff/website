@@ -5,7 +5,7 @@ import { profile } from "~/content/profile";
 import { ld, privacyGraph, seoMeta } from "~/content/seo";
 
 // Each sentence states how the site behaves: change it with that behaviour.
-const UPDATED = "2026-10-14";
+const UPDATED = "2026-10-19";
 
 export default component$(() => {
   return (
@@ -70,6 +70,12 @@ export default component$(() => {
         computer never receives it.
       </p>
       <p>
+        If my computer is off or can't be reached, your question and the earlier
+        turns go to Poe, a service run by Quora, Inc., and an AI model there
+        answers instead. Your IP address and country are not sent. Those
+        exchanges are not in my log; Poe's privacy policy covers what it keeps.
+      </p>
+      <p>
         My computer keeps a log of each exchange: your question, the earlier
         turns, the answer and the model's working notes, the time and your
         country. I read it to see what people ask and to improve the answers.
@@ -81,7 +87,8 @@ export default component$(() => {
       <p>
         I process this to run, protect and improve a working demo of my own
         work. Cloudflare, Inc. hosts the site, carries the chat traffic and runs
-        the analytics, on my behalf. Nothing is sold, shared for advertising or
+        the analytics, and Quora, Inc. answers the chat through Poe when my
+        computer can't, on my behalf. Nothing is sold, shared for advertising or
         used to profile you.
       </p>
 
@@ -93,7 +100,7 @@ export default component$(() => {
       </p>
 
       <p class="text-muted pt-6 text-sm">
-        Last updated <time dateTime={UPDATED}>14 October 2026</time>.
+        Last updated <time dateTime={UPDATED}>19 October 2026</time>.
       </p>
     </div>
   );

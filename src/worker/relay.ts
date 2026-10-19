@@ -15,7 +15,8 @@ type Chunk = {
 };
 
 /** Ollama's NDJSON lines in, the shell's events out. Reasoning is dropped. */
-export function events(asked: readonly string[]) {
+/** `stats: false` sends `done` without timings, so the shell shows none. */
+export function events(asked: readonly string[], { stats = true } = {}) {
   const split = splitter();
   const guard = loopGuard();
   let stopped = false;
@@ -71,14 +72,16 @@ export function events(asked: readonly string[]) {
         out.push({
           type: "done",
           model: chunk.model,
-          stats: {
-            loadMs: Math.round((chunk.load_duration ?? 0) / 1e6),
-            promptTokens: chunk.prompt_eval_count ?? 0,
-            cachedTokens: chunk.prompt_eval_cached_count ?? 0,
-            promptMs: Math.round((chunk.prompt_eval_duration ?? 0) / 1e6),
-            tokens: chunk.eval_count ?? 0,
-            genMs: Math.round((chunk.eval_duration ?? 0) / 1e6),
-          },
+          stats: stats
+            ? {
+                loadMs: Math.round((chunk.load_duration ?? 0) / 1e6),
+                promptTokens: chunk.prompt_eval_count ?? 0,
+                cachedTokens: chunk.prompt_eval_cached_count ?? 0,
+                promptMs: Math.round((chunk.prompt_eval_duration ?? 0) / 1e6),
+                tokens: chunk.eval_count ?? 0,
+                genMs: Math.round((chunk.eval_duration ?? 0) / 1e6),
+              }
+            : null,
           next,
         });
       }
@@ -113,11 +116,14 @@ export function deskEvent(
 
 export function relay(
   asked: readonly string[],
-  first: object | null = null,
+  {
+    first = null,
+    stats = true,
+  }: { first?: object | null; stats?: boolean } = {},
 ): TransformStream<Uint8Array, Uint8Array> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
-  const ev = events(asked);
+  const ev = events(asked, { stats });
   let buffer = "";
 
   const send = (

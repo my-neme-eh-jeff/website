@@ -5,12 +5,13 @@ import {
   NUM_PREDICT,
   SYSTEM_PROMPT,
 } from "../content/chat";
+import { callPoe, fromPoe } from "./poe";
 import { DESK_STATE_HEADER, deskEvent, relay } from "./relay";
 
 /**
  * `POST /api/chat`, streamed back as NDJSON events:
  *
- *   {"type":"desk","cold":true}      first: whether the model must load
+ *   {"type":"desk","cold":true}      first, from the desk: must the model load?
  *   {"type":"token","text":"..."}
  *   {"type":"answered"}              the answer is whole; questions follow
  *   {"type":"next","text":"...?"}    one per question, as its line ends
@@ -24,13 +25,19 @@ import { DESK_STATE_HEADER, deskEvent, relay } from "./relay";
  * fixed here.
  */
 
+type RateLimit = {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+};
+
 interface Env {
   /** Workers VPC binding to the desk's log proxy, through a Cloudflare Tunnel. */
   DESK: { fetch(input: Request): Promise<Response> };
-  CHAT_LIMIT: {
-    limit(options: { key: string }): Promise<{ success: boolean }>;
-  };
+  CHAT_LIMIT: RateLimit;
   DESK_MODEL: string;
+  /** A secret. Unset, a desk that's down is reported as offline. */
+  POE_API_KEY?: string;
+  POE_LIMIT: RateLimit;
+  POE_MODEL: string;
 }
 
 type Turn = { role: "user" | "assistant"; content: string };
@@ -39,10 +46,23 @@ const MAX_BODY_BYTES = 16_000;
 
 /**
  * For response headers only. The desk's proxy sends them before Ollama loads
- * anything, so a desk that hasn't answered by now is down, not cold. The
- * stream itself is not timed out.
+ * anything (0.2-0.3s through the tunnel, 2026-10-19), so a desk that hasn't
+ * answered by now is down, not cold. The stream itself is not timed out.
  */
-const HEADERS_TIMEOUT_MS = 8_000;
+const HEADERS_TIMEOUT_MS = 5_000;
+
+/** Poe's first byte came after about 2s (2026-10-19). */
+const POE_HEADERS_TIMEOUT_MS = 15_000;
+
+const stream = (body: ReadableStream<Uint8Array>) =>
+  // A fresh Response, so none of the upstream's headers reach the browser.
+  new Response(body, {
+    headers: {
+      "content-type": "application/x-ndjson; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
 
 const json = (body: unknown, status: number, headers: HeadersInit = {}) =>
   new Response(JSON.stringify(body), {
@@ -140,36 +160,60 @@ async function chat(request: Request, env: Env): Promise<Response> {
   }
   if (!turns) return json({ error: "bad_request" }, 400);
 
+  const asked = turns.filter((t) => t.role === "user").map((t) => t.content);
+  const upstream = await withTimeout(HEADERS_TIMEOUT_MS, (signal) =>
+    callDesk(env, turns, signal, visitorHeaders(request)),
+  );
+  if (!upstream) return fallback(env, turns, asked);
+
+  const first = deskEvent(upstream.headers.get(DESK_STATE_HEADER));
+  return stream(upstream.body.pipeThrough(relay(asked, { first })));
+}
+
+/**
+ * Poe, when the desk can't answer. Only before the desk's stream starts: a
+ * cold desk is up, and an answer cut off midway isn't asked again.
+ */
+async function fallback(
+  env: Env,
+  turns: Turn[],
+  asked: string[],
+): Promise<Response> {
+  const offline = json({ error: "offline" }, 503);
+  const key = env.POE_API_KEY;
+  if (!key) return offline;
+  // One key for everyone: a cap on the points the public can spend.
+  if (!(await env.POE_LIMIT.limit({ key: "poe" })).success) return offline;
+
+  const res = await withTimeout(POE_HEADERS_TIMEOUT_MS, (signal) =>
+    callPoe(key, env.POE_MODEL, turns, signal),
+  );
+  if (!res) return offline;
+  return stream(
+    res.body.pipeThrough(fromPoe()).pipeThrough(relay(asked, { stats: false })),
+  );
+}
+
+/** An ok response with a body, or null; the timeout covers headers only. */
+async function withTimeout(
+  ms: number,
+  call: (signal: AbortSignal) => Promise<Response>,
+): Promise<(Response & { body: ReadableStream<Uint8Array> }) | null> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), HEADERS_TIMEOUT_MS);
-  let upstream: Response;
+  const timer = setTimeout(() => controller.abort(), ms);
+  let res: Response;
   try {
-    upstream = await callDesk(
-      env,
-      turns,
-      controller.signal,
-      visitorHeaders(request),
-    );
+    res = await call(controller.signal);
   } catch {
-    return json({ error: "offline" }, 503);
+    return null;
   } finally {
     clearTimeout(timer);
   }
-  if (!upstream.ok || !upstream.body) {
-    await upstream.body?.cancel();
-    return json({ error: "offline" }, 503);
+  if (res.ok && res.body) {
+    return res as Response & { body: ReadableStream<Uint8Array> };
   }
-
-  const asked = turns.filter((t) => t.role === "user").map((t) => t.content);
-  const first = deskEvent(upstream.headers.get(DESK_STATE_HEADER));
-  // A fresh Response, so none of the desk's headers reach the browser.
-  return new Response(upstream.body.pipeThrough(relay(asked, first)), {
-    headers: {
-      "content-type": "application/x-ndjson; charset=utf-8",
-      "cache-control": "no-store",
-      "x-content-type-options": "nosniff",
-    },
-  });
+  await res.body?.cancel();
+  return null;
 }
 
 export default {

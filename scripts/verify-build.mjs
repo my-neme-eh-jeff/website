@@ -8,6 +8,7 @@ import { grad } from "../src/components/blog/statusline/model.ts";
 import { GRIDS, rasterize } from "../src/components/desk/desk.ts";
 import { DEFAULT_PALETTE, PALETTES, modesOf } from "../src/content/palettes.ts";
 import { SENTINEL, parse, splitter } from "../src/worker/follow-ups.ts";
+import { DESK_LINE, FALLBACK_PROMPT, poeLine } from "../src/worker/poe.ts";
 import { DESK_STATE_HEADER, deskEvent, events } from "../src/worker/relay.ts";
 import {
   MAX_ASSISTANT_CHARS,
@@ -279,6 +280,64 @@ check("the desk proxy sends the cold/warm header the Worker reads", () => {
       deskEvent("warm")?.cold === false &&
       deskEvent(null) === null,
     "deskEvent no longer maps cold/warm/absent to true/false/null",
+  );
+});
+
+check(
+  "Poe's stream reaches the shell as the desk's does, without timings",
+  () => {
+    // The shape ds-v4.1-flash-1017 streamed on 2026-10-19.
+    const answer = "He works on platform infrastructure at Atlan.";
+    const asks = ["What is he building?", "Where did he work before?"];
+    const reply = `${answer}\n\n${SENTINEL}\n${asks.join("\n")}`;
+    const sse = (o) => `data: ${JSON.stringify({ model: "m", ...o })}`;
+    const lines = [
+      sse({ choices: [{ delta: { role: "assistant" }, finish_reason: null }] }),
+      ...reply
+        .match(/.{1,7}/gs)
+        .map((content) =>
+          sse({ choices: [{ delta: { content }, finish_reason: null }] }),
+        ),
+      sse({
+        choices: [{ delta: {}, finish_reason: "stop" }],
+        usage: { completion_tokens: 30 },
+      }),
+      "data: [DONE]",
+    ];
+    const ev = events([], { stats: false });
+    const out = [
+      ...lines.flatMap(poeLine).flatMap((l) => ev.line(JSON.stringify(l))),
+      ...ev.end(),
+    ];
+    const text = out
+      .filter((e) => e.type === "token")
+      .map((e) => e.text)
+      .join("");
+    const done = out.at(-1);
+    assert(text === answer, `showed ${JSON.stringify(text)}`);
+    assert(
+      done?.type === "done" &&
+        done.stats === null &&
+        JSON.stringify(done.next) === JSON.stringify(asks),
+      `ended with ${JSON.stringify(done)}`,
+    );
+    assert(
+      JSON.stringify(poeLine(sse({ error: { message: "x" } }))) ===
+        '[{"error":"poe"}]',
+      "an error from Poe no longer becomes an error line",
+    );
+  },
+);
+
+check("Poe's prompt doesn't say it runs on the desk", () => {
+  assert(
+    SYSTEM_PROMPT.includes(DESK_LINE) && FALLBACK_PROMPT !== SYSTEM_PROMPT,
+    "DESK_LINE in src/worker/poe.ts no longer matches the prompt's line about " +
+      "the desk, so Poe would claim to run there. Copy the new line into it.",
+  );
+  assert(
+    !/on its GPU|at his home|Cloudflare tunnel/.test(FALLBACK_PROMPT),
+    "FALLBACK_PROMPT mentions the desk",
   );
 });
 
