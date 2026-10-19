@@ -103,8 +103,8 @@ function chatError(code: string): Line[] {
 
 function statsLine(o: Extract<Outcome, { ok: true }>): string {
   const parts = [`${o.model || "model"} on Aman's desk`];
-  if (o.stats && o.stats.genMs > 0) {
-    parts.push(`${(o.stats.tokens / (o.stats.genMs / 1000)).toFixed(1)} tok/s`);
+  if (o.stats && o.stats.tokPerSec > 0) {
+    parts.push(`${o.stats.tokPerSec.toFixed(1)} tok/s`);
   }
   if (o.firstTokenMs >= 0) {
     parts.push(`ttft ${(o.firstTokenMs / 1000).toFixed(1)}s`);

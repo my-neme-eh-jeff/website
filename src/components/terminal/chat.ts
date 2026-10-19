@@ -1,13 +1,6 @@
-export type Turn = { role: "user" | "assistant"; content: string };
+import type { Stats } from "../../worker/relay";
 
-export type Stats = {
-  loadMs: number;
-  promptTokens: number;
-  cachedTokens: number;
-  promptMs: number;
-  tokens: number;
-  genMs: number;
-};
+export type Turn = { role: "user" | "assistant"; content: string };
 
 export type Outcome =
   | {

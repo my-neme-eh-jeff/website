@@ -404,6 +404,31 @@ check("a looping answer is cut before it repeats, and nothing else is", () => {
   return `${runs} splits`;
 });
 
+check("the Worker's tok/s is Ollama's eval_count over eval_duration", () => {
+  // The last line Ollama 0.34.4 sent the desk on 2026-10-19.
+  const last = {
+    model: "gpt-oss-16k:20b",
+    message: { role: "assistant", content: "" },
+    done: true,
+    done_reason: "stop",
+    total_duration: 1257601896,
+    load_duration: 1418408,
+    prompt_eval_count: 73,
+    prompt_eval_cached_count: 67,
+    prompt_eval_duration: 180005000,
+    eval_count: 23,
+    eval_duration: 1016663000,
+  };
+  const ev = events([]);
+  const done = ev.line(JSON.stringify(last)).find((e) => e.type === "done");
+  const { tokPerSec, loadMs } = done?.stats ?? {};
+  assert(
+    tokPerSec?.toFixed(1) === "22.6" && loadMs === 1,
+    `stats ${JSON.stringify(done?.stats)}`,
+  );
+  return `${tokPerSec.toFixed(1)} tok/s`;
+});
+
 // Cloudflare applies every matching _headers rule and comma-joins a repeated
 // header (verified on wrangler's asset worker).
 check("_headers sets no Cache-Control in its catch-all block", () => {

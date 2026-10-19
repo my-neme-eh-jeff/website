@@ -5,14 +5,25 @@ type Chunk = {
   done?: boolean;
   model?: string;
   message?: { content?: string };
-  total_duration?: number;
   load_duration?: number;
-  prompt_eval_count?: number;
-  prompt_eval_cached_count?: number;
-  prompt_eval_duration?: number;
   eval_count?: number;
   eval_duration?: number;
 };
+
+export type Stats = { tokPerSec: number; loadMs: number };
+
+/**
+ * Ollama sends a count and a time, never a rate. This is how its docs
+ * (docs/api.md) and `ollama run --verbose` turn them into one (read
+ * 2026-10-19, Ollama 0.35).
+ */
+function statsOf(chunk: Chunk): Stats {
+  const ns = chunk.eval_duration ?? 0;
+  return {
+    tokPerSec: ns > 0 ? ((chunk.eval_count ?? 0) / ns) * 1e9 : 0,
+    loadMs: Math.round((chunk.load_duration ?? 0) / 1e6),
+  };
+}
 
 /** Ollama's NDJSON lines in, the shell's events out. Reasoning is dropped. */
 /** `stats: false` sends `done` without timings, so the shell shows none. */
@@ -72,16 +83,7 @@ export function events(asked: readonly string[], { stats = true } = {}) {
         out.push({
           type: "done",
           model: chunk.model,
-          stats: stats
-            ? {
-                loadMs: Math.round((chunk.load_duration ?? 0) / 1e6),
-                promptTokens: chunk.prompt_eval_count ?? 0,
-                cachedTokens: chunk.prompt_eval_cached_count ?? 0,
-                promptMs: Math.round((chunk.prompt_eval_duration ?? 0) / 1e6),
-                tokens: chunk.eval_count ?? 0,
-                genMs: Math.round((chunk.eval_duration ?? 0) / 1e6),
-              }
-            : null,
+          stats: stats ? statsOf(chunk) : null,
           next,
         });
       }
