@@ -20,6 +20,8 @@ export type Outcome =
   | { ok: false; code: string };
 
 export type Handlers = {
+  /** Before any token: whether the model had to be loaded first. */
+  desk: (cold: boolean) => void;
   token: (text: string) => void;
   /** The answer is whole; its next questions are being written. */
   answered: () => void;
@@ -79,12 +81,15 @@ export async function sendChat(turns: Turn[], on: Handlers): Promise<Outcome> {
         buffer = buffer.slice(nl + 1);
         if (!line.trim()) continue;
         const event = JSON.parse(line) as
+          | { type: "desk"; cold: unknown }
           | { type: "token"; text: string }
           | { type: "answered" }
           | { type: "next"; text: unknown }
           | { type: "done"; model: string; stats: Stats; next?: unknown }
           | { type: "error"; code: string };
-        if (event.type === "token") {
+        if (event.type === "desk") {
+          on.desk(event.cold === true);
+        } else if (event.type === "token") {
           if (firstTokenMs < 0) firstTokenMs = performance.now() - started;
           on.token(event.text);
         } else if (event.type === "answered") {

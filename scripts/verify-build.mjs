@@ -8,7 +8,7 @@ import { grad } from "../src/components/blog/statusline/model.ts";
 import { GRIDS, rasterize } from "../src/components/desk/desk.ts";
 import { DEFAULT_PALETTE, PALETTES, modesOf } from "../src/content/palettes.ts";
 import { SENTINEL, parse, splitter } from "../src/worker/follow-ups.ts";
-import { events } from "../src/worker/relay.ts";
+import { DESK_STATE_HEADER, deskEvent, events } from "../src/worker/relay.ts";
 import {
   MAX_ASSISTANT_CHARS,
   MAX_TURNS,
@@ -255,6 +255,32 @@ check(
     return `${runs} splits`;
   },
 );
+
+check("the desk proxy sends the cold/warm header the Worker reads", () => {
+  const proxy = read("desk", "chat-log-proxy.mjs");
+  const name = /const STATE_HEADER = "([^"]+)"/.exec(proxy)?.[1];
+  assert(
+    name === DESK_STATE_HEADER,
+    `desk/chat-log-proxy.mjs sends ${name}, the Worker reads ${DESK_STATE_HEADER}`,
+  );
+  assert(
+    /\[STATE_HEADER\]: warm \? "warm" : "cold"/.test(proxy),
+    "can't find the proxy setting warm/cold -- did its shape change?",
+  );
+  // The Worker's short HEADERS_TIMEOUT_MS relies on this order.
+  const flushed = proxy.indexOf("res.flushHeaders()");
+  const asked = proxy.indexOf("fetch(`${OLLAMA}/api/chat`");
+  assert(
+    flushed >= 0 && asked >= 0 && flushed < asked,
+    "the proxy must flush its headers before it asks Ollama for the answer",
+  );
+  assert(
+    deskEvent("cold")?.cold === true &&
+      deskEvent("warm")?.cold === false &&
+      deskEvent(null) === null,
+    "deskEvent no longer maps cold/warm/absent to true/false/null",
+  );
+});
 
 check("a looping answer is cut before it repeats, and nothing else is", () => {
   // As gpt-oss-16k:20b wrote it on 2026-10-17: the answer, the previous

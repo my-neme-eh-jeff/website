@@ -20,6 +20,8 @@ const RETENTION_DAYS = 30;
 const DAY_MS = 86_400_000;
 
 const COUNTRY_HEADER = "x-visitor-country";
+/** DESK_STATE_HEADER in src/worker/relay.ts; verify checks they match. */
+const STATE_HEADER = "x-desk-model";
 
 /**
  * A day file goes once its day began RETENTION_DAYS ago, so no entry outlives
@@ -50,6 +52,23 @@ async function readBody(req) {
     chunks.push(chunk);
   }
   return Buffer.concat(chunks).toString("utf8");
+}
+
+/** Whether Ollama has `model` in memory; null if Ollama didn't answer. */
+async function loaded(model) {
+  try {
+    const res = await fetch(`${OLLAMA}/api/ps`, {
+      signal: AbortSignal.timeout(2_000),
+    });
+    if (!res.ok) return null;
+    const { models } = await res.json();
+    return (
+      Array.isArray(models) &&
+      models.some((m) => m?.name === model || m?.model === model)
+    );
+  } catch {
+    return null;
+  }
 }
 
 async function record(entry) {
@@ -98,16 +117,23 @@ async function relay(req, res) {
   });
 
   try {
+    // Ollama sends no headers until the model is loaded, so these go first:
+    // then a desk that never answers is down, not loading.
+    const warm = await loaded(body.model);
+    if (warm === null) throw new Error("Ollama did not answer /api/ps");
+    res.writeHead(200, {
+      "content-type": "application/x-ndjson",
+      [STATE_HEADER]: warm ? "warm" : "cold",
+    });
+    res.flushHeaders();
+
     const upstream = await fetch(`${OLLAMA}/api/chat`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: raw,
       signal: upstreamAbort.signal,
     });
-    res.writeHead(upstream.status, {
-      "content-type":
-        upstream.headers.get("content-type") ?? "application/x-ndjson",
-    });
+    // Its error body, `{"error":"..."}`, streams through as the last line.
     if (!upstream.ok) entry.outcome = `upstream_${upstream.status}`;
 
     const decoder = new TextDecoder();

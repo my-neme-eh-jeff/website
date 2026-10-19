@@ -11,6 +11,9 @@ visitor -> Worker (/api/chat) -> Workers VPC -> Cloudflare Tunnel
 - `chat-log-proxy.mjs` forwards only `POST /api/chat`, streams the answer
   through unchanged, and appends each exchange to
   `~/.local/share/portfolio-chat/chats-YYYY-MM-DD.jsonl` (one file per UTC day).
+  Before forwarding it asks Ollama's `/api/ps` whether the model is loaded and
+  answers at once with `x-desk-model: cold` or `warm`, which the shell turns
+  into its "cold start" note. If Ollama doesn't answer, it returns 502.
 - **Retention is 30 days.** The proxy deletes a day file once that day began
   more than 30 days ago, at startup and hourly. `/privacy/` promises this; change
   `RETENTION_DAYS` and that page together.
@@ -36,6 +39,9 @@ id or session id. The desk never sees them, because the Worker forwards only the
 country.
 
 ## Install or update on the desk
+
+Update the desk before pushing a Worker that relies on the change: verify
+checks the repo's copy, and nothing checks the copy on the desk.
 
 From the repo root on a machine that can `ssh box`:
 

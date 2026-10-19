@@ -80,8 +80,6 @@ const CHIP =
 // Suggestions are asked as they stand: the model writes them, so never `run`.
 type From = "input" | "suggestion";
 
-const SLOW_MS = 4_000;
-
 function chatError(code: string): Line[] {
   if (code === "rate_limited") {
     return [
@@ -484,13 +482,8 @@ export const Terminal = component$(() => {
     // Created with its first word, so no blank row sits above the busy line.
     let answer: Line | null = null;
     let got = "";
-    const slow = setTimeout(() => {
-      convo.note = "cold start, ~20s";
-      document.querySelector("[data-shell]")?.setAttribute("data-cold", "");
-    }, SLOW_MS);
     // Before aria-busy drops, so the finished answer is announced once.
     const settle = () => {
-      clearTimeout(slow);
       convo.note = "";
       const done = answer as Line | null;
       if (done) {
@@ -501,6 +494,11 @@ export const Terminal = component$(() => {
     let outcome: Outcome;
     try {
       outcome = await sendChat(turns, {
+        desk: (cold) => {
+          if (!cold) return;
+          convo.note = "cold start, ~20s";
+          document.querySelector("[data-shell]")?.setAttribute("data-cold", "");
+        },
         token: (t) => {
           got = (got + t).trimStart();
           if (!got) return;
@@ -510,7 +508,6 @@ export const Terminal = component$(() => {
             followIfPinned();
             return;
           }
-          clearTimeout(slow);
           convo.note = "";
           clearBusy();
           say([{ kind: "ai", text: "", live: true }]);

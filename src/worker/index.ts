@@ -5,11 +5,12 @@ import {
   NUM_PREDICT,
   SYSTEM_PROMPT,
 } from "../content/chat";
-import { relay } from "./relay";
+import { DESK_STATE_HEADER, deskEvent, relay } from "./relay";
 
 /**
  * `POST /api/chat`, streamed back as NDJSON events:
  *
+ *   {"type":"desk","cold":true}      first: whether the model must load
  *   {"type":"token","text":"..."}
  *   {"type":"answered"}              the answer is whole; questions follow
  *   {"type":"next","text":"...?"}    one per question, as its line ends
@@ -37,10 +38,11 @@ type Turn = { role: "user" | "assistant"; content: string };
 const MAX_BODY_BYTES = 16_000;
 
 /**
- * For response headers only, which Ollama sends after loading the model and
- * reading the prompt. The stream itself is not timed out.
+ * For response headers only. The desk's proxy sends them before Ollama loads
+ * anything, so a desk that hasn't answered by now is down, not cold. The
+ * stream itself is not timed out.
  */
-const HEADERS_TIMEOUT_MS = 90_000;
+const HEADERS_TIMEOUT_MS = 8_000;
 
 const json = (body: unknown, status: number, headers: HeadersInit = {}) =>
   new Response(JSON.stringify(body), {
@@ -159,8 +161,9 @@ async function chat(request: Request, env: Env): Promise<Response> {
   }
 
   const asked = turns.filter((t) => t.role === "user").map((t) => t.content);
+  const first = deskEvent(upstream.headers.get(DESK_STATE_HEADER));
   // A fresh Response, so none of the desk's headers reach the browser.
-  return new Response(upstream.body.pipeThrough(relay(asked)), {
+  return new Response(upstream.body.pipeThrough(relay(asked, first)), {
     headers: {
       "content-type": "application/x-ndjson; charset=utf-8",
       "cache-control": "no-store",

@@ -99,8 +99,21 @@ export function events(asked: readonly string[]) {
   };
 }
 
+/** Set by desk/chat-log-proxy.mjs to `cold` or `warm` before Ollama answers. */
+export const DESK_STATE_HEADER = "x-desk-model";
+
+/** The header as the shell's first event, or null from an older proxy. */
+export function deskEvent(
+  state: string | null,
+): { type: "desk"; cold: boolean } | null {
+  return state === "cold" || state === "warm"
+    ? { type: "desk", cold: state === "cold" }
+    : null;
+}
+
 export function relay(
   asked: readonly string[],
+  first: object | null = null,
 ): TransformStream<Uint8Array, Uint8Array> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
@@ -115,6 +128,9 @@ export function relay(
   };
 
   return new TransformStream({
+    start(out) {
+      if (first) send([first], out);
+    },
     transform(bytes, out) {
       buffer += decoder.decode(bytes, { stream: true });
       let nl: number;
