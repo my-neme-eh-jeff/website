@@ -8,6 +8,10 @@
  *
  *   node evals/report.mjs tmp/evals/<run> [more run dirs for review.html]
  *
+ * With --compare <before> <after> it writes compare.html in the second run
+ * instead: both runs' numbers over the wordings judged in both, and their
+ * answers side by side, for telling whether a prompt change helped.
+ *
  * box.mjs runs this after copying a run back.
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -15,9 +19,13 @@ import { join } from "node:path";
 import { CASES } from "./cases.mjs";
 import { recheck } from "./checks.mjs";
 
-const dirs = process.argv.slice(2);
-if (!dirs.length) {
-  console.error("usage: node evals/report.mjs <run dir> [<run dir>...]");
+const argv = process.argv.slice(2);
+const comparing = argv[0] === "--compare";
+const dirs = comparing ? argv.slice(1) : argv;
+if (!dirs.length || (comparing && dirs.length !== 2)) {
+  console.error(
+    "usage: node evals/report.mjs <run dir> [<run dir>...]\n       node evals/report.mjs --compare <before run dir> <after run dir>",
+  );
   process.exit(1);
 }
 
@@ -128,7 +136,8 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 64px}h1{font-size:22px;mar
 th{font-weight:600}.bad{color:var(--bad)}.good{color:var(--good)}code,pre{font:13px/1.45 ui-monospace,monospace}
 pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px;margin:6px 0}
 details{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:8px 0;background:var(--card)}summary{cursor:pointer}
-.wrap{overflow-x:auto}`;
+.wrap{overflow-x:auto}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:700px){.cols{grid-template-columns:1fr}}h3{font-size:14px;margin:8px 0 0}`;
 
 function reportPage({ meta, answers, usd }) {
   const targets = [...new Set(answers.map((a) => a.target))];
@@ -220,6 +229,131 @@ ${a.reasons.length ? `<ul>${a.reasons.map((r) => `<li><b>${esc(r.name)}</b> ${es
 <h2>Judged answers, by kind</h2><div class="wrap"><table><tr><th></th>${targets.map((t) => `<th>${esc(t)}</th>`).join("")}</tr>${byKind}</table></div>
 <h2>By case</h2><p class="dim">Answers with no problem, of all answers; judged criteria count only where judged.</p><div class="wrap"><table><tr><th></th>${targets.map((t) => `<th>${esc(t)}</th>`).join("")}</tr>${caseRows}</table></div>
 <h2>Every answer with a problem</h2>${failing || "<p>None.</p>"}
+</main></body></html>`;
+}
+
+function comparePage(before, after) {
+  const key = (a) => `${a.target}|${a.case}|${a.variant}`;
+  const inBoth = (pick) => {
+    const [b, a] = [before, after].map((run) => run.answers.filter(pick));
+    const keys = new Set(b.map(key));
+    const shared = new Set(a.map(key).filter((k) => keys.has(k)));
+    return [b, a].map((xs) => xs.filter((x) => shared.has(key(x))));
+  };
+  const [CB, CA] = inBoth((a) => !a.error);
+  const [B, A] = inBoth((a) => !a.error && a.verdicts);
+  const targets = [...new Set(CA.map((a) => a.target))];
+  const crit = [
+    ...new Set([...B, ...A].flatMap((a) => Object.keys(a.verdicts))),
+  ];
+  const of = (xs, t, id) =>
+    xs.filter((a) => a.target === t && (id === undefined || a.case === id));
+  const everyTime = (xs) => {
+    const groups = [...Map.groupBy(xs, key).values()];
+    return rate(groups.filter((g) => g.every(ok)).length, groups.length);
+  };
+  const line = (label, f, [xb, xa] = [B, A]) =>
+    `<tr><th>${label}</th>${targets.map((t) => `<td>${f(of(xb, t))}</td><td>${f(of(xa, t))}</td>`).join("")}</tr>`;
+  const numbers = [
+    line(
+      "code checks",
+      (xs) => rate(xs.filter((a) => !a.failed.length).length, xs.length),
+      [CB, CA],
+    ),
+    ...crit.map((n) =>
+      line(`judge: ${esc(n)}`, (xs) => {
+        const js = xs.filter((a) => a.verdicts[n] !== undefined);
+        return rate(
+          js.filter((a) => a.verdicts[n] === "PASS").length,
+          js.length,
+        );
+      }),
+    ),
+    line("judged and all right", (xs) => rate(xs.filter(ok).length, xs.length)),
+    line("wordings right every time", everyTime),
+  ].join("");
+
+  /** Judged answers where both runs have them, else every answer, by its checks. */
+  const pairOf = (t, id) => {
+    const judged = [of(B, t, id), of(A, t, id)];
+    return judged.every((xs) => xs.length)
+      ? { judged: true, b: judged[0], a: judged[1] }
+      : { judged: false, b: of(CB, t, id), a: of(CA, t, id) };
+  };
+  const score = (xs) => (xs.length ? xs.filter(ok).length / xs.length : null);
+  const tally = ({ b, a }) =>
+    `${b.filter(ok).length}/${b.length} → ${a.filter(ok).length}/${a.length}`;
+  const cases = [...new Set(CA.map((a) => a.case))];
+  const caseRows = cases
+    .map(
+      (id) =>
+        `<tr><th>${esc(id)} <span class="dim">${esc(byCase.get(id)?.kind ?? "")}</span></th>${targets
+          .map((t) => {
+            const p = pairOf(t, id);
+            const [sb, sa] = [score(p.b), score(p.a)];
+            const cls =
+              sb == null || sa == null
+                ? ""
+                : sa > sb
+                  ? "good"
+                  : sa < sb
+                    ? "bad"
+                    : "";
+            return `<td class="${cls}">${p.a.length ? tally(p) : "—"}${p.judged ? "" : ' <span class="dim">checks only</span>'}</td>`;
+          })
+          .join("")}</tr>`,
+    )
+    .join("");
+
+  const verdict = (a) =>
+    !a.verdicts && !a.failed.length
+      ? "checks passed, not judged"
+      : ok(a)
+        ? "all right"
+        : `<span class="bad">${esc(problems(a).join("; "))}</span>`;
+  const shown = (a) =>
+    `<pre>${esc(a.answer)}</pre><p class="dim">${verdict(a)} · suggested: ${esc(a.next.join(" · ") || "none")}</p>`;
+  const byRep = (xs, v) =>
+    xs.filter((a) => a.variant === v).sort((x, y) => x.rep - y.rep);
+  const answers = targets
+    .flatMap((t) =>
+      cases.map((id) => {
+        const p = pairOf(t, id);
+        if (!p.a.length) return "";
+        const changed = score(p.a) !== score(p.b);
+        return `<details${changed ? " open" : ""}><summary><b>${esc(t)}</b> ${esc(id)}: ${tally(p)}${p.judged ? "" : " (checks only)"}</summary>${[
+          ...new Set(p.a.map((x) => x.variant)),
+        ]
+          .map(
+            (v) =>
+              `<pre>${esc(
+                byRep(p.a, v)[0]
+                  .turns.map(
+                    (u) => `${u.role === "user" ? "Q" : "A"}: ${u.content}`,
+                  )
+                  .join("\n"),
+              )}</pre><div class="cols"><div><h3>before</h3>${byRep(p.b, v).map(shown).join("")}</div><div><h3>after</h3>${byRep(p.a, v).map(shown).join("")}</div></div>`,
+          )
+          .join("")}</details>`;
+      }),
+    )
+    .join("");
+
+  const prompt = (run, t) => run.meta.targets?.[t]?.prompt?.full ?? "?";
+  const heads = targets
+    .map(
+      (t) =>
+        `<li><b>${esc(t)}</b>: prompt ${esc(prompt(before, t))} → ${esc(prompt(after, t))}${prompt(before, t) === prompt(after, t) ? " (the same prompt, so any difference is noise)" : ""}</li>`,
+    )
+    .join("");
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Compare ${esc(before.meta.run)} and ${esc(after.meta.run)}</title><style>${STYLE}</style></head><body><main>
+<h1>Before and after</h1>
+<p class="dim">Before: run ${esc(before.meta.run)}, commit ${esc(before.meta.sha ?? "?")} · After: run ${esc(after.meta.run)}, commit ${esc(after.meta.sha ?? "?")}</p>
+<ul>${heads}</ul>
+<p class="dim">Code checks count the ${CB.length} answers before and ${CA.length} after to wordings both runs asked; the judges' rows count the ${B.length} and ${A.length} judged in both. Intervals are 95% Wilson. "Wordings right every time" counts a wording only if every judged answer to it was all right.</p>
+<h2>Numbers</h2><div class="wrap"><table><tr><th></th>${targets.map((t) => `<th>${esc(t)} before</th><th>${esc(t)} after</th>`).join("")}</tr>${numbers}</table></div>
+<h2>By case</h2><p class="dim">Judged and all right where both runs judged the case, else code checks.</p><div class="wrap"><table><tr><th></th>${targets.map((t) => `<th>${esc(t)}</th>`).join("")}</tr>${caseRows}</table></div>
+<h2>Answers</h2><p class="dim">Open where the share right changed.</p>${answers}
 </main></body></html>`;
 }
 
@@ -321,11 +455,17 @@ show();
 </script></main></body></html>`;
 }
 
-writeFileSync(join(main.dir, "report.html"), reportPage(main));
-writeFileSync(
-  join(main.dir, "review.html"),
-  reviewPage(runs.flatMap((r) => r.answers.filter((a) => !a.error))),
-);
-console.log(
-  `${join(main.dir, "report.html")}\n${join(main.dir, "review.html")}`,
-);
+if (comparing) {
+  const out = join(runs[1].dir, "compare.html");
+  writeFileSync(out, comparePage(runs[0], runs[1]));
+  console.log(out);
+} else {
+  writeFileSync(join(main.dir, "report.html"), reportPage(main));
+  writeFileSync(
+    join(main.dir, "review.html"),
+    reviewPage(runs.flatMap((r) => r.answers.filter((a) => !a.error))),
+  );
+  console.log(
+    `${join(main.dir, "report.html")}\n${join(main.dir, "review.html")}`,
+  );
+}
