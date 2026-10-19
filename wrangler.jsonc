@@ -8,7 +8,10 @@
   "build": {
     "command": "pnpm install --frozen-lockfile && pnpm run build",
   },
-  "name": "amannambisan",
+  // The Worker in Cloudflare. Workers Builds deploys to it whatever this says,
+  // so a mismatch only bites a laptop deploy, which would create a second
+  // Worker. Check: `wrangler deployments list --name website` (2026-10-19).
+  "name": "website",
   "main": "src/worker/index.ts",
   "compatibility_date": "2026-08-22",
   "assets": {
