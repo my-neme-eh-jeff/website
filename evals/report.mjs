@@ -14,6 +14,7 @@
  *
  * box.mjs runs this after copying a run back.
  */
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CASES } from "./cases.mjs";
@@ -357,8 +358,22 @@ function comparePage(before, after) {
 </main></body></html>`;
 }
 
+/**
+ * Judged answers first, so marks can be held against the judges', then the
+ * rest; each part in an order fixed by a hash of the id, so the first marks
+ * are a spread of targets and kinds rather than one target's first cases.
+ */
+const reviewOrder = (all) => {
+  const h = (a) =>
+    createHash("sha256").update(`${a.run}|${a.id}`).digest("hex");
+  return all
+    .map((a) => ({ a, k: `${a.verdicts ? 0 : 1}${h(a)}` }))
+    .sort((x, y) => (x.k < y.k ? -1 : 1))
+    .map(({ a }) => a);
+};
+
 function reviewPage(all) {
-  const items = all.map((a) => {
+  const items = reviewOrder(all).map((a) => {
     const c = byCase.get(a.case);
     return {
       id: `${a.run}|${a.id}`,
@@ -383,7 +398,7 @@ button[aria-pressed="true"]{outline:2px solid var(--accent)}textarea{width:100%;
 .answer{white-space:pre-wrap;font-size:16px}label{font-weight:600}</style></head><body><main>
 <h1>Review answers</h1>
 <p class="dim">Mark each answer as you'd judge it, with a one-line note on what's wrong. Keys: <kbd>p</kbd> pass, <kbd>f</kbd> fail, <kbd>s</kbd> skip, <kbd>n</kbd> note, <kbd>j</kbd>/<kbd>k</kbd> next and back. Marks stay in this browser until you export them.</p>
-<div class="row"><span id="progress" aria-live="polite"></span><button id="export" type="button">Export labels.json</button><label><input type="checkbox" id="unmarked"> Unmarked only</label><label><input type="checkbox" id="show"> Show checks</label></div>
+<div class="row"><span id="progress" aria-live="polite"></span><button id="export" type="button">Export labels.json</button><label><input type="checkbox" id="unmarked"> Unmarked only</label><label><input type="checkbox" id="show"> Show model and checks</label></div>
 <div class="card"><p class="dim" id="where"></p><div id="convo"></div><p><label>Answer</label></p><div class="answer" id="answer"></div><p class="dim" id="next"></p>
 <details><summary>What a good answer holds</summary><div id="ref"></div></details>
 <div id="checks" hidden></div>
@@ -406,7 +421,7 @@ function show() {
   i = Math.max(0, Math.min(i, list.length - 1));
   const it = list[i];
   const l = labels[it.id] || {};
-  text($("where"), it.target + " (" + it.model + ") · " + it.case + " · " + it.kind);
+  text($("where"), it.case + " · " + it.kind);
   $("convo").replaceChildren(...it.turns.map((t) => { const p = document.createElement("p"); p.textContent = (t.role === "user" ? "Visitor: " : "Assistant: ") + t.content; if (t.role !== "user") p.className = "dim"; return p; }));
   text($("answer"), it.answer || "(no answer)");
   text($("next"), "Suggested next: " + (it.next.join(" · ") || "none"));
@@ -416,7 +431,7 @@ function show() {
   if (it.draft) ref.push("Draft answer: " + it.draft);
   $("ref").replaceChildren(...ref.map((s) => { const p = document.createElement("p"); p.textContent = s; return p; }));
   $("checks").hidden = !$("show").checked;
-  text($("checks"), it.checks.length ? "Checks failed: " + it.checks.join("; ") : "Checks: all passed");
+  text($("checks"), it.target + " (" + it.model + ") · " + (it.checks.length ? "Checks failed: " + it.checks.join("; ") : "Checks: all passed"));
   $("pass").setAttribute("aria-pressed", String(l.label === "pass"));
   $("fail").setAttribute("aria-pressed", String(l.label === "fail"));
   $("note").value = l.note || "";
