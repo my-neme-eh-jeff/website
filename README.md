@@ -28,7 +28,8 @@ Then:
     pnpm run build    # client + SSG + type check + lint
     pnpm run verify   # assert build invariants against dist/ (after build)
     pnpm run audit    # Lighthouse against production -> tmp/audit.json (not published)
-    pnpm run bench    # ask the desk model the shell's test questions and score them (usage in the script)
+    pnpm run eval     # on the box: ask the shell's models the test questions and check the answers (usage in evals/run.mjs)
+    pnpm run bench    # the same from here, desk only, through an ssh tunnel
     pnpm run preview  # serve the built output
     pnpm run fmt      # prettier, incl. Tailwind class sorting
     pnpm run icons    # regenerate favicon/touch icon from one geometry source
@@ -137,6 +138,7 @@ Only what a filename doesn't say; `ls` for the rest.
     scripts/make-icons.mjs      favicon + touch icon (pnpm run icons); never hand-edit the output
     scripts/make-og.mjs         og:image (pnpm run og)
     desk/                       runs on Aman's desk, not the site: the chat log proxy
+    evals/                      the shell's test questions (cases.mjs) and the runner that asks them
     public/                     copied verbatim into dist/
       _headers                  cache + security headers, rationale in its comments
       robots.txt                crawler allow/deny, rationale in its comments

@@ -1,8 +1,8 @@
 import {
+  DESK_REQUEST,
   MAX_ASSISTANT_CHARS,
   MAX_TURNS,
   MAX_USER_CHARS,
-  NUM_PREDICT,
   SYSTEM_PROMPT,
 } from "../content/chat";
 import { callPoe, fromPoe } from "./poe";
@@ -115,10 +115,7 @@ function callDesk(
       headers: { "content-type": "application/json", ...visitor },
       body: JSON.stringify({
         model: env.DESK_MODEL,
-        stream: true,
-        think: "low",
-        keep_alive: "30m",
-        options: { num_predict: NUM_PREDICT },
+        ...DESK_REQUEST,
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...turns],
       }),
       signal,

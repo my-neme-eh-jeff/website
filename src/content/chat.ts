@@ -26,6 +26,14 @@ export const MAX_ASSISTANT_CHARS = 2_000;
 /** Per reply; Ollama 0.34.4 counts the model's reasoning in it (2026-10-16). */
 export const NUM_PREDICT = 700;
 
+/** Everything the desk is sent besides the model and the messages. */
+export const DESK_REQUEST = {
+  stream: true,
+  think: "low",
+  keep_alive: "30m",
+  options: { num_predict: NUM_PREDICT },
+} as const;
+
 const best = bestWork && {
   title: projects.find((p) => p.slug === bestWork?.slug)?.title,
   why: bestWork.why,
