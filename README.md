@@ -138,7 +138,8 @@ Only what a filename doesn't say; `ls` for the rest.
     scripts/make-icons.mjs      favicon + touch icon (pnpm run icons); never hand-edit the output
     scripts/make-og.mjs         og:image (pnpm run og)
     desk/                       runs on Aman's desk, not the site: the chat log proxy
-    evals/                      the shell's test questions (cases.mjs) and the runner that asks them
+    evals/                      the shell's test questions (cases.mjs), the runner that asks them, and
+                                the judges that grade the answers (models.mjs: any OpenAI-compatible API)
     public/                     copied verbatim into dist/
       _headers                  cache + security headers, rationale in its comments
       robots.txt                crawler allow/deny, rationale in its comments

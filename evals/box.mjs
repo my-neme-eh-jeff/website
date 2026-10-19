@@ -1,7 +1,7 @@
 /**
  * Starts run.mjs on the box, where Ollama and the Poe key are, from a laptop:
- * copies the files it needs, starts it detached, follows its log and copies
- * the results back to tmp/evals/<run>/.
+ * copies the files it needs, starts it detached, follows its log, copies the
+ * results back to tmp/evals/<run>/ and writes report.html and review.html.
  *
  *   pnpm run eval --target desk,fallback --reps 3
  *   pnpm run eval --resume <run>       after the box went down mid-run
@@ -50,7 +50,9 @@ function fetchRun(run) {
     ["-az", `${HOST}:${RUNS}/${run}/`, `tmp/evals/${run}/`],
     { stdio: "inherit" },
   );
-  console.log(`tmp/evals/${run}/`);
+  execFileSync(process.execPath, ["evals/report.mjs", `tmp/evals/${run}`], {
+    stdio: "inherit",
+  });
 }
 
 if (fetchOnly) {

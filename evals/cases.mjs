@@ -12,6 +12,8 @@
  * of them it must (all by default). `expect` describes the behaviour for kinds
  * with no facts to give. `draft` is a reference answer for Aman to rewrite in
  * his own words. `must` are code checks, `(text, { onDesk }) => boolean`.
+ * `offDesk` replaces any of these for a model that isn't on the desk, whose
+ * prompt says nothing about it.
  *
  * Wordings are written here, never copied from the visitor log: /privacy/
  * promises that log is deleted after 30 days.
@@ -824,6 +826,12 @@ export const CASES = [
     cover: 1,
     draft:
       "I'm the assistant on Aman's personal site: a language model running on the GPU of the computer on his desk at home.",
+    offDesk: {
+      points: [
+        "the assistant on Aman's personal website",
+        "a language model answering from a fixed set of facts about him",
+      ],
+    },
     must: [],
   },
   {
@@ -841,6 +849,11 @@ export const CASES = [
     cover: 1,
     draft:
       "I'm a language model running on the GPU of the computer on Aman's desk at home, reached through a Cloudflare tunnel.",
+    offDesk: {
+      points: [
+        "a language model answering from a fixed set of facts about him",
+      ],
+    },
     must: [
       [
         "GPU at home, from the desk only",
@@ -866,6 +879,12 @@ export const CASES = [
     ],
     draft:
       "I do: the box on his desk is the computer this assistant runs on, a language model on its GPU.",
+    offDesk: {
+      kind: "unanswerable",
+      points: [],
+      expect:
+        "Says it doesn't know what is on his desk, without claiming to run there.",
+    },
     must: [
       [
         "says it's the model, from the desk only",
