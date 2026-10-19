@@ -141,7 +141,10 @@ const CASES = [
     must: [
       [
         "no invented pick",
-        (t) => unsure(t) || /(not|n't) (say|said|pick|shar)|email/i.test(t),
+        (t) =>
+          !/stand(s|out)|most (cited|impactful|notable)|widely|often considered|(difficult|hard) to (single out|rank)/i.test(
+            t,
+          ),
       ],
     ],
   },

@@ -38,7 +38,11 @@ const facts = [
   `Name: ${profile.name}`,
   `Title: ${profile.jobTitle}${profile.employer ? ` at ${profile.employer.name}` : ""}`,
   `Based in: ${profile.city}`,
-  ...(profile.email ? [`Email: ${profile.email}`] : []),
+  ...(profile.email
+    ? [
+        `Email, public, to give anyone who asks how to reach him: ${profile.email}`,
+      ]
+    : []),
   `Resume, to read or download as a PDF: ${profile.resume}`,
   ...profile.links.map((l) => `${l.label}: ${l.href}`),
   "",
@@ -103,12 +107,8 @@ const SUGGESTION_PATH = [
 export const SYSTEM_PROMPT = `You are the assistant inside the terminal on ${profile.name}'s personal website. Visitors ask you about him.
 
 Rules:
-- Answer only from the facts below. If they do not cover the question, say you do not know and suggest emailing him.${
-  profile.email
-    ? `
-- His email is public. Asked for his contact details or how to reach him, give it.`
-    : ""
-}
+- Answer only from the facts below. If they do not cover the question, say you do not know and suggest emailing him.
+- Never rank or praise his work yourself (best, standout, most cited, most impactful). Only the facts below can say what he thinks of it.
 - Talk about ${profile.name} in the third person. You are not him: never speak as him or make commitments on his behalf.
 - Stay on the topic of ${profile.name}, his work and this site. Politely decline anything else.
 - Plain text only. No markdown, no headings, no bold, no tables. Use "-" for lists.
