@@ -7,12 +7,14 @@ import {
   CABLE_END,
   GRIDS,
   KIND,
-  PATH,
+  MAT,
+  SCENE,
   VIEW,
   lampBase,
   lampRest,
   occupancy,
   rasterize,
+  standing,
   traceLines,
   type Pt,
 } from "./desk";
@@ -54,7 +56,8 @@ type Msg =
   | { type: "lamp"; on: boolean }
   | { type: "hover"; on: boolean }
   | { type: "send" }
-  | { type: "token" };
+  | { type: "token" }
+  | { type: "online"; on: boolean };
 
 type Switch = { type: "switch"; size: Size; row: number; col: number; at: Pt };
 type Out = "drawn" | "lost" | "calm" | "text" | Switch;
@@ -72,6 +75,8 @@ const LEVEL = "desk:level";
 const DOWN_S = 0.95;
 /** At most this often a pulse; the shader draws eight at once. */
 const TOKEN_MS = 120;
+/** The most light a shadow thrown from clear of the wall takes: it thins the pool, never blacks it out. */
+const STAND_SHADE = 0.6;
 
 declare global {
   interface Window {
@@ -466,12 +471,17 @@ function page() {
     breakDesk();
   };
 
+  let down = shell.hasAttribute("data-desk-down");
+  if (down) post({ type: "online", on: false });
   let busy = shell.hasAttribute("data-busy");
   let up = shell.style.getPropertyValue("--desk-up");
   const mo = new MutationObserver(() => {
     const now = shell.hasAttribute("data-busy");
     if (now !== busy) post({ type: "state", think: now, flash: busy && !now });
     busy = now;
+    const d = shell.hasAttribute("data-desk-down");
+    if (d !== down) post({ type: "online", on: !d });
+    down = d;
     // The desk scrolled up with the log: the light draws it where it now is.
     const u = shell.style.getPropertyValue("--desk-up");
     if (u !== up) {
@@ -696,6 +706,15 @@ uniform sampler2D uAux;
 uniform sampler2D uOver;
 uniform sampler2D uShadow;
 uniform vec4 uSView;
+// Per cell: R its material, so the mug's ceramic stays smooth.
+uniform sampler2D uExtra;
+// Whether the desk's model answers, eased: the LED is lit only while it does.
+uniform float uOnline;
+// Things standing clear of the wall: back and front as fractions of the way
+// to the bulb, the most light their shadow takes, and 1 if there are any.
+uniform vec4 uStand;
+// The book title's middle, and 1 if there is one: it reads as a whole, lit as its middle is.
+uniform vec3 uTitle;
 out vec4 outColor;
 
 const vec4 VIEW = vec4(${VIEW.x}.0, ${VIEW.y}.0, ${VIEW.w}.0, ${VIEW.h}.0);
@@ -776,6 +795,31 @@ float castShadow(vec2 d, float tMax, float k, int steps, out float tHit) {
   res = max(res, -1.0);
   return 1.0 - 0.25 * (1.0 + res) * (1.0 + res) * (2.0 - res);
 }
+float sdStand(vec2 d) {
+  return texture(uShadow, (d - uSView.xy) / uSView.zw).g * 80.0 - 24.0;
+}
+// The same trace against what stands clear of the wall, over only the stretch
+// of the ray at its depth. A high bulb's ray is already above it there, so its
+// shadow falls on the desk top; a low one's passes through it, onto the wall.
+float standShadow(vec2 d, float k, int steps, out float tHit) {
+  vec2 toB = uBulb - d;
+  float len = length(toB);
+  vec2 dir = toB / max(len, 1e-3);
+  float t = max(1.5, uStand.x * len);
+  float tMax = min(uStand.y * len, len - 4.0);
+  float res = 1.0;
+  tHit = tMax;
+  for (int i = 0; i < 16; i++) {
+    if (i >= steps || t >= tMax) break;
+    float h = sdStand(d + dir * t);
+    float r = h / (k * t);
+    if (r < res) { res = r; tHit = t; }
+    if (res < -1.0) break;
+    t += clamp(h, 1.0 + 0.5 * k * t, 40.0);
+  }
+  res = max(res, -1.0);
+  return 1.0 - 0.25 * (1.0 + res) * (1.0 + res) * (2.0 - res);
+}
 // How much of a wall cell's light the solid things take: each fills the space
 // from the wall out to its face, so the shadow starts at its feet, sharp there
 // and softer further out, and thrown far it fills with the room's light.
@@ -783,7 +827,13 @@ float grounded(vec2 d) {
   float tHit;
   // Calm takes fewer steps, but enough to reach the desk top from under it.
   float s = castShadow(d, DEPTH * length(uBulb - d), 0.12, uCalm > 0.5 ? 6 : 10, tHit);
-  return s * (1.0 - 0.55 * smoothstep(50.0, 200.0, tHit));
+  s *= 1.0 - 0.55 * smoothstep(50.0, 200.0, tHit);
+  if (uStand.w > 0.5) {
+    float f = standShadow(d, 0.12, uCalm > 0.5 ? 4 : 8, tHit) * uStand.z;
+    f *= 1.0 - 0.55 * smoothstep(50.0, 200.0, tHit);
+    s = 1.0 - (1.0 - s) * (1.0 - f);
+  }
+  return s;
 }
 float cone(vec2 d) {
   vec2 v = d - uBulb;
@@ -818,7 +868,12 @@ void main() {
     float wall = smoothstep(0.0, 3.0, sdAt(dp)) * (1.0 - uCalm);
     if (wall > 0.0) {
       float hh;
-      reach *= 1.0 - 0.85 * wall * castShadow(dp, DEPTH * length(uBulb - dp), 0.16, 5, hh);
+      float sh = castShadow(dp, DEPTH * length(uBulb - dp), 0.16, 5, hh);
+      if (uStand.w > 0.5) {
+        float f = standShadow(dp, 0.16, 4, hh) * uStand.z * smoothstep(0.0, 3.0, sdStand(dp));
+        sh = 1.0 - (1.0 - sh) * (1.0 - f);
+      }
+      reach *= 1.0 - 0.85 * wall * sh;
     }
   }
   float haze = 0.0;
@@ -840,6 +895,7 @@ void main() {
     vec4 mk = texture(uMask, uv);
     vec4 ax = texture(uAux, uv);
     vec4 ov = texture(uOver, uv);
+    float mat = floor(texture(uExtra, uv).r * 255.0 + 0.5);
     float gi = floor(mk.r * 255.0 + 0.5);
     float kind = floor(mk.g * 255.0 + 0.5);
     float dens = mk.b;
@@ -871,24 +927,31 @@ void main() {
     if (kind == ${KIND.fill}.0) {
       float v = dens * (0.7 + 0.8 * n) * (1.0 + 1.2 * L);
       gi = v > 0.33 ? 13.0 : v > 0.24 ? 26.0 : v > 0.14 ? 14.0 : 0.0;
+      // Ceramic stays smooth: dots, never dashes.
+      if (mat == ${MAT.ceramic}.0) gi = v > 0.24 ? 26.0 : v > 0.14 ? 14.0 : 0.0;
       gc = mix(uMuted, uWarm, L * 0.8);
       a = min(1.0, ambient + L * 1.2);
     } else if (kind == ${KIND.steam}.0) {
-      float s = vnoise(vec3(cell.x * 0.7, cell.y * 0.45 + uTime * 1.2, uTime * 0.4));
-      gi = s > 0.62 ? 26.0 : s > 0.46 ? 14.0 : 0.0;
+      // Wisps: ( and ) swap a row at a time going up, so the steam rises; it thins as it goes.
+      float ph = cell.y + uTime * 1.6 + floor(cell.x * 0.5) * 0.5;
+      float w = vnoise(vec3(cell.x * 0.9, cell.y * 0.6 + uTime * 1.1, uTime * 0.3));
+      gi = mod(floor(ph), 2.0) < 1.0 ? 8.0 : 9.0;
+      if (w < 0.32) gi = w < 0.22 ? 0.0 : 14.0;
       gc = mix(uMuted, uWarm, L);
-      a = min(1.0, ambient + L * 1.6);
+      a = min(1.0, (ambient * 0.85 + L * 1.6) * (0.55 + 0.45 * w));
     } else if (kind == ${KIND.note}.0) {
       gc = uMuted;
       a = ambient + (1.0 - ambient) * clamp(L * 1.7, 0.0, 1.0);
     } else if (kind == ${KIND.led}.0) {
-      gc = uAccent;
-      a = 0.3 + 0.7 * uLed;
+      // Online it breathes in the accent; offline it's a dull dot.
+      gc = mix(uMuted, uAccent, uOnline);
+      a = mix(0.32, 0.3 + 0.7 * uLed, uOnline);
     } else if (kind == ${KIND.line}.0 || kind == ${KIND.joint}.0) {
       gc = mix(mix(uFg, uAccent, smoothstep(0.3, 0.75, band)), uWarm, clamp(L * 1.3, 0.0, 0.9));
       a = ambient + (1.0 - ambient) * clamp(L * 1.7, 0.0, 1.0);
-    } else if (dark > 0.5 && L * low * 1.15 > th) {
+    } else if (dark > 0.5 && L * low * 1.15 > th && ax.r < 0.5) {
       // Ordered dither, so the pool of light reads as a gradient, not noise.
+      // A solid thing's face isn't wall: the pool stops at its outline.
       gi = L * low * 1.15 > th + 0.55 ? 26.0 : 14.0;
       gc = uWarm;
       a = 0.14 + L * 0.7;
@@ -927,11 +990,25 @@ void main() {
 
     // Inside the box, where the light is strong enough to see through.
     float xg = floor(ax.g * 255.0 + 0.5);
-    bool seen = xg > 0.5 && smoothstep(0.08, 0.22, L) > th;
-    if (seen) {
+    int xb = int(floor(ax.b * 255.0 + 0.5));
+    // A title on a spine (ink 5) fades in and out as a whole with the light on
+    // its middle, where the x-ray dithers in cell by cell: half a word reads as cut off.
+    bool title = xg > 1.5 && (xb & 7) == 5;
+    bool seen = !title && xg > 0.5 && smoothstep(0.08, 0.22, L) > th;
+    vec2 gf = f;
+    if (title) {
+      // Half a row low, midway between the spine's edges; its lower half is drawn by the row below.
+      gf.y = f.y - 0.5;
+      float Lt = uPower > 0.01 ? cone(uTitle.xy) : 0.0;
+      float k = smoothstep(0.04, 0.16, Lt);
+      if (k > 0.02) {
+        gi = xg - 2.0;
+        gc = mix(uFg, uWarm, Lt * 0.5);
+        a = k * min(1.0, 0.45 + Lt * 1.6);
+      }
+    } else if (seen) {
       if (xg < 1.5) gi = 0.0;
       else {
-        int xb = int(floor(ax.b * 255.0 + 0.5));
         gi = xg - 2.0;
         gc = inkOf(float(xb & 7));
         if ((xb & 8) != 0) gi = FAN[int(floor(uFan + cell.x * 0.37)) & 3];
@@ -963,8 +1040,9 @@ void main() {
 
     if (uCalm < 0.999) {
       vec2 gl2 = texture(uGlow, q / uGrid).rg * keep * (1.0 - uCalm);
+      // The LED's halo stays under the scan band's, and goes out with the desk.
       float glow = gl2.r * (0.35 + 0.65 * band) * mix(0.06, 0.14, dark) * ambient
-        + gl2.g * uLed * mix(0.28, 0.55, dark) * (1.6 - 0.8 * uPower);
+        + gl2.g * uLed * uOnline * mix(0.1, 0.16, dark);
       col = vec4(uAccent, 1.0) * clamp(glow, 0.0, 1.0);
       if (uSwitchGlow > 0.0) {
         float sg = clamp(exp(-length((dp - uSwitch) * vec2(1.0, 1.6)) / 7.0) * uSwitchGlow * keep * (1.0 - uCalm), 0.0, 1.0);
@@ -972,8 +1050,17 @@ void main() {
       }
     }
 
-    float ga = gi > 0.0 ? glyph(gi, f) * a : 0.0;
+    float ga = gi > 0.0 && gf.y >= 0.0 ? glyph(gi, gf) * a : 0.0;
     col = vec4(gc, 1.0) * ga + col * (1.0 - ga);
+    if (uTitle.z > 0.5 && uPower > 0.01 && f.y < 0.5) {
+      vec4 au = texture(uAux, (cell + vec2(0.5, -0.5)) / uGrid);
+      float ug = floor(au.g * 255.0 + 0.5);
+      if (ug > 1.5 && (int(floor(au.b * 255.0 + 0.5)) & 7) == 5) {
+        float Lt = cone(uTitle.xy);
+        float ta = glyph(ug - 2.0, vec2(f.x, f.y + 0.5)) * smoothstep(0.04, 0.16, Lt) * min(1.0, 0.45 + Lt * 1.6);
+        col = vec4(mix(uFg, uWarm, Lt * 0.5), 1.0) * ta + col * (1.0 - ta);
+      }
+    }
     col *= smoothstep(uClip, uClip + 20.0 * uDpr, p.y);
   } else if (reach > 0.0 && p.y > uClip && q.y >= 0.0 && q.y < uGrid.y) {
     // Either side of the drawing the wall carries on, its pool and shadows with it.
@@ -1108,6 +1195,9 @@ function worker() {
   let target: Pt | null = null;
   let lampOn = true;
   let power = 1;
+  /** Whether the desk's model answers, as far as the page knows; only the LED shows it. */
+  let online = true;
+  let onlineMix = 1;
   /** Scrolled out of sight with the log, the lamp's light goes out with it. */
   let seen = 1;
   let hover = false;
@@ -1137,6 +1227,10 @@ function worker() {
     boxC: [number, number];
     meters: number;
     over: Uint8Array;
+    /** How far clear of the wall the standing things are, if there are any. */
+    stand: [number, number] | null;
+    /** The book title's middle, if there is one. */
+    title: Pt | null;
   };
   let G: Grid | null = null;
 
@@ -1234,7 +1328,7 @@ function worker() {
     }
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     // The glow, the atlas and the shadows' distance field are smooth between cells.
-    ["uMask", "uGlow", "uAtlas", "uAux", "uOver", "uShadow"].forEach(
+    ["uMask", "uGlow", "uAtlas", "uAux", "uOver", "uShadow", "uExtra"].forEach(
       (name, unit) => {
         const t = gl!.createTexture();
         gl!.activeTexture(gl!.TEXTURE0 + unit);
@@ -1285,22 +1379,35 @@ function worker() {
   /** The masks, glow, cable, inside of the box and the lamp's base, rebuilt only when the grid changes. */
   function build(size: Size) {
     const { cols, rows } = GRIDS[size];
-    const desk = rasterize(cols, rows, { lamp: false, record: true });
-    const owner = desk.owner!;
-    const along = desk.along!;
+    const desk = rasterize(cols, rows, { lamp: false });
+    const { owner, along, roles } = desk;
     const n = cols * rows;
     const cw = VIEW.w / cols;
     const ch = VIEW.h / rows;
     const occ = occupancy(cols, rows);
-    const inside = xray(desk);
+    const stand = standing(cols, rows);
+    const inside = xray(desk, SCENE.xray.rect);
+    // The book's title, shown where the light is; ink 5 marks it, so it fades in as a whole.
+    let tx = 0;
+    let ty = 0;
+    let tn = 0;
+    for (let i = 0; i < n; i++) {
+      if (!desk.reveal[i] || inside.glyph[i]) continue;
+      inside.glyph[i] = desk.reveal[i]! - FIRST + 2;
+      inside.ink[i] = 5;
+      tx += VIEW.x + ((i % cols) + 0.5) * cw;
+      ty += VIEW.y + (Math.floor(i / cols) + 0.5) * ch;
+      tn++;
+    }
     const isCable = (i: number) =>
-      owner[i] === PATH.cable &&
+      owner[i] === roles.cable &&
       (desk.kind[i] === KIND.line || desk.kind[i] === KIND.joint);
     let Lc = 1;
     for (let i = 0; i < n; i++) if (isCable(i)) Lc = Math.max(Lc, along[i]!);
 
     const mask = new Uint8Array(n * 4);
     const aux = new Uint8Array(n * 4);
+    const extra = new Uint8Array(n * 4);
     const lit = new Float32Array(n);
     const led = new Float32Array(n);
     for (let i = 0; i < n; i++) {
@@ -1309,28 +1416,26 @@ function worker() {
       mask[i * 4 + 1] = k;
       mask[i * 4 + 2] = Math.round(desk.dens[i]! * 255);
       mask[i * 4 + 3] = isCable(i) ? Math.round((along[i]! / Lc) * 254) : 255;
-      aux[i * 4] = occ[i] ? 255 : 0;
+      aux[i * 4] = occ[i] || stand?.occ[i] ? 255 : 0;
       aux[i * 4 + 1] = inside.glyph[i]!;
       aux[i * 4 + 2] = inside.ink[i]!;
-      aux[i * 4 + 3] = owner[i] === PATH.wave ? 255 : 0;
+      aux[i * 4 + 3] = roles.wave >= 0 && owner[i] === roles.wave ? 255 : 0;
+      extra[i * 4] = desk.mat[i]!;
       lit[i] = k === KIND.line || k === KIND.joint ? 0.8 : desk.dens[i]!;
       led[i] = k === KIND.led ? 1 : 0;
     }
     const a = blur(lit, cols, rows, 4, 2);
-    const b = blur(led, cols, rows, 7, 3);
+    // A status light's halo is a cell or two, not a bloom.
+    const b = blur(led, cols, rows, 3, 1);
     const glow = new Uint8Array(n * 4);
     for (let i = 0; i < n; i++) {
       glow[i * 4] = Math.min(255, Math.round(a[i]! * 1.6 * 255));
-      glow[i * 4 + 1] = Math.min(255, Math.round(b[i]! * 6 * 255));
+      glow[i * 4 + 1] = Math.min(255, Math.round(b[i]! * 4 * 255));
     }
 
     // The panel's inside, row by row, where its trace runs.
-    const quad: Pt[] = [
-      [232, 194],
-      [290, 190],
-      [292, 214],
-      [234, 218],
-    ];
+    const quad: Pt[] =
+      (Array.isArray(SCENE.panel) ? SCENE.panel : SCENE.panel?.[size]) ?? [];
     const byRow = new Map<number, number[]>();
     for (let i = 0; i < n; i++) {
       const c = i % cols;
@@ -1339,10 +1444,10 @@ function worker() {
       const y = VIEW.y + (r + 0.5) * ch;
       if (!inPoly(quad, x, y)) continue;
       const k = desk.kind[i];
-      const outline = owner[i] === PATH.panel && k !== KIND.fill;
+      const outline = owner[i] === roles.panel && k !== KIND.fill;
       if (
         outline ||
-        !(k === KIND.empty || k === KIND.fill || owner[i] === PATH.wave)
+        !(k === KIND.empty || k === KIND.fill || owner[i] === roles.wave)
       )
         continue;
       byRow.set(r, [...(byRow.get(r) ?? []), i]);
@@ -1353,9 +1458,13 @@ function worker() {
     upload(1, cols, rows, glow);
     upload(3, cols, rows, aux);
     upload(4, cols, rows, over);
+    upload(6, cols, rows, extra);
     const sdf = distanceField(occ, cols, rows);
+    if (stand) distanceField(stand.occ, cols, rows, sdf.data, 1);
+    else for (let k = 1; k < sdf.data.length; k += 4) sdf.data[k] = 255;
     upload(5, sdf.W, sdf.H, sdf.data);
-    const base = lampBase(desk.chars, cols, rows);
+    const base = lampBase(cols, rows);
+    const heat = SCENE.heat;
     G = {
       cols,
       rows,
@@ -1363,10 +1472,15 @@ function worker() {
       base,
       Lc,
       panel: [...byRow.entries()].sort((x, y) => x[0] - y[0]).map(([, c]) => c),
-      boxTop: Math.floor((166 - VIEW.y) / ch),
-      boxC: [Math.ceil((158 - VIEW.x) / cw), Math.floor((308 - VIEW.x) / cw)],
+      boxTop: Math.floor((heat.top - VIEW.y) / ch),
+      boxC: [
+        Math.ceil((heat.x0 - VIEW.x) / cw),
+        Math.floor((heat.x1 - VIEW.x) / cw),
+      ],
       meters: inside.meters,
       over,
+      stand: stand?.depth ?? null,
+      title: tn ? [tx / tn, ty / tn] : null,
     };
     const was = rig;
     rig = new Rig(base.S);
@@ -1664,6 +1778,7 @@ function worker() {
       target = P;
       rig.step(rig.goal(P, dt), dt, false);
       power += ((lampOn ? 1 : 0) - power) * (1 - Math.exp(-dt * 9));
+      onlineMix += ((online ? 1 : 0) - onlineMix) * (1 - Math.exp(-dt * 6));
       seen += (seenTo - seen) * (1 - Math.exp(-dt * 9));
 
       for (const p of pulses) p.s += p.v * dt;
@@ -1738,6 +1853,22 @@ function worker() {
       set1("uFan", fan);
       set1("uLoad", load);
       set1("uMeters", G.meters);
+      set1("uOnline", onlineMix);
+      const sd = G.stand;
+      gl.uniform4f(
+        U.get("uStand") ?? null,
+        sd?.[0] ?? 0,
+        sd?.[1] ?? 0,
+        sd ? STAND_SHADE : 0,
+        sd ? 1 : 0,
+      );
+      const tt = G.title;
+      gl.uniform3f(
+        U.get("uTitle") ?? null,
+        tt?.[0] ?? 0,
+        tt?.[1] ?? 0,
+        tt ? 1 : 0,
+      );
     }
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -1757,7 +1888,8 @@ function worker() {
       easing ||
       swing ||
       pulses.length > 0 ||
-      Math.abs(power - (lampOn ? 1 : 0)) > 0.01
+      Math.abs(power - (lampOn ? 1 : 0)) > 0.01 ||
+      Math.abs(onlineMix - (online ? 1 : 0)) > 0.01
     );
   }
 
@@ -1879,6 +2011,7 @@ function worker() {
       if (m.at) lastAim = m.at;
     } else if (m.type === "lamp") lampOn = m.on;
     else if (m.type === "hover") hover = m.on;
+    else if (m.type === "online") online = m.on;
     else if (m.type === "send" && G)
       pulses.push({ s: G.Lc + 8, v: -G.Lc / 1.25, k: 1, tail: 26 });
     else if (m.type === "token" && G) {
@@ -1910,7 +2043,14 @@ function inPoly(poly: Pt[], x: number, y: number) {
  * edge in drawing units (negative inside), as (sd + 24) / 80 in R. Nothing
  * outside the drawing is solid.
  */
-function distanceField(occ: Uint8Array, cols: number, rows: number) {
+/** Into channel `chan` of `out`: R for things against the wall, G for things clear of it. */
+function distanceField(
+  occ: Uint8Array,
+  cols: number,
+  rows: number,
+  out = new Uint8Array(cols * 2 * rows * 2 * 4),
+  chan = 0,
+) {
   const W = cols * 2;
   const H = rows * 2;
   const ox = cols / 2;
@@ -1926,7 +2066,6 @@ function distanceField(occ: Uint8Array, cols: number, rows: number) {
   };
   const rx = Math.ceil(HI / cw) + 1;
   const ry = Math.ceil(HI / ch) + 1;
-  const out = new Uint8Array(W * H * 4);
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
       const inside = at(x, y);
@@ -1942,7 +2081,7 @@ function distanceField(occ: Uint8Array, cols: number, rows: number) {
         }
       }
       const sd = inside ? -best : best;
-      out[(y * W + x) * 4] = Math.round(
+      out[(y * W + x) * 4 + chan] = Math.round(
         ((Math.min(HI, Math.max(LO, sd)) - LO) / (HI - LO)) * 255,
       );
     }

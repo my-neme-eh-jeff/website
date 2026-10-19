@@ -3,7 +3,7 @@
  * lscpu, nvidia-smi, lsblk and udevadm's DMI memory fields (three of four
  * DIMM slots filled). No software can read a PSU, so it stays unnamed.
  */
-import { KIND, PATH, VIEW, type Desk } from "./desk";
+import { KIND, VIEW, type Desk } from "./ascii.ts";
 
 const SPECS = {
   gpu: "RTX 2060",
@@ -18,7 +18,7 @@ const SPECS = {
 };
 
 /** Sized to the box's inside: 40x11 cells on the wide grid, 24x6 on the narrow. ~ is the load meter. */
-const ART = {
+export const ART = {
   wide: [
     `${" ".repeat(30)}${SPECS.board}`,
     " .-.     .---------.    |||     .-.     ",
@@ -48,14 +48,19 @@ const MUTED = 1;
 const ACCENT = 2;
 const ALT = 3;
 
+/** The box's own outline stays in front of what the light sees inside. */
+const OUTLINE: number[] = [KIND.line, KIND.joint, KIND.steam];
+
 /**
  * Per cell, for the worker's aux texture: 0 outside the box, 1 inside and
  * empty (the face is cleared, you see into the case), else the glyph index
  * + 2. Ink takes the low 3 bits of the second byte; 8 marks a fan's hub, 16 a
- * meter cell, whose index is in the top 3 bits.
+ * meter cell, whose index is in the top 3 bits. `inside` is the box's inside
+ * in drawing units: x0, y0, x1, y1.
  */
-export function xray(desk: Desk) {
-  const { cols, rows, owner, kind } = desk;
+export function xray(desk: Desk, inside: [number, number, number, number]) {
+  const { cols, rows, owner, kind, roles } = desk;
+  const [x0, y0, x1, y1] = inside;
   const n = cols * rows;
   const glyph = new Uint8Array(n);
   const ink = new Uint8Array(n);
@@ -69,8 +74,10 @@ export function xray(desk: Desk) {
       const i = r * cols + c;
       const x = VIEW.x + (c + 0.5) * cw;
       const y = VIEW.y + (r + 0.5) * ch;
-      if (!(x > 150 && x < 316 && y > 168 && y < 262)) continue;
-      if (owner?.[i] === PATH.box && kind[i] !== KIND.fill) continue;
+      if (!(x > x0 && x < x1 && y > y0 && y < y1)) continue;
+      if (owner[i] === roles.box && OUTLINE.includes(kind[i]!)) continue;
+      // The LED says whether the desk is online, so it always shows.
+      if (kind[i] === KIND.led) continue;
       glyph[i] = 1;
       c0 = Math.min(c0, c);
       c1 = Math.max(c1, c);

@@ -17,7 +17,7 @@ export const profile = {
     "Platform engineer at Atlan. I build the Kubernetes and Terraform machinery that provisions enterprise infrastructure, and the agents that operate it.",
 
   /** The home page's h1, in the shell's title bar: "<name>, <headline> at <employer>". */
-  headline: "Platform Engineer",
+  headline: "AI Builder",
 
   /** The first line the shell prints. */
   motd: "I build infrastructure, and my desktop at home will tell you about me.",

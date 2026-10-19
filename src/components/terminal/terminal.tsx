@@ -393,6 +393,17 @@ function markAnswered() {
   document.querySelector("[data-shell]")?.setAttribute("data-answered", "");
 }
 
+/**
+ * Whether the desk's own model answered the last question; the LED on the
+ * drawn desk goes dark while it hasn't. Only a reply tells: the desk's comes
+ * with a desk event and stats, Poe's with neither.
+ */
+function markDesk(up: boolean) {
+  document
+    .querySelector("[data-shell]")
+    ?.toggleAttribute("data-desk-down", !up);
+}
+
 function clearBusy() {
   const shell = document.querySelector("[data-shell]");
   shell?.removeAttribute("data-busy");
@@ -492,9 +503,12 @@ export const Terminal = component$(() => {
       }
     };
     let outcome: Outcome;
+    let fromDesk = false;
     try {
       outcome = await sendChat(turns, {
         desk: (cold) => {
+          fromDesk = true;
+          markDesk(true);
           if (!cold) return;
           convo.note = "cold start, ~20s";
           document.querySelector("[data-shell]")?.setAttribute("data-cold", "");
@@ -530,6 +544,8 @@ export const Terminal = component$(() => {
       convo.phase = convo.queued ? "answering" : "idle";
     }
 
+    if (outcome.ok && got) markDesk(fromDesk || !!outcome.stats);
+    else if (!outcome.ok && outcome.code === "offline") markDesk(false);
     if (outcome.ok) {
       if (got) markAnswered();
       convo.turns = [
