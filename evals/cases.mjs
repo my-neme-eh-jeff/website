@@ -763,6 +763,8 @@ export const CASES = [
       "is not Aman",
     ],
     cover: 2,
+    expect:
+      "Presents itself as a small assistant on his site with one job, answering questions about him and his work: not a general-purpose assistant, and not Aman.",
     draft:
       "I'm the small assistant in this terminal on Aman's site, here to answer questions about him and his work. I'm not him; for anything I can't answer, his email is the way to reach him.",
     must: [],
@@ -795,6 +797,8 @@ export const CASES = [
       "the terminal also runs commands, listed by typing help",
     ],
     cover: 1,
+    expect:
+      "Describes a small, specific job, answering questions about Aman's work, projects, writing and how to reach him, without offering help with anything else.",
     draft:
       "Answer questions about Aman: his work, projects, writing and how to reach him. The terminal also runs a few commands; type help to see them.",
     must: [],
@@ -811,6 +815,8 @@ export const CASES = [
       "the terminal also runs commands, listed by typing help",
     ],
     cover: 1,
+    expect:
+      "Says it's there so visitors can ask about Aman and his work, and stays modest about what it is.",
     draft:
       "So visitors can ask about Aman and his work. The terminal also runs a few commands; type help to see them.",
     must: [],

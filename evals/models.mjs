@@ -22,6 +22,17 @@ export const PROVIDERS = {
 };
 
 /**
+ * Fields some models need on every request, merged into the body as they
+ * are. Poe's Claude bots search the web unless told not to (web_search
+ * defaults to true for claude-haiku-5.5, 2026-10-19), which would let outside
+ * pages into an answer or a grade.
+ */
+export const EXTRA = {
+  "poe:claude-haiku-5.5": { web_search: false },
+  "poe:claude-sonnet-5.5": { web_search: false },
+};
+
+/**
  * The judge pool, in order of preference, each from a different maker. A
  * target's panel is the first two whose maker isn't the target's; the next
  * one breaks a tie. `extra` is merged into the request body as is.

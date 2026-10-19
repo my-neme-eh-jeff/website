@@ -1,5 +1,5 @@
 /** One call to any OpenAI-compatible chat API, with its cost when known. */
-import { PROVIDERS } from "./models.mjs";
+import { EXTRA, PROVIDERS } from "./models.mjs";
 
 const prices = new Map();
 
@@ -64,6 +64,7 @@ export async function chat(
         messages,
         temperature,
         max_tokens: maxTokens,
+        ...EXTRA[`${provider}:${model}`],
         ...extra,
       }),
       signal: AbortSignal.timeout(180_000),

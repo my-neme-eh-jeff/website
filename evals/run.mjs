@@ -5,8 +5,12 @@
  *   pnpm run bench [options]   from a laptop, desk only, through
  *                              ssh -fN -L 21434:127.0.0.1:11434 box
  *
- *   --target desk,fallback     who answers: Ollama on the desk, or the
- *                              Worker's Poe model (default desk)
+ *   --target desk,fallback     who answers (default desk): Ollama on the
+ *                              desk, the Worker's Poe model, desk:<model>
+ *                              for another model on the desk, or
+ *                              <provider>:<model> for one in models.mjs
+ *   --think false              overrides the desk's reasoning setting
+ *   --extra '{"effort":"low"}' fields added to a <provider>:<model> request
  *   --set dev|holdout|all      which wordings (default dev)
  *   --reps 3                   answers per wording
  *   --cases now,before         only these cases; --kinds meta,attack likewise
@@ -48,6 +52,8 @@ const { values: arg } = parseArgs({
     run: { type: "string", default: "" },
     resume: { type: "string", default: "" },
     ollama: { type: "string", default: "http://127.0.0.1:11434" },
+    think: { type: "string" },
+    extra: { type: "string", default: "{}" },
     sha: { type: "string", default: "" },
     judge: { type: "boolean", default: false },
     "judge-only": { type: "boolean", default: false },
@@ -83,7 +89,13 @@ const inSet = (holdout) =>
   arg.set === "all" || holdout === (arg.set === "holdout");
 const chosen = wordings(CASES.filter(picked)).filter((w) => inSet(w.holdout));
 const reps = Number(arg.reps);
-const targets = list(arg.target).map((t) => target(t, { host: arg.ollama }));
+const think =
+  arg.think === undefined
+    ? undefined
+    : ({ true: true, false: false }[arg.think] ?? arg.think);
+const targets = list(arg.target).map((t) =>
+  target(t, { host: arg.ollama, think, extra: JSON.parse(arg.extra) }),
+);
 
 const run =
   arg.resume ||
@@ -143,7 +155,7 @@ const secs = (ms) =>
   ms == null ? "    —" : `${(ms / 1000).toFixed(1).padStart(5)}s`;
 
 /** Ollama on the box answers one request at a time (OLLAMA_NUM_PARALLEL=1, 2026-10-19). */
-const PARALLEL = { desk: 1, fallback: 4 };
+const parallel = (t) => (t.onDesk ? 1 : 4);
 
 async function pool(items, n, work) {
   const queue = [...items];
@@ -172,7 +184,7 @@ if (!arg["judge-only"]) {
     await t.warm();
 
     let failures = 0;
-    await pool(jobs, PARALLEL[t.name] ?? 1, async ({ id, w, rep }) => {
+    await pool(jobs, parallel(t), async ({ id, w, rep }) => {
       let r;
       for (const wait of [5_000, 15_000, null]) {
         try {
