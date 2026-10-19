@@ -19,6 +19,10 @@ export const FORM = [
   ["plain text", (r) => !/\*\*|^#{1,6}\s|^\s*\|.*\|\s*$|`/m.test(r.answer)],
   ["known URLs only", (r) => urls(r.answer).every((u) => known.has(u))],
   ["3 follow-ups", (r) => r.next.length === 3],
+  [
+    "no stray help",
+    (r) => !/(?:^|[.!?]\s*|\n\s*)help\.?$/i.test(r.answer.trim()),
+  ],
 ];
 
 /**
