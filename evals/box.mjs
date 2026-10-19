@@ -89,17 +89,18 @@ const started = ssh(
     `cd ~/${DIR}`,
     "set -a; . ~/.config/llm/env; set +a",
     "node=$(ls -d ~/.config/nvm/versions/node/v*/bin/node | sort -V | tail -1)",
+    `size=$(stat -c %s ~/${RUNS}/${q(run)}.log 2>/dev/null || echo 0)`,
     `EVAL_OUT=~/${RUNS} nohup setsid "$node" evals/run.mjs --sha ${q(sha)} ${
       args.includes("--resume") ? "" : `--run ${q(run)}`
     } ${args.map(q).join(" ")} >> ~/${RUNS}/${q(run)}.log 2>&1 < /dev/null &`,
-    "echo $!",
+    "echo $! $size",
   ].join("\n"),
 );
 if (started.status !== 0) {
   console.error(started.stderr);
   process.exit(1);
 }
-const pid = started.stdout.trim();
+const [pid, size] = started.stdout.trim().split(" ");
 console.log(`run ${run} started on ${HOST} (pid ${pid}) at ${sha}`);
 if (detach) {
   console.log(
@@ -108,7 +109,7 @@ if (detach) {
   process.exit(0);
 }
 
-ssh(`tail -n +1 --pid=${q(pid)} -f ~/${RUNS}/${q(run)}.log`, {
+ssh(`tail -c +${Number(size) + 1} --pid=${q(pid)} -f ~/${RUNS}/${q(run)}.log`, {
   stdio: ["pipe", "inherit", "inherit"],
 });
 fetchRun(run);

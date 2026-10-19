@@ -37,7 +37,7 @@ import {
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { CASES, wordings } from "./cases.mjs";
-import { FORM, failures, recheck } from "./checks.mjs";
+import { FORM, failedChecks, recheck } from "./checks.mjs";
 import { judge } from "./judges.mjs";
 import { balanceUsd } from "./llm.mjs";
 import { nameOf, panelFor } from "./models.mjs";
@@ -199,7 +199,7 @@ if (!arg["judge-only"]) {
           process.exit(1);
         }
       }
-      const failed = failures(r, w.case, t);
+      const failed = failedChecks(r, w.case, t);
       keep(file, {
         id,
         target: t.name,

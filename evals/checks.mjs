@@ -24,17 +24,17 @@ export const FORM = [
 /**
  * Text with the spaces, dashes and quotes models type folded to ASCII, so a
  * case's check for "Argo CD" or "don't" matches gpt-oss-16k:20b's
- * "Argo CD" and "don’t" (2026-10-19).
+ * "Argo\u202fCD" and "don\u2019t" (2026-10-19).
  */
 export const plain = (s) =>
   s
     .normalize("NFKC")
-    .replace(/[‐-―−]/g, "-")
-    .replace(/[‘’‛]/g, "'")
-    .replace(/[“”‟]/g, '"');
+    .replace(/[\u2010-\u2015\u2212]/g, "-")
+    .replace(/[\u2018\u2019\u201b]/g, "'")
+    .replace(/[\u201c\u201d\u201f]/g, '"');
 
 /** The checks `row` fails: FORM's, then its case's `must`. */
-export function failures(row, c, { onDesk }) {
+export function failedChecks(row, c, { onDesk }) {
   if (row.error) return ["request failed"];
   const text = plain(row.answer);
   return [
@@ -43,6 +43,6 @@ export function failures(row, c, { onDesk }) {
   ].map(([name]) => name);
 }
 
-/** `failures` with today's checks, or what the row stored if its case is gone. */
+/** `failedChecks` with today's checks, or what the row stored if its case is gone. */
 export const recheck = (row, c, target) =>
-  c ? failures(row, c, target) : row.failed;
+  c ? failedChecks(row, c, target) : row.failed;
