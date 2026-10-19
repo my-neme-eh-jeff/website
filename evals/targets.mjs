@@ -58,6 +58,7 @@ function reader(turns, stats) {
   const r = {
     answer: "",
     next: [],
+    raw: "",
     looped: false,
     doneReason: null,
     thinkingChars: 0,
@@ -117,6 +118,7 @@ function desk({ host, think }, model = varOf("DESK_MODEL")) {
       for await (const l of lines(res.body)) {
         try {
           const chunk = JSON.parse(l);
+          rd.r.raw += chunk.message?.content ?? "";
           rd.r.thinkingChars += chunk.message?.thinking?.length ?? 0;
           if (chunk.done) rd.r.doneReason = chunk.done_reason ?? null;
         } catch {
@@ -142,7 +144,10 @@ async function streamed(rd, res, controller) {
         // "[DONE]" and partial lines.
       }
     }
-    for (const o of poeLine(l)) rd.line(JSON.stringify(o));
+    for (const o of poeLine(l)) {
+      rd.r.raw += o.message?.content ?? "";
+      rd.line(JSON.stringify(o));
+    }
     if (rd.stopped) {
       controller.abort();
       break;

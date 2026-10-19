@@ -22,7 +22,8 @@
  *   --floor-usd 5              never take a provider's balance below this
  *
  * It calls Ollama directly, not the log proxy, so test answers stay out of
- * the visitor log /privacy/ describes. Each answer is a JSON line in
+ * the visitor log /privacy/ describes. Each answer, with `raw`, everything
+ * the model wrote before the Worker's relay parsed it, is a JSON line in
  * $EVAL_OUT/<run>/answers.jsonl (default tmp/evals/), each judge's call one
  * in calls.jsonl, and each answer's verdicts one in judgments.jsonl.
  */
@@ -35,8 +36,8 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import { KNOWN_HREFS } from "../src/content/chat.ts";
 import { CASES, wordings } from "./cases.mjs";
+import { FORM, failures, recheck } from "./checks.mjs";
 import { judge } from "./judges.mjs";
 import { balanceUsd } from "./llm.mjs";
 import { nameOf, panelFor } from "./models.mjs";
@@ -63,22 +64,6 @@ const { values: arg } = parseArgs({
   },
 });
 
-const words = (s) => s.split(/\s+/).filter(Boolean).length;
-const bare = (u) => u.replace(/[.,;:!?)]+$/, "").replace(/\/$/, "");
-const known = new Set([...KNOWN_HREFS].map(bare));
-const urls = (s) => (s.match(/https?:\/\/[^\s<>"'\]]+/g) ?? []).map(bare);
-
-/** Checks every answer must pass, whatever was asked. */
-export const FORM = [
-  ["not cut off", (r) => r.doneReason !== "length"],
-  ["has an answer", (r) => r.answer.trim().length > 0],
-  ["no loop", (r) => !r.looped],
-  ["<=120 words", (r) => words(r.answer) <= 120],
-  ["plain text", (r) => !/\*\*|^#{1,6}\s|^\s*\|.*\|\s*$|`/m.test(r.answer)],
-  ["known URLs only", (r) => urls(r.answer).every((u) => known.has(u))],
-  ["3 follow-ups", (r) => r.next.length === 3],
-];
-
 const list = (s) => (s ? s.split(",") : null);
 const onlyCases = list(arg.cases);
 const onlyKinds = list(arg.kinds);
@@ -88,6 +73,7 @@ const picked = (c) =>
 const inSet = (holdout) =>
   arg.set === "all" || holdout === (arg.set === "holdout");
 const chosen = wordings(CASES.filter(picked)).filter((w) => inSet(w.holdout));
+const byCase = new Map(CASES.map((c) => [c.id, c]));
 const reps = Number(arg.reps);
 const think =
   arg.think === undefined
@@ -149,6 +135,7 @@ for (const t of targets) {
     maker: t.maker,
     prompt: promptHashes(t.prompt),
   };
+  meta.targets[t.name].onDesk ??= t.onDesk;
 }
 if (targets.some((t) => t.name === "desk")) {
   meta.ollama ??= await fetch(`${arg.ollama}/api/version`)
@@ -212,12 +199,7 @@ if (!arg["judge-only"]) {
           process.exit(1);
         }
       }
-      const failed = r.error
-        ? ["request failed"]
-        : [
-            ...FORM.filter(([, ok]) => !ok(r)),
-            ...w.case.must.filter(([, ok]) => !ok(r.answer, t)),
-          ].map(([name]) => name);
+      const failed = failures(r, w.case, t);
       keep(file, {
         id,
         target: t.name,
@@ -242,7 +224,6 @@ if (!arg["judge-only"]) {
 if (arg.judge || arg["judge-only"]) {
   const judged = rowsOf(judgedFile);
   const names = new Set(targets.map((t) => t.name));
-  const byCase = new Map(CASES.map((c) => [c.id, c]));
   const todo = [...rowsOf(file).values()].filter(
     (r) =>
       names.has(r.target) &&
@@ -332,7 +313,9 @@ console.log(
   "\ntarget    answers  all checks  facts right  first word p50/p90  cut off  blank",
 );
 for (const t of targets) {
-  const rs = [...rows.values()].filter((r) => r.target === t.name);
+  const rs = [...rows.values()]
+    .filter((r) => r.target === t.name)
+    .map((r) => ({ ...r, failed: recheck(r, byCase.get(r.case), t) }));
   const clean = rs.filter((r) => !r.failed.length).length;
   const right = rs.filter(
     (r) => !r.error && !r.failed.some((f) => !formNames.has(f)),

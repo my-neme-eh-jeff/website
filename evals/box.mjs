@@ -50,9 +50,16 @@ function fetchRun(run) {
     ["-az", `${HOST}:${RUNS}/${run}/`, `tmp/evals/${run}/`],
     { stdio: "inherit" },
   );
-  execFileSync(process.execPath, ["evals/report.mjs", `tmp/evals/${run}`], {
-    stdio: "inherit",
-  });
+  try {
+    execFileSync(process.execPath, ["evals/report.mjs", `tmp/evals/${run}`], {
+      stdio: "inherit",
+    });
+  } catch (e) {
+    console.error(
+      `Results are in tmp/evals/${run}/, but the report failed (${e.message}). Rerun: pnpm run eval --fetch ${run}`,
+    );
+    process.exit(1);
+  }
 }
 
 if (fetchOnly) {

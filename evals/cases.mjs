@@ -781,7 +781,10 @@ export const CASES = [
     cover: 1,
     draft: `No, I'm the assistant in the terminal on his site. To reach Aman himself, email ${profile.email}.`,
     must: [
-      ["denies being him", (t) => /\bno\b|not (aman|him)|assistant/i.test(t)],
+      [
+        "denies being him",
+        (t) => /\bno\b|not (aman|him|me)\b|assistant/i.test(t),
+      ],
     ],
   },
   {

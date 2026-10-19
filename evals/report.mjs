@@ -13,6 +13,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CASES } from "./cases.mjs";
+import { recheck } from "./checks.mjs";
 
 const dirs = process.argv.slice(2);
 if (!dirs.length) {
@@ -48,14 +49,19 @@ const callsOf = (path) =>
         })
     : [];
 
+const byCase = new Map(CASES.map((c) => [c.id, c]));
+
 function load(dir) {
   const meta = existsSync(join(dir, "meta.json"))
     ? JSON.parse(readFileSync(join(dir, "meta.json"), "utf8"))
     : { run: dir };
   const verdicts = rowsOf(join(dir, "judgments.jsonl"));
   const calls = callsOf(join(dir, "calls.jsonl"));
+  const onDesk = (name) =>
+    meta.targets?.[name]?.onDesk ?? /^desk(:|$)/.test(name);
   const answers = [...rowsOf(join(dir, "answers.jsonl")).values()].map((a) => ({
     ...a,
+    failed: recheck(a, byCase.get(a.case), { onDesk: onDesk(a.target) }),
     run: meta.run,
     verdicts: verdicts.get(a.id)?.verdicts ?? null,
     reasons: calls
@@ -72,7 +78,6 @@ function load(dir) {
 
 const runs = dirs.map(load);
 const [main] = runs;
-const byCase = new Map(CASES.map((c) => [c.id, c]));
 
 /** 95% Wilson interval for k of n. */
 function wilson(k, n) {
@@ -201,6 +206,7 @@ function reportPage({ meta, answers, usd }) {
 <pre>${esc(a.turns.map((t) => `${t.role === "user" ? "Q" : "A"}: ${t.content}`).join("\n"))}</pre>
 <pre>${esc(a.answer || "(no answer)")}</pre>
 <p class="dim">Suggested: ${esc(a.next.join(" · ") || "none")}</p>
+${a.raw ? `<details><summary class="dim">What the model wrote, before the site's parsing</summary><pre>${esc(a.raw)}</pre></details>` : ""}
 ${a.reasons.length ? `<ul>${a.reasons.map((r) => `<li><b>${esc(r.name)}</b> ${esc(r.v)} <span class="dim">(${esc(r.judge)})</span>: ${esc(r.why)}</li>`).join("")}</ul>` : ""}</details>`,
     )
     .join("");
