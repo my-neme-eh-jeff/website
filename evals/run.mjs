@@ -136,6 +136,14 @@ meta.node = process.version;
 meta.args = arg;
 meta.targets ??= {};
 for (const t of targets) {
+  const now = promptHashes(t.prompt).full;
+  const then = meta.targets[t.name]?.prompt?.full;
+  if (then && then !== now) {
+    console.error(
+      `${t.name}'s prompt is ${now} here but ${then} in run ${run}: answers and grades must come from the same prompt. Check out the commit that made them, or start a new run.`,
+    );
+    process.exit(1);
+  }
   meta.targets[t.name] ??= {
     model: t.model,
     maker: t.maker,
