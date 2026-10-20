@@ -19,6 +19,7 @@ import {
   type Pt,
 } from "./desk";
 import { AIM, decay, Rig } from "./lamp";
+import { caretPoint } from "../terminal/caret";
 import { xray } from "./xray";
 
 type Size = keyof typeof GRIDS;
@@ -134,6 +135,11 @@ function page() {
     document.removeEventListener("themechange", colors);
     shell.removeEventListener("pointermove", onMove);
     shell.removeEventListener("pointerleave", onLeave);
+    field?.removeEventListener("input", follow);
+    field?.removeEventListener("keyup", onKeyUp);
+    field?.removeEventListener("keydown", onKeyDown);
+    field?.removeEventListener("blur", letGo);
+    clearTimeout(idle);
     clearTimeout(flush);
     cancelAnimationFrame(flyFrame);
     flyers.clear();
@@ -528,11 +534,39 @@ function page() {
     const m = away ? 6 : 0;
     return deg > -68 - m && deg < 118 + m;
   };
+  /*
+   * The mouse always wins: typing takes the lamp to the caret only once the
+   * mouse has been still for 2 s, and a move gives it straight back. A move
+   * counts from 12 px off where the last one did, so a trackpad nudge doesn't.
+   */
+  let movedAt = -Infinity;
+  let anchor: Pt | null = null;
+  /** The pointer's last aim, to hand back when typing lets go. */
+  let pointer: Pt | null = null;
+  let keyed = false;
+  let idle = 0;
+  const letGo = () => {
+    clearTimeout(idle);
+    if (!keyed) return;
+    keyed = false;
+    post({ type: "aim", at: shell.matches(":hover") ? pointer : null });
+  };
   // Near its switch the lamp holds still, so the switch stays where you reach for it.
   const onMove = (e: PointerEvent) => {
     if (e.pointerType === "touch") return;
     const P = toDrawing(e.clientX, e.clientY);
     if (!P) return;
+    const moved =
+      !anchor || Math.hypot(e.clientX - anchor[0], e.clientY - anchor[1]) >= 12;
+    if (moved) {
+      anchor = [e.clientX, e.clientY];
+      movedAt = performance.now();
+    }
+    if (keyed) {
+      if (!moved) return;
+      keyed = false;
+      clearTimeout(idle);
+    }
     const near =
       !!switchAt &&
       Math.abs(P[0] - switchAt.at[0]) < 30 &&
@@ -541,16 +575,60 @@ function page() {
     if (near) return;
     const was = away;
     away = behind(P);
+    pointer = away ? null : P;
     if (!away) post({ type: "aim", at: P });
     else if (!was) post({ type: "aim", at: null });
   };
   const onLeave = () => {
     hold(false);
     away = false;
-    post({ type: "aim", at: null });
+    pointer = null;
+    if (!keyed) post({ type: "aim", at: null });
   };
   shell.addEventListener("pointermove", onMove, { passive: true });
   shell.addEventListener("pointerleave", onLeave, { passive: true });
+
+  /*
+   * Down and to its right the head can't turn to face the caret and folds
+   * back, so the caret's run across the prompt is spread over what it can
+   * reach: the prompt's left end as it is, its right end 10deg left of
+   * straight down from the pivot, past where the pointer lets go.
+   */
+  const reach = (P: Pt, left: number, right: number): Pt => {
+    if (!switchAt || right <= left) return P;
+    const [x, y] = switchAt.at;
+    const pivotY = y - VIEW.h / GRIDS[switchAt.size].rows;
+    const edge = x + (P[1] - pivotY) / Math.tan((100 * Math.PI) / 180);
+    const far = Math.min(right, edge);
+    return [left + ((P[0] - left) * (far - left)) / (right - left), P[1]];
+  };
+  // It lets go 1.5 s after the last key, on Enter, and when the field loses focus.
+  const field = shell.querySelector<HTMLTextAreaElement>("#term-input");
+  const follow = () => {
+    if (!field || performance.now() - movedAt < 2000) return;
+    const [cx, cy] = caretPoint(field);
+    const r = field.getBoundingClientRect();
+    const P = toDrawing(cx, cy);
+    const L = toDrawing(r.left, cy);
+    const R = toDrawing(r.right, cy);
+    if (!P || !L || !R) return;
+    post({ type: "aim", at: reach(P, L[0], R[0]) });
+    keyed = true;
+    clearTimeout(idle);
+    idle = window.setTimeout(letGo, 1500);
+  };
+  const onKeyUp = (e: KeyboardEvent) => {
+    if (/^(Arrow|Home$|End$)/.test(e.key)) follow();
+  };
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) letGo();
+  };
+  if (field && !coarse) {
+    field.addEventListener("input", follow);
+    field.addEventListener("keyup", onKeyUp);
+    field.addEventListener("keydown", onKeyDown);
+    field.addEventListener("blur", letGo);
+  }
 
   if (sw) {
     let on = true;

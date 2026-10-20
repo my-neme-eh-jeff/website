@@ -817,7 +817,8 @@
 .desk-slot {
   position: absolute;
   inset: auto 1rem 4.75rem;
-  height: var(--desk-h, calc(100% - 5rem));
+  /* --grow: the prompt's lines past its first, so the desk keeps its size. */
+  height: var(--desk-h, calc(100% - 5rem + var(--grow, 0px)));
   translate: 0 calc(-1 * var(--desk-up, 0px));
   pointer-events: none;
   transition: opacity 300ms ease;

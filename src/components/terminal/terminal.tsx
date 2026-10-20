@@ -11,6 +11,7 @@ import {
 } from "@qwik.dev/core";
 import { haptic } from "./haptics";
 import { sound, isMuted, setMuted, type Tone } from "./sounds";
+import { caretLine, grow, setField } from "./caret";
 import { load as loadHistory, save as saveHistory } from "./history";
 import { run, completions, ASK, PICK, type Line } from "./commands";
 import { ThemePick, PICKS, type PickState } from "./theme-pick";
@@ -691,10 +692,10 @@ export const Terminal = component$(() => {
     }
   });
 
-  const submit = $(async (field: HTMLInputElement) => {
+  const submit = $(async (field: HTMLTextAreaElement) => {
     if (convo.phase !== "idle") return;
     const raw = field.value;
-    field.value = "";
+    setField(field, "");
     await runLine(raw);
   });
 
@@ -710,20 +711,20 @@ export const Terminal = component$(() => {
   /** Types `cmd` into the prompt a key at a time, then enters it. */
   const typeIn = $(async (cmd: string) => {
     const field = document.getElementById("term-input");
-    if (!(field instanceof HTMLInputElement)) return;
+    if (!(field instanceof HTMLTextAreaElement)) return;
     if (typing.value || convo.phase !== "idle" || pick.open) return;
     typing.value = true;
     try {
       field.focus();
-      field.value = "";
+      setField(field, "");
       if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
         for (const ch of cmd) {
-          field.value += ch;
+          setField(field, field.value + ch);
           await feedback("key");
           await new Promise((r) => setTimeout(r, 45));
         }
       }
-      field.value = cmd;
+      setField(field, cmd);
       await submit(field);
     } finally {
       typing.value = false;
@@ -739,9 +740,9 @@ export const Terminal = component$(() => {
 
     // Not a signal fed by `input` events: on a page's first Enter those may
     // not have run yet.
-    const field = e.target as HTMLInputElement;
+    const field = e.target as HTMLTextAreaElement;
 
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
       await submit(field);
       return;
     }
@@ -767,7 +768,7 @@ export const Terminal = component$(() => {
           ...lines.items,
           { kind: "in", text: `${PROMPT} ${field.value}^C` },
         ];
-        field.value = "";
+        setField(field, "");
         cmdHistory.cursor = -1;
         stickToBottom(renderGroups(lines.items).length);
         await feedback("error");
@@ -776,6 +777,12 @@ export const Terminal = component$(() => {
     }
 
     if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      // An arrow moves between the field's lines; past its first or last, it
+      // walks the history. keyGuard noted where the caret was before it moved.
+      const at = Number(field.dataset["caret"] ?? field.selectionStart);
+      const edge =
+        e.key === "ArrowUp" ? 0 : caretLine(field, field.value.length);
+      if (caretLine(field, at) !== edge) return;
       await ensureHistory();
       if (cmdHistory.past.length === 0) return;
       const next =
@@ -783,7 +790,7 @@ export const Terminal = component$(() => {
           ? Math.min(cmdHistory.cursor + 1, cmdHistory.past.length - 1)
           : Math.max(cmdHistory.cursor - 1, -1);
       cmdHistory.cursor = next;
-      field.value = next === -1 ? "" : (cmdHistory.past.at(-1 - next) ?? "");
+      setField(field, next === -1 ? "" : (cmdHistory.past.at(-1 - next) ?? ""));
       return;
     }
 
@@ -798,7 +805,7 @@ export const Terminal = component$(() => {
       if (matches.length === 0) return;
 
       if (matches.length === 1) {
-        field.value = matches[0]!;
+        setField(field, matches[0]!);
         tab.armed = false;
         await feedback("key");
         return;
@@ -806,7 +813,7 @@ export const Terminal = component$(() => {
 
       if (continuing) {
         tab.i = (tab.i + 1) % matches.length;
-        field.value = matches[tab.i]!;
+        setField(field, matches[tab.i]!);
         tab.last = field.value;
         await feedback("key");
         return;
@@ -814,7 +821,7 @@ export const Terminal = component$(() => {
 
       const common = commonPrefix(matches);
       if (common.length > base.length) {
-        field.value = common;
+        setField(field, common);
         tab.armed = false;
         await feedback("key");
         return;
@@ -919,11 +926,20 @@ export const Terminal = component$(() => {
    * default action and before any fetch or resume, and captures nothing.
    * Shift+Tab, and Tab on an empty field, must still leave (WCAG 2.1.2).
    */
-  const keyGuard = sync$((e: KeyboardEvent, el: HTMLInputElement) => {
-    // Busy is marked here: on a page's first Enter, no `$()` handler can run
-    // until Qwik has resumed and fetched it.
-    if (e.key === "Enter" && el.value.trim() !== "") {
-      el.closest("[data-shell]")?.setAttribute("data-busy", "");
+  const keyGuard = sync$((e: KeyboardEvent, el: HTMLTextAreaElement) => {
+    // Enter sends, and Shift+Enter is the field's own new line. Busy is marked
+    // here: on a page's first Enter, no `$()` handler can run until Qwik has
+    // resumed and fetched it.
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      if (el.value.trim() !== "")
+        el.closest("[data-shell]")?.setAttribute("data-busy", "");
+      return;
+    }
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      el.dataset["caret"] = String(
+        e.key === "ArrowUp" ? el.selectionStart : el.selectionEnd,
+      );
       return;
     }
     if (e.key === "Tab" && !e.shiftKey && el.value.trim() !== "") {
@@ -952,6 +968,8 @@ export const Terminal = component$(() => {
       e.preventDefault();
     }
   });
+
+  const onInput = $((_: Event, el: HTMLTextAreaElement) => grow(el));
 
   const clickGuard = sync$((_: MouseEvent, el: HTMLElement) => {
     // Enter on a focused chip still clicks it.
@@ -1271,17 +1289,18 @@ export const Terminal = component$(() => {
       )}
 
       <div class="px-3 pt-1 sm:px-4" hidden={pick.open}>
-        <div class="term-composer flex items-center gap-2 rounded-xl px-3 py-2.5">
-          <span class="text-accent shrink-0 font-mono text-[0.8125rem]">
+        <div class="term-composer flex items-start gap-2 rounded-xl px-3 py-2.5">
+          <span class="text-accent shrink-0 font-mono text-[0.8125rem] leading-6 sm:leading-[1.3rem]">
             {PROMPT}
           </span>
-          <input
+          <textarea
             id="term-input"
-            type="text"
+            rows={1}
             spellcheck={false}
-            autoComplete="off"
+            autocomplete="off"
             autoCorrect="off"
             autoCapitalize="off"
+            enterKeyHint="send"
             placeholder="Ask about Aman's work"
             // Its own name: the <label> above wraps the whole log, and would
             // otherwise make every line of output the field's name.
@@ -1290,12 +1309,13 @@ export const Terminal = component$(() => {
              * 16px on phones: iOS Safari zooms on focus of a smaller input,
              * and capping maximum-scale instead would fail WCAG 1.4.4.
              */
-            class="text-text placeholder:text-muted min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-base focus:outline-none sm:text-[0.8125rem]"
+            class="text-text placeholder:text-muted block h-[1lh] max-h-[6lh] min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent p-0 font-mono text-base leading-6 focus:outline-none sm:text-[0.8125rem] sm:leading-[1.3rem]"
             onKeyDown$={[keyGuard, onKeyDown]}
+            onInput$={onInput}
             onFocus$={warmAudio}
           />
           <span
-            class="text-muted hidden shrink-0 font-mono text-[0.6875rem] sm:inline"
+            class="text-muted hidden shrink-0 self-end font-mono text-[0.6875rem] leading-[1.3rem] sm:inline"
             aria-hidden="true"
           >
             enter ↵
