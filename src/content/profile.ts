@@ -14,7 +14,7 @@ export const profile = {
 
   /** The meta description, og:description and Person.description. 120–160 chars. */
   tagline:
-    "Platform engineer at Atlan. I build the Kubernetes and Terraform machinery that provisions enterprise infrastructure, and the agents that operate it.",
+    "AI Builder at Atlan. I build the Kubernetes and Terraform machinery that provisions enterprise infrastructure, and the agents that operate it.",
 
   /** The home page's h1, in the shell's title bar: "<name>, <headline> at <employer>". */
   headline: "AI Builder",
