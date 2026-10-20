@@ -13,8 +13,8 @@
  * answers side by side, for telling whether a prompt change helped.
  *
  * With --board <run>... it writes board.html next to the runs: every target
- * of every run in one table, over the wordings judged in all of them, ranked
- * by the share of answers that are accurate.
+ * of every run in one table, over the wordings judged in all of them, each
+ * counted once, ranked by the share that are accurate.
  *
  * box.mjs runs this after copying a run back.
  */
@@ -109,6 +109,8 @@ const judgedFails = (a) =>
     .map(([n]) => `judge: ${n}`);
 const problems = (a) => [...a.failed, ...judgedFails(a)];
 const ok = (a) => !a.error && problems(a).length === 0;
+/** Judged, or blank: a blank answer is never sent to the judges, but it is wrong. */
+const graded = (a) => !a.error && (a.verdicts != null || !a.answer?.trim());
 
 /**
  * Accurate: the facts and the behaviour are right. Leaves out how the answer
@@ -138,7 +140,7 @@ const pct = (x) => `${Math.round(x * 100)}%`;
 const rate = (k, n) => {
   const [lo, hi] = wilson(k, n);
   return n
-    ? `<b>${k}/${n}</b> <span class="dim">${pct(k / n)} (${pct(lo)}–${pct(hi)})</span>`
+    ? `<b>${Number.isInteger(k) ? k : k.toFixed(1)}/${n}</b> <span class="dim">${pct(k / n)} (${pct(lo)}–${pct(hi)})</span>`
     : "—";
 };
 
@@ -175,10 +177,10 @@ function reportPage({ meta, answers, usd }) {
   const summary = targets
     .map((t) => {
       const as = answers.filter((a) => a.target === t && !a.error);
-      const judged = as.filter((a) => a.verdicts);
+      const judged = as.filter(graded);
       const cells = crit
         .map((n) => {
-          const js = judged.filter((a) => a.verdicts[n] !== undefined);
+          const js = judged.filter((a) => a.verdicts?.[n] !== undefined);
           return `<td>${rate(js.filter((a) => a.verdicts[n] === "PASS").length, js.length)}</td>`;
         })
         .join("");
@@ -203,7 +205,7 @@ function reportPage({ meta, answers, usd }) {
         `<tr><th>${esc(k)}</th>${targets
           .map((t) => {
             const as = answers.filter(
-              (a) => a.target === t && a.kind === k && a.verdicts,
+              (a) => a.target === t && a.kind === k && graded(a),
             );
             return `<td>${rate(as.filter(ok).length, as.length)}</td>`;
           })
@@ -245,7 +247,7 @@ ${a.reasons.length ? `<ul>${a.reasons.map((r) => `<li><b>${esc(r.name)}</b> ${es
 <h1>Eval run ${esc(meta.run)}</h1>
 <p class="dim">${esc(meta.started ?? "")} · commit ${esc(meta.sha ?? "?")} · Ollama ${esc(meta.ollama ?? "—")} · judges spent $${usd.toFixed(3)}</p>
 <ul>${head}</ul>
-<p class="dim">Intervals are 95% Wilson, treating answers as independent; wordings of one question are not, so read them as a floor on the uncertainty.</p>
+<p class="dim">Intervals are 95% Wilson, treating answers as independent; wordings of one question are not, so read them as a floor on the uncertainty. A blank answer is never sent to the judges; the judged columns count it as wrong.</p>
 <h2>By target</h2><div class="wrap"><table><tr><th></th><th>code checks</th>${crit.map((n) => `<th>judge: ${esc(n)}</th>`).join("")}<th>accurate</th><th>judged and all right</th><th>first word p50 / p90</th></tr>${summary}</table></div>
 <h2>Judged answers, by kind</h2><div class="wrap"><table><tr><th></th>${targets.map((t) => `<th>${esc(t)}</th>`).join("")}</tr>${byKind}</table></div>
 <h2>By case</h2><p class="dim">Answers with no problem, of all answers; judged criteria count only where judged.</p><div class="wrap"><table><tr><th></th>${targets.map((t) => `<th>${esc(t)}</th>`).join("")}</tr>${caseRows}</table></div>
@@ -262,10 +264,10 @@ function comparePage(before, after) {
     return [b, a].map((xs) => xs.filter((x) => shared.has(key(x))));
   };
   const [CB, CA] = inBoth((a) => !a.error);
-  const [B, A] = inBoth((a) => !a.error && a.verdicts);
+  const [B, A] = inBoth(graded);
   const targets = [...new Set(CA.map((a) => a.target))];
   const crit = [
-    ...new Set([...B, ...A].flatMap((a) => Object.keys(a.verdicts))),
+    ...new Set([...B, ...A].flatMap((a) => Object.keys(a.verdicts ?? {}))),
   ];
   const of = (xs, t, id) =>
     xs.filter((a) => a.target === t && (id === undefined || a.case === id));
@@ -283,7 +285,7 @@ function comparePage(before, after) {
     ),
     ...crit.map((n) =>
       line(`judge: ${esc(n)}`, (xs) => {
-        const js = xs.filter((a) => a.verdicts[n] !== undefined);
+        const js = xs.filter((a) => a.verdicts?.[n] !== undefined);
         return rate(
           js.filter((a) => a.verdicts[n] === "PASS").length,
           js.length,
@@ -372,7 +374,7 @@ function comparePage(before, after) {
 <h1>Before and after</h1>
 <p class="dim">Before: run ${esc(before.meta.run)}, commit ${esc(before.meta.sha ?? "?")} · After: run ${esc(after.meta.run)}, commit ${esc(after.meta.sha ?? "?")}</p>
 <ul>${heads}</ul>
-<p class="dim">Code checks count the ${CB.length} answers before and ${CA.length} after to wordings both runs asked; the judges' rows count the ${B.length} and ${A.length} judged in both. Intervals are 95% Wilson. "Wordings right every time" counts a wording only if every judged answer to it was all right.</p>
+<p class="dim">Code checks count the ${CB.length} answers before and ${CA.length} after to wordings both runs asked; the judges' rows count the ${B.length} and ${A.length} judged in both, a blank answer counting as judged and wrong. Intervals are 95% Wilson. "Wordings right every time" counts a wording only if every judged answer to it was all right.</p>
 <h2>Numbers</h2><div class="wrap"><table><tr><th></th>${targets.map((t) => `<th>${esc(t)} before</th><th>${esc(t)} after</th>`).join("")}</tr>${numbers}</table></div>
 <h2>By case</h2><p class="dim">Judged and all right where both runs judged the case, else code checks.</p><div class="wrap"><table><tr><th></th>${targets.map((t) => `<th>${esc(t)}</th>`).join("")}</tr>${caseRows}</table></div>
 <h2>Answers</h2><p class="dim">Open where the share right changed.</p>${answers}
@@ -402,12 +404,19 @@ function boardPage(runs) {
     })),
   );
   const wording = (a) => `${a.case}|${a.variant}`;
-  const judgedIn = entries.map(
-    (e) => new Set(e.answers.filter((a) => a.verdicts).map(wording)),
+  const gradedIn = entries.map(
+    (e) => new Set(e.answers.filter(graded).map(wording)),
   );
   const shared = new Set(
-    [...judgedIn[0]].filter((k) => judgedIn.every((set) => set.has(k))),
+    [...gradedIn[0]].filter((k) => gradedIn.every((set) => set.has(k))),
   );
+  // Each wording counts once, however many times a run asked it.
+  const share = (xs, pass) => {
+    const by = Map.groupBy(xs, wording);
+    let k = 0;
+    for (const g of by.values()) k += g.filter(pass).length / g.length;
+    return [k, by.size];
+  };
   const crit = [
     ...new Set(
       entries.flatMap((e) =>
@@ -418,15 +427,9 @@ function boardPage(runs) {
   const rows = entries
     .map((e) => {
       const all = e.answers.filter((a) => shared.has(wording(a)));
-      const judged = all.filter((a) => a.verdicts);
-      return {
-        e,
-        all,
-        judged,
-        score: judged.length
-          ? judged.filter(accurate).length / judged.length
-          : 0,
-      };
+      const judged = all.filter(graded);
+      const [k, n] = share(judged, accurate);
+      return { e, all, judged, score: n ? k / n : 0 };
     })
     .sort((x, y) => y.score - x.score);
   const setting = ({ run }) =>
@@ -443,14 +446,14 @@ function boardPage(runs) {
     .map(({ e, all, judged }) => {
       const t = e.run.meta.targets?.[e.target] ?? {};
       const tok = median(all.map((a) => a.tokPerSec));
-      return `<tr><th>${esc(e.target)} <span class="dim">${esc(t.model ?? "")}</span><br><span class="dim">run ${esc(e.run.meta.run)} · ${esc(setting(e))} · prompt ${esc(t.prompt?.full ?? "?")}</span></th><td>${rate(judged.filter(accurate).length, judged.length)}</td><td>${rate(judged.filter(ok).length, judged.length)}</td>${crit
+      return `<tr><th>${esc(e.target)} <span class="dim">${esc(t.model ?? "")}</span><br><span class="dim">run ${esc(e.run.meta.run)} · ${esc(setting(e))} · prompt ${esc(t.prompt?.full ?? "?")}</span></th><td>${rate(...share(judged, accurate))}</td><td>${rate(...share(judged, ok))}</td>${crit
         .map((n) => {
-          const js = judged.filter((a) => a.verdicts[n] !== undefined);
-          return `<td>${rate(js.filter((a) => a.verdicts[n] === "PASS").length, js.length)}</td>`;
+          const js = judged.filter((a) => a.verdicts?.[n] !== undefined);
+          return `<td>${rate(...share(js, (a) => a.verdicts[n] === "PASS"))}</td>`;
         })
         .join(
           "",
-        )}<td>${rate(all.filter((a) => !a.failed.length).length, all.length)}</td><td>${secs(median(all.map((a) => a.firstTokenMs)))} / ${secs(median(all.map((a) => a.totalMs)))}</td><td>${tok == null ? "—" : tok.toFixed(1)}</td></tr>`;
+        )}<td>${rate(...share(all, (a) => !a.failed.length))}</td><td>${secs(median(all.map((a) => a.firstTokenMs)))} / ${secs(median(all.map((a) => a.totalMs)))}</td><td>${tok == null ? "—" : tok.toFixed(1)}</td></tr>`;
     })
     .join("");
   const prompts = new Set(
@@ -458,7 +461,7 @@ function boardPage(runs) {
   );
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Model board</title><style>${STYLE}</style></head><body><main>
 <h1>Model board</h1>
-<p class="dim">Ranked by accurate: facts and behaviour right, by code checks and the judges' grounded, behaves, covers and in-role, leaving out layout and suggested questions. Every row counts the same ${shared.size} wordings, those judged in all ${entries.length} rows. Intervals are 95% Wilson.${prompts.size > 1 ? " The rows were not all asked with the same rules, so prompt and model differences are mixed." : ""}</p>
+<p class="dim">Ranked by accurate: facts and behaviour right, by code checks and the judges' grounded, behaves, covers and in-role, leaving out layout and suggested questions. A blank answer counts as judged and wrong. Every row counts the same ${shared.size} wordings, those judged in all ${entries.length} rows, each once however many times a run asked it. Intervals are 95% Wilson.${prompts.size > 1 ? " The rows were not all asked with the same rules, so prompt and model differences are mixed." : ""}</p>
 <div class="wrap"><table><tr><th></th><th>accurate</th><th>judged and all right</th>${crit.map((n) => `<th>judge: ${esc(n)}</th>`).join("")}<th>code checks</th><th>first word / whole answer, p50</th><th>tok/s p50</th></tr>${body}</table></div>
 </main></body></html>`;
 }
