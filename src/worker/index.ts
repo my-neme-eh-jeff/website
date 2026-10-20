@@ -169,7 +169,7 @@ async function chat(request: Request, env: Env): Promise<Response> {
   if (!turns) return json({ error: "bad_request" }, 400);
 
   const asked = turns.filter((t) => t.role === "user").map((t) => t.content);
-  const upstream = await withTimeout(HEADERS_TIMEOUT_MS, (signal) =>
+  const upstream = await withTimeout("desk", HEADERS_TIMEOUT_MS, (signal) =>
     callDesk(env, turns, signal, visitorHeaders(request)),
   );
   if (!upstream) {
@@ -256,20 +256,21 @@ async function askPoe(
     return null;
   }
 
-  const res = await withTimeout(POE_HEADERS_TIMEOUT_MS, (signal) =>
+  const res = await withTimeout("poe", POE_HEADERS_TIMEOUT_MS, (signal) =>
     callPoe(key, env.POE_MODEL, turns, signal),
   );
-  if (!res) {
-    console.log("poe: no answer");
-    return null;
-  }
+  if (!res) return null;
   return res.body
     .pipeThrough(fromPoe())
     .pipeThrough(relay(asked, { first, stats: false }));
 }
 
-/** An ok response with a body, or null; the timeout covers headers only. */
+/**
+ * An ok response with a body, or null, logged with why: the status, or the
+ * error's name, never its message. The timeout covers headers only.
+ */
 async function withTimeout(
+  label: string,
   ms: number,
   call: (signal: AbortSignal) => Promise<Response>,
 ): Promise<(Response & { body: ReadableStream<Uint8Array> }) | null> {
@@ -278,7 +279,8 @@ async function withTimeout(
   let res: Response;
   try {
     res = await call(controller.signal);
-  } catch {
+  } catch (err) {
+    console.log(`${label}: ${err instanceof Error ? err.name : "failed"}`);
     return null;
   } finally {
     clearTimeout(timer);
@@ -286,6 +288,7 @@ async function withTimeout(
   if (res.ok && res.body) {
     return res as Response & { body: ReadableStream<Uint8Array> };
   }
+  console.log(`${label}: ${res.status}`);
   await res.body?.cancel();
   return null;
 }

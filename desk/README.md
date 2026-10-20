@@ -11,9 +11,12 @@ visitor -> Worker (/api/chat) -> Workers VPC -> Cloudflare Tunnel
 - `chat-log-proxy.mjs` forwards only `POST /api/chat`, streams the answer
   through unchanged, and appends each exchange to
   `~/.local/share/portfolio-chat/chats-YYYY-MM-DD.jsonl` (one file per UTC day).
-  Before forwarding it asks Ollama's `/api/ps` whether the model is loaded and
-  answers at once with `x-desk-model: cold` or `warm`, which the shell turns
-  into its "cold start" note. If Ollama doesn't answer, it returns 502.
+  Before forwarding it asks Ollama's `/api/ps` what is loaded and answers at
+  once: `x-desk-model: warm` if the chat's model is, `cold` if nothing is (the
+  shell's "cold start" note). If only other models are, something else (an
+  eval) is using Ollama and a question would queue behind it, so it returns
+  503 `busy` without asking Ollama, and the Worker asks Poe. If Ollama doesn't
+  answer, it returns 502.
 - **Retention is 30 days.** The proxy deletes a day file once that day began
   more than 30 days ago, at startup and hourly. `/privacy/` promises this; change
   `RETENTION_DAYS` and that page together.
@@ -24,15 +27,15 @@ visitor -> Worker (/api/chat) -> Workers VPC -> Cloudflare Tunnel
 
 Written by the proxy, so it can only contain what reaches the desk:
 
-| Field                              | From                                                                                                             |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `ts`, `id`                         | the proxy                                                                                                        |
-| `question`, `history`              | the conversation the browser sent (up to 8 turns)                                                                |
-| `answer`, `reasoning`              | Ollama's stream: the reply, suggested questions and hidden notes                                                 |
-| `stats`, `firstTokenMs`, `totalMs` | Ollama's timings and the proxy's clock                                                                           |
-| `outcome`                          | `ok`, `cancelled` (the visitor hung up, or the Worker gave up waiting and asked Poe), `error`, `upstream_<code>` |
-| `systemPrompt`                     | a 12-character hash: which prompt version answered                                                               |
-| `country`                          | the one visitor fact the Worker forwards (Cloudflare's geo)                                                      |
+| Field                              | From                                                                                                                                                                         |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ts`, `id`                         | the proxy                                                                                                                                                                    |
+| `question`, `history`              | the conversation the browser sent (up to 8 turns)                                                                                                                            |
+| `answer`, `reasoning`              | Ollama's stream: the reply, suggested questions and hidden notes                                                                                                             |
+| `stats`, `firstTokenMs`, `totalMs` | Ollama's timings and the proxy's clock                                                                                                                                       |
+| `outcome`                          | `ok`, `cancelled` (the visitor hung up, or the Worker gave up waiting and asked Poe), `busy` (another model was loaded, so the Worker asked Poe), `error`, `upstream_<code>` |
+| `systemPrompt`                     | a 12-character hash: which prompt version answered                                                                                                                           |
+| `country`                          | the one visitor fact the Worker forwards (Cloudflare's geo)                                                                                                                  |
 
 Nothing else about the visitor is stored: no IP address, user agent, request
 id or session id. The desk never sees them, because the Worker forwards only the

@@ -54,18 +54,24 @@ async function readBody(req) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-/** Whether Ollama has `model` in memory; null if Ollama didn't answer. */
-async function loaded(model) {
+/**
+ * What Ollama has in memory: `warm` if `model`, `cold` if nothing, `busy` if
+ * only other models, or null if Ollama didn't answer. Busy means something
+ * else, like an eval, is using Ollama: a question would queue behind its
+ * requests, then wait for a load. On 2026-10-20 one waited 53s that way.
+ */
+async function deskState(model) {
   try {
     const res = await fetch(`${OLLAMA}/api/ps`, {
       signal: AbortSignal.timeout(2_000),
     });
     if (!res.ok) return null;
     const { models } = await res.json();
-    return (
-      Array.isArray(models) &&
-      models.some((m) => m?.name === model || m?.model === model)
-    );
+    const loaded = Array.isArray(models) ? models : [];
+    if (loaded.some((m) => m?.name === model || m?.model === model)) {
+      return "warm";
+    }
+    return loaded.length ? "busy" : "cold";
   } catch {
     return null;
   }
@@ -119,11 +125,16 @@ async function relay(req, res) {
   try {
     // Ollama sends no headers until the model is loaded, so these go first:
     // then a desk that never answers is down, not loading.
-    const warm = await loaded(body.model);
-    if (warm === null) throw new Error("Ollama did not answer /api/ps");
+    const state = await deskState(body.model);
+    if (state === null) throw new Error("Ollama did not answer /api/ps");
+    if (state === "busy") {
+      // Not a 200, so the Worker asks Poe straight away.
+      entry.outcome = "busy";
+      return json(res, 503, { error: "busy" });
+    }
     res.writeHead(200, {
       "content-type": "application/x-ndjson",
-      [STATE_HEADER]: warm ? "warm" : "cold",
+      [STATE_HEADER]: state,
     });
     res.flushHeaders();
 

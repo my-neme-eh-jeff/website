@@ -64,11 +64,12 @@ build if that scoping is lost.
 
 `POST /api/chat` relays questions typed into the shell to Ollama on
 Aman's desk, reached through a Cloudflare Tunnel and a Workers VPC binding, so
-the desk has no public hostname. When the desk is off, doesn't answer within
-5s, or takes the question but sends no answer text within 30s (a cold start
-takes up to ~23s; behind an eval it takes longer), `src/worker/poe.ts` asks Poe
-instead (`POE_MODEL`, at most 5 a minute, and only if the `POE_API_KEY` secret
-is set); otherwise the shell says the desk is offline. On the desk a small proxy logs each exchange for 30 days; see
+the desk has no public hostname. `src/worker/poe.ts` asks Poe instead
+(`POE_MODEL`, at most 5 a minute, and only if the `POE_API_KEY` secret is set)
+when the desk is off or doesn't answer within 5s, says it's busy because
+another model is loaded (an eval), or takes the question but sends no answer
+text within 30s (a cold start takes up to ~23s). Otherwise the shell says the
+desk is offline. On the desk a small proxy logs each exchange for 30 days; see
 `desk/README.md`. Poe's answers are not in that log.
 
 ### Styling: Tailwind v4, and why not a component library

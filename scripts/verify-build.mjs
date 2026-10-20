@@ -1,7 +1,16 @@
 /** Post-build invariant checks. Run: `pnpm run verify`, after a build. */
 
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+import {
+  readFileSync,
+  existsSync,
+  readdirSync,
+  mkdtempSync,
+  rmSync,
+} from "node:fs";
+import http from "node:http";
+import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { grad } from "../src/components/blog/statusline/model.ts";
@@ -262,23 +271,143 @@ check(
   },
 );
 
-check("the desk proxy sends the cold/warm header the Worker reads", () => {
-  const proxy = read("desk", "chat-log-proxy.mjs");
-  const name = /const STATE_HEADER = "([^"]+)"/.exec(proxy)?.[1];
+// desk/chat-log-proxy.mjs, run for real against a fake Ollama.
+const OLLAMA_DELAY_MS = 800;
+async function runProxy() {
+  let loaded = [];
+  let psStatus = 200;
+  let chats = 0;
+  const ollama = http.createServer(async (req, res) => {
+    for await (const _ of req);
+    if (req.url === "/api/ps") {
+      res.writeHead(psStatus, { "content-type": "application/json" });
+      return res.end(JSON.stringify({ models: loaded }));
+    }
+    chats++;
+    // Slow to start, like a load: the proxy's headers mustn't wait for it.
+    await new Promise((r) => setTimeout(r, OLLAMA_DELAY_MS));
+    res.writeHead(200, { "content-type": "application/x-ndjson" });
+    res.end(
+      JSON.stringify({ message: { content: "Hi" }, done: false }) +
+        "\n" +
+        JSON.stringify({ message: { content: "" }, done: true }) +
+        "\n",
+    );
+  });
+  const listening = (server) =>
+    new Promise((r) =>
+      server.listen(0, "127.0.0.1", () => r(server.address().port)),
+    );
+  const ollamaPort = await listening(ollama);
+  const spare = http.createServer();
+  const port = await listening(spare);
+  await new Promise((r) => spare.close(r));
+
+  const logs = mkdtempSync(join(tmpdir(), "desk-proxy-"));
+  const proxy = spawn(process.execPath, [p("desk", "chat-log-proxy.mjs")], {
+    env: {
+      ...process.env,
+      PORT: String(port),
+      OLLAMA_URL: `http://127.0.0.1:${ollamaPort}`,
+      LOG_DIR: logs,
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  try {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("no start in 5s")), 5000);
+      let said = "";
+      proxy.stdout.on("data", (d) => {
+        said += d;
+        if (said.includes("chat log proxy on")) {
+          clearTimeout(timer);
+          resolve();
+        }
+      });
+      proxy.on("exit", (code) => {
+        clearTimeout(timer);
+        reject(new Error(`the proxy exited with ${code}`));
+      });
+    });
+
+    const ask = async (models, status = 200) => {
+      loaded = models.map((name) => ({ name, model: name }));
+      psStatus = status;
+      const before = chats;
+      const started = performance.now();
+      const res = await fetch(`http://127.0.0.1:${port}/api/chat`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          model: "desk-model",
+          messages: [{ role: "user", content: "hi" }],
+        }),
+      });
+      const headersMs = performance.now() - started;
+      return {
+        status: res.status,
+        state: res.headers.get(DESK_STATE_HEADER),
+        headersMs,
+        body: await res.text(),
+        asked: chats - before,
+      };
+    };
+    const got = {
+      warm: await ask(["desk-model", "other"]),
+      cold: await ask([]),
+      busy: await ask(["eval-model"]),
+      down: await ask([], 500),
+    };
+    // Each line is written after its response ends.
+    for (let i = 0; i < 40; i++) {
+      got.outcomes = readdirSync(logs)
+        .flatMap((f) => readFileSync(join(logs, f), "utf8").split("\n"))
+        .filter(Boolean)
+        .map((l) => JSON.parse(l).outcome)
+        .sort();
+      if (got.outcomes.length >= 4) break;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    return got;
+  } finally {
+    proxy.kill();
+    ollama.close();
+    rmSync(logs, { recursive: true, force: true });
+  }
+}
+const desk = await runProxy().catch((err) => ({ error: err.message }));
+
+check("the desk proxy says warm, cold or busy before Ollama answers", () => {
+  assert(!desk.error, `desk/chat-log-proxy.mjs: ${desk.error}`);
+  const { warm, cold, busy, down } = desk;
+  const show = (o) =>
+    JSON.stringify({ ...o, headersMs: Math.round(o.headersMs) });
   assert(
-    name === DESK_STATE_HEADER,
-    `desk/chat-log-proxy.mjs sends ${name}, the Worker reads ${DESK_STATE_HEADER}`,
+    warm.status === 200 && warm.state === "warm" && warm.body.includes("Hi"),
+    `with the model loaded: ${show(warm)}`,
   );
   assert(
-    /\[STATE_HEADER\]: warm \? "warm" : "cold"/.test(proxy),
-    "can't find the proxy setting warm/cold -- did its shape change?",
+    cold.status === 200 && cold.state === "cold",
+    `with nothing loaded: ${show(cold)}`,
   );
+  // Anything but a 200 sends the Worker to Poe before the stream starts.
+  assert(
+    busy.status === 503 &&
+      busy.state === null &&
+      busy.asked === 0 &&
+      JSON.parse(busy.body).error === "busy",
+    `with only another model loaded: ${show(busy)}`,
+  );
+  assert(down.status === 502, `with /api/ps failing: ${show(down)}`);
   // The Worker's short HEADERS_TIMEOUT_MS relies on this order.
-  const flushed = proxy.indexOf("res.flushHeaders()");
-  const asked = proxy.indexOf("fetch(`${OLLAMA}/api/chat`");
   assert(
-    flushed >= 0 && asked >= 0 && flushed < asked,
-    "the proxy must flush its headers before it asks Ollama for the answer",
+    warm.headersMs < OLLAMA_DELAY_MS && cold.headersMs < OLLAMA_DELAY_MS,
+    `headers waited for Ollama: ${Math.round(warm.headersMs)}ms`,
+  );
+  assert(
+    JSON.stringify(desk.outcomes) ===
+      JSON.stringify(["busy", "error", "ok", "ok"]),
+    `logged outcomes ${desk.outcomes}`,
   );
   assert(
     deskEvent("cold")?.cold === true &&
@@ -286,6 +415,7 @@ check("the desk proxy sends the cold/warm header the Worker reads", () => {
       deskEvent(null) === null,
     "deskEvent no longer maps cold/warm/absent to true/false/null",
   );
+  return `headers in ${Math.round(warm.headersMs)}ms`;
 });
 
 check(
