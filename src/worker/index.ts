@@ -53,11 +53,14 @@ const MAX_BODY_BYTES = 16_000;
 const HEADERS_TIMEOUT_MS = 5_000;
 
 /**
- * From the desk's headers to its first answer text. Its log has 22 cold starts
- * at 12.2-23.2s (2026-10-14 to 2026-10-20); one queued behind an eval's
+ * From the desk's headers to its first answer text. In its log (2026-10-14 to
+ * 2026-10-20), 60 warm answers started within 8.5s unless queued behind other
+ * questions, and 25 cold starts within 25.0s: that one first swapped out an
+ * idle 30B eval model, and loading took 15.9s. One queued behind an eval's
  * answers took 52.9s.
  */
-const ANSWER_START_TIMEOUT_MS = 30_000;
+const WARM_START_MS = 30_000;
+const COLD_START_MS = 45_000;
 
 /** Poe's first byte came after about 2s (2026-10-19). */
 const POE_HEADERS_TIMEOUT_MS = 15_000;
@@ -178,7 +181,9 @@ async function chat(request: Request, env: Env): Promise<Response> {
   }
 
   const first = deskEvent(upstream.headers.get(DESK_STATE_HEADER));
-  return stream(deskOrPoe(env, turns, asked, upstream.body, first));
+  // No header is an older proxy, which may be loading too.
+  const hold = first?.cold === false ? WARM_START_MS : COLD_START_MS;
+  return stream(deskOrPoe(env, turns, asked, upstream.body, first, hold));
 }
 
 /**
@@ -193,6 +198,7 @@ function deskOrPoe(
   asked: string[],
   desk: ReadableStream<Uint8Array>,
   first: object | null,
+  hold: number,
 ): ReadableStream<Uint8Array> {
   const gone = new AbortController();
   let source: ReadableStreamDefaultReader<Uint8Array> | null = null;
@@ -204,11 +210,7 @@ function deskOrPoe(
     async pull(out) {
       if (!source) {
         const since = Date.now();
-        const answer = await untilAnswer(
-          desk,
-          ANSWER_START_TIMEOUT_MS,
-          gone.signal,
-        );
+        const answer = await untilAnswer(desk, hold, gone.signal);
         let picked = answer?.pipeThrough(relay(asked)) ?? null;
         if (!picked && !gone.signal.aborted) {
           console.log(`desk: no answer text after ${Date.now() - since}ms`);
