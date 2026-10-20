@@ -34,10 +34,16 @@ if (!dirs.length || (mode === "--compare" && dirs.length !== 2)) {
   process.exit(1);
 }
 
+// A power cut leaves zero bytes where unflushed lines were, and the next line
+// written goes straight after them.
+const linesOf = (path) =>
+  existsSync(path)
+    ? readFileSync(path, "utf8").replaceAll("\0", "").split("\n")
+    : [];
+
 function rowsOf(path) {
   const rows = new Map();
-  if (!existsSync(path)) return rows;
-  for (const line of readFileSync(path, "utf8").split("\n")) {
+  for (const line of linesOf(path)) {
     if (!line) continue;
     try {
       const row = JSON.parse(line);
@@ -49,18 +55,15 @@ function rowsOf(path) {
   return rows;
 }
 const callsOf = (path) =>
-  existsSync(path)
-    ? readFileSync(path, "utf8")
-        .split("\n")
-        .filter(Boolean)
-        .flatMap((l) => {
-          try {
-            return [JSON.parse(l)];
-          } catch {
-            return [];
-          }
-        })
-    : [];
+  linesOf(path)
+    .filter(Boolean)
+    .flatMap((l) => {
+      try {
+        return [JSON.parse(l)];
+      } catch {
+        return [];
+      }
+    });
 
 const byCase = new Map(CASES.map((c) => [c.id, c]));
 

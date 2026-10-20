@@ -99,7 +99,10 @@ mkdirSync(dir, { recursive: true });
 function rowsOf(path) {
   const rows = new Map();
   if (!existsSync(path)) return rows;
-  for (const line of readFileSync(path, "utf8").split("\n")) {
+  // A power cut leaves zero bytes where unflushed lines were, and the next
+  // line written goes straight after them.
+  const text = readFileSync(path, "utf8").replaceAll("\0", "");
+  for (const line of text.split("\n")) {
     if (!line) continue;
     try {
       const row = JSON.parse(line);
