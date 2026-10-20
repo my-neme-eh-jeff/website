@@ -221,6 +221,60 @@ function books(size: Size): Part {
   };
 }
 
+/**
+ * The notes float up and left of what they name, the PC's further, with a
+ * short straight tick each: a curved arrow read as one more cable. Top-left
+ * cell per grid.
+ */
+const NOTES: Record<
+  string,
+  Record<Size, { at: [number, number]; rows: string[] }>
+> = {
+  pc: {
+    wide: {
+      at: [1, 10],
+      rows: ["# my desktop at home", "  # answers your questions"],
+    },
+    narrow: {
+      at: [1, 4],
+      rows: ["# my desktop at home", "  # answers your questions"],
+    },
+  },
+  "pc-tick": {
+    wide: { at: [12, 12], rows: ["|", "v"] },
+    narrow: { at: [7, 6], rows: ["|", "v"] },
+  },
+  books: {
+    wide: { at: [64, 20], rows: ["# my reading pile"] },
+    narrow: { at: [37, 11], rows: ["# my reading pile"] },
+  },
+  "books-tick": {
+    wide: { at: [72, 21], rows: ["|", "v"] },
+    // A row higher would put the note in the lamp's shade at rest.
+    narrow: { at: [40, 12], rows: ["v"] },
+  },
+};
+
+const notes = (): Part[] =>
+  Object.entries(NOTES).map(([id, grids]) => ({
+    id: `note-${id}`,
+    z: 5,
+    sprite: Object.fromEntries(
+      (["wide", "narrow"] as const).map((size) => {
+        const { at, rows } = grids[size];
+        return [
+          size,
+          {
+            at: mid(size, ...at),
+            anchor: [0, 0],
+            rows,
+            kinds: rows.map((l) => l.replace(/\S/g, "n")),
+          },
+        ];
+      }),
+    ),
+  }));
+
 export const SCENE: Scene = {
   id: "desk",
   parts: [
@@ -293,22 +347,8 @@ export const SCENE: Scene = {
         narrow: { at: [392, 252], anchor: [0, 4], ...MUG_NARROW },
       },
     },
-    {
-      id: "arrow",
-      z: 5,
-      // Today's curve, moved half as far as the box: it still floats between the note and the PC.
-      lines: ["M88 96 C 130 102, 152 126, 158 150"],
-      sprite: {
-        wide: { at: [160, 154], anchor: [0, 0], rows: ["v"] },
-        narrow: { at: [160, 154], anchor: [0, 0], rows: ["v"] },
-      },
-    },
+    ...notes(),
   ],
-  note: {
-    x: 18,
-    y: 44,
-    lines: ["# my desktop at home", "# answers your questions"],
-  },
   // On the panel's right edge: aimed further left, the lamp's springs lean it
   // 20 degrees off today's upright arm; here it's 14, the lean of the drawing
   // the page ships, and the x-ray still covers the PC.

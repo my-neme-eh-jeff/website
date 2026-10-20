@@ -1410,6 +1410,18 @@ function worker() {
     const extra = new Uint8Array(n * 4);
     const lit = new Float32Array(n);
     const led = new Float32Array(n);
+    // The notes sit where the lamp lights the wall: keep its grain out from between their words.
+    const quiet = new Uint8Array(n);
+    for (let r = 0; r < rows; r++) {
+      let last = -9;
+      for (let c = 0; c < cols; c++) {
+        if (desk.kind[r * cols + c] !== KIND.note) continue;
+        const from = c - last <= 3 ? last : c - 2;
+        for (let x = Math.max(0, from); x <= Math.min(cols - 1, c + 2); x++)
+          quiet[r * cols + x] = 1;
+        last = c;
+      }
+    }
     for (let i = 0; i < n; i++) {
       const k = desk.kind[i]!;
       mask[i * 4] = Math.max(0, desk.chars[i]!.charCodeAt(0) - FIRST);
@@ -1419,7 +1431,11 @@ function worker() {
       aux[i * 4] = occ[i] || stand?.occ[i] ? 255 : 0;
       aux[i * 4 + 1] = inside.glyph[i]!;
       aux[i * 4 + 2] = inside.ink[i]!;
-      aux[i * 4 + 3] = roles.wave >= 0 && owner[i] === roles.wave ? 255 : 0;
+      aux[i * 4 + 3] =
+        (roles.wave >= 0 && owner[i] === roles.wave) ||
+        (quiet[i] && k === KIND.empty)
+          ? 255
+          : 0;
       extra[i * 4] = desk.mat[i]!;
       lit[i] = k === KIND.line || k === KIND.joint ? 0.8 : desk.dens[i]!;
       led[i] = k === KIND.led ? 1 : 0;
