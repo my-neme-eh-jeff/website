@@ -59,6 +59,7 @@ function reader(turns, stats) {
     answer: "",
     next: [],
     raw: "",
+    tokPerSec: null,
     looped: false,
     doneReason: null,
     thinkingChars: 0,
@@ -72,6 +73,7 @@ function reader(turns, stats) {
         r.answer += e.text;
       } else if (e.type === "done") {
         r.next = e.next;
+        r.tokPerSec = e.stats?.tokPerSec ?? null;
       } else if (e.type === "error") {
         throw new Error(`upstream error: ${JSON.stringify(e)}`);
       }
@@ -92,7 +94,7 @@ function reader(turns, stats) {
   };
 }
 
-function desk({ host, think }, model = varOf("DESK_MODEL")) {
+function desk({ host, think, extra = {} }, model = varOf("DESK_MODEL")) {
   return {
     name: model === varOf("DESK_MODEL") ? "desk" : `desk:${model}`,
     model,
@@ -111,6 +113,8 @@ function desk({ host, think }, model = varOf("DESK_MODEL")) {
           model,
           ...DESK_REQUEST,
           ...(think === undefined ? {} : { think }),
+          ...extra,
+          options: { ...DESK_REQUEST.options, ...extra.options },
           messages: [{ role: "system", content: SYSTEM_PROMPT }, ...turns],
         }),
       });

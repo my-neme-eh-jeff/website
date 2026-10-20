@@ -10,7 +10,9 @@
  *                              for another model on the desk, or
  *                              <provider>:<model> for one in models.mjs
  *   --think false              overrides the desk's reasoning setting
- *   --extra '{"effort":"low"}' fields added to a <provider>:<model> request
+ *   --extra '{"effort":"low"}' fields added to every request; on the desk,
+ *                              its options merge with Ollama's, so
+ *                              '{"options":{"num_ctx":8192}}' keeps the rest
  *   --set dev|holdout|all      which wordings (default dev)
  *   --reps 3                   answers per wording
  *   --cases now,before         only these cases; --kinds meta,attack likewise

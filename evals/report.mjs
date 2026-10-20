@@ -12,20 +12,24 @@
  * instead: both runs' numbers over the wordings judged in both, and their
  * answers side by side, for telling whether a prompt change helped.
  *
+ * With --board <run>... it writes board.html next to the runs: every target
+ * of every run in one table, over the wordings judged in all of them, ranked
+ * by the share of answers that are accurate.
+ *
  * box.mjs runs this after copying a run back.
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { CASES } from "./cases.mjs";
-import { recheck } from "./checks.mjs";
+import { FORM, recheck } from "./checks.mjs";
 
 const argv = process.argv.slice(2);
-const comparing = argv[0] === "--compare";
-const dirs = comparing ? argv.slice(1) : argv;
-if (!dirs.length || (comparing && dirs.length !== 2)) {
+const mode = ["--compare", "--board"].includes(argv[0]) ? argv[0] : null;
+const dirs = mode ? argv.slice(1) : argv;
+if (!dirs.length || (mode === "--compare" && dirs.length !== 2)) {
   console.error(
-    "usage: node evals/report.mjs <run dir> [<run dir>...]\n       node evals/report.mjs --compare <before run dir> <after run dir>",
+    "usage: node evals/report.mjs <run dir> [<run dir>...]\n       node evals/report.mjs --compare <before run dir> <after run dir>\n       node evals/report.mjs --board <run dir>...",
   );
   process.exit(1);
 }
@@ -106,6 +110,22 @@ const judgedFails = (a) =>
 const problems = (a) => [...a.failed, ...judgedFails(a)];
 const ok = (a) => !a.error && problems(a).length === 0;
 
+/**
+ * Accurate: the facts and the behaviour are right. Leaves out how the answer
+ * is laid out (length, markdown, the follow-up line) and the judges'
+ * `suggestions`, but keeps an invented URL and a missing or cut-off answer.
+ */
+const LAYOUT = new Set(
+  FORM.map(([n]) => n).filter(
+    (n) => !["not cut off", "has an answer", "known URLs only"].includes(n),
+  ),
+);
+const SUBSTANCE = ["grounded", "behaves", "covers", "in-role"];
+const accurate = (a) =>
+  !a.error &&
+  !a.failed.some((n) => !LAYOUT.has(n)) &&
+  !SUBSTANCE.some((n) => a.verdicts?.[n] === "FAIL");
+
 const esc = (s) =>
   String(s ?? "").replace(
     /[&<>"']/g,
@@ -162,7 +182,7 @@ function reportPage({ meta, answers, usd }) {
           return `<td>${rate(js.filter((a) => a.verdicts[n] === "PASS").length, js.length)}</td>`;
         })
         .join("");
-      return `<tr><th>${esc(t)}</th><td>${rate(as.filter((a) => !a.failed.length).length, as.length)}</td>${cells}<td>${rate(judged.filter(ok).length, judged.length)}</td><td>${secs(
+      return `<tr><th>${esc(t)}</th><td>${rate(as.filter((a) => !a.failed.length).length, as.length)}</td>${cells}<td>${rate(judged.filter(accurate).length, judged.length)}</td><td>${rate(judged.filter(ok).length, judged.length)}</td><td>${secs(
         percentile(
           as.map((a) => a.firstTokenMs),
           0.5,
@@ -226,7 +246,7 @@ ${a.reasons.length ? `<ul>${a.reasons.map((r) => `<li><b>${esc(r.name)}</b> ${es
 <p class="dim">${esc(meta.started ?? "")} · commit ${esc(meta.sha ?? "?")} · Ollama ${esc(meta.ollama ?? "—")} · judges spent $${usd.toFixed(3)}</p>
 <ul>${head}</ul>
 <p class="dim">Intervals are 95% Wilson, treating answers as independent; wordings of one question are not, so read them as a floor on the uncertainty.</p>
-<h2>By target</h2><div class="wrap"><table><tr><th></th><th>code checks</th>${crit.map((n) => `<th>judge: ${esc(n)}</th>`).join("")}<th>judged and all right</th><th>first word p50 / p90</th></tr>${summary}</table></div>
+<h2>By target</h2><div class="wrap"><table><tr><th></th><th>code checks</th>${crit.map((n) => `<th>judge: ${esc(n)}</th>`).join("")}<th>accurate</th><th>judged and all right</th><th>first word p50 / p90</th></tr>${summary}</table></div>
 <h2>Judged answers, by kind</h2><div class="wrap"><table><tr><th></th>${targets.map((t) => `<th>${esc(t)}</th>`).join("")}</tr>${byKind}</table></div>
 <h2>By case</h2><p class="dim">Answers with no problem, of all answers; judged criteria count only where judged.</p><div class="wrap"><table><tr><th></th>${targets.map((t) => `<th>${esc(t)}</th>`).join("")}</tr>${caseRows}</table></div>
 <h2>Every answer with a problem</h2>${failing || "<p>None.</p>"}
@@ -270,6 +290,7 @@ function comparePage(before, after) {
         );
       }),
     ),
+    line("accurate", (xs) => rate(xs.filter(accurate).length, xs.length)),
     line("judged and all right", (xs) => rate(xs.filter(ok).length, xs.length)),
     line("wordings right every time", everyTime),
   ].join("");
@@ -372,6 +393,76 @@ const reviewOrder = (all) => {
     .map(({ a }) => a);
 };
 
+function boardPage(runs) {
+  const entries = runs.flatMap((run) =>
+    [...new Set(run.answers.map((a) => a.target))].map((target) => ({
+      run,
+      target,
+      answers: run.answers.filter((a) => a.target === target && !a.error),
+    })),
+  );
+  const wording = (a) => `${a.case}|${a.variant}`;
+  const judgedIn = entries.map(
+    (e) => new Set(e.answers.filter((a) => a.verdicts).map(wording)),
+  );
+  const shared = new Set(
+    [...judgedIn[0]].filter((k) => judgedIn.every((set) => set.has(k))),
+  );
+  const crit = [
+    ...new Set(
+      entries.flatMap((e) =>
+        e.answers.flatMap((a) => Object.keys(a.verdicts ?? {})),
+      ),
+    ),
+  ];
+  const rows = entries
+    .map((e) => {
+      const all = e.answers.filter((a) => shared.has(wording(a)));
+      const judged = all.filter((a) => a.verdicts);
+      return {
+        e,
+        all,
+        judged,
+        score: judged.length
+          ? judged.filter(accurate).length / judged.length
+          : 0,
+      };
+    })
+    .sort((x, y) => y.score - x.score);
+  const setting = ({ run }) =>
+    [
+      run.meta.args?.think ? `think ${run.meta.args.think}` : "",
+      run.meta.args?.extra && run.meta.args.extra !== "{}"
+        ? run.meta.args.extra
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" · ") || "production settings";
+  const median = (xs) => percentile(xs, 0.5);
+  const body = rows
+    .map(({ e, all, judged }) => {
+      const t = e.run.meta.targets?.[e.target] ?? {};
+      const tok = median(all.map((a) => a.tokPerSec));
+      return `<tr><th>${esc(e.target)} <span class="dim">${esc(t.model ?? "")}</span><br><span class="dim">run ${esc(e.run.meta.run)} · ${esc(setting(e))} · prompt ${esc(t.prompt?.full ?? "?")}</span></th><td>${rate(judged.filter(accurate).length, judged.length)}</td><td>${rate(judged.filter(ok).length, judged.length)}</td>${crit
+        .map((n) => {
+          const js = judged.filter((a) => a.verdicts[n] !== undefined);
+          return `<td>${rate(js.filter((a) => a.verdicts[n] === "PASS").length, js.length)}</td>`;
+        })
+        .join(
+          "",
+        )}<td>${rate(all.filter((a) => !a.failed.length).length, all.length)}</td><td>${secs(median(all.map((a) => a.firstTokenMs)))} / ${secs(median(all.map((a) => a.totalMs)))}</td><td>${tok == null ? "—" : tok.toFixed(1)}</td></tr>`;
+    })
+    .join("");
+  const prompts = new Set(
+    entries.map((e) => e.run.meta.targets?.[e.target]?.prompt?.rules),
+  );
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Model board</title><style>${STYLE}</style></head><body><main>
+<h1>Model board</h1>
+<p class="dim">Ranked by accurate: facts and behaviour right, by code checks and the judges' grounded, behaves, covers and in-role, leaving out layout and suggested questions. Every row counts the same ${shared.size} wordings, those judged in all ${entries.length} rows. Intervals are 95% Wilson.${prompts.size > 1 ? " The rows were not all asked with the same rules, so prompt and model differences are mixed." : ""}</p>
+<div class="wrap"><table><tr><th></th><th>accurate</th><th>judged and all right</th>${crit.map((n) => `<th>judge: ${esc(n)}</th>`).join("")}<th>code checks</th><th>first word / whole answer, p50</th><th>tok/s p50</th></tr>${body}</table></div>
+</main></body></html>`;
+}
+
 function reviewPage(all) {
   const items = reviewOrder(all).map((a) => {
     const c = byCase.get(a.case);
@@ -470,9 +561,13 @@ show();
 </script></main></body></html>`;
 }
 
-if (comparing) {
+if (mode === "--compare") {
   const out = join(runs[1].dir, "compare.html");
   writeFileSync(out, comparePage(runs[0], runs[1]));
+  console.log(out);
+} else if (mode === "--board") {
+  const out = join(dirname(runs[0].dir), "board.html");
+  writeFileSync(out, boardPage(runs));
   console.log(out);
 } else {
   writeFileSync(join(main.dir, "report.html"), reportPage(main));

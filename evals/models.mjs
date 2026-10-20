@@ -62,6 +62,7 @@ const MAKERS = [
   [/^(mistral|magistral|devstral)/i, "mistral"],
   [/^(llama|muse)/i, "meta"],
   [/^minimax/i, "minimax"],
+  [/^nemotron/i, "nvidia"],
 ];
 
 export const makerOf = (model) =>
