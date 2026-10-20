@@ -1,0 +1,34 @@
+{
+  "run": "20261019T085124",
+  "started": "2026-10-19T08:51:25.373Z",
+  "sha": "8015c73-dirty",
+  "node": "v24.21.0",
+  "args": {
+    "sha": "8015c73-dirty",
+    "run": "20261019T085124",
+    "target": "poe:claude-haiku-5.5",
+    "extra": "{\"effort\":\"low\"}",
+    "cases": "now,how,best",
+    "reps": "1",
+    "set": "dev",
+    "kinds": "",
+    "resume": "",
+    "ollama": "http://127.0.0.1:11434",
+    "judge": false,
+    "judge-only": false,
+    "judge-reps": "1",
+    "budget-usd": "1",
+    "floor-usd": "5"
+  },
+  "targets": {
+    "poe:claude-haiku-5.5": {
+      "model": "claude-haiku-5.5",
+      "maker": "anthropic",
+      "prompt": {
+        "full": "d20da8ed4454",
+        "rules": "8222138c95d8",
+        "facts": "e293e6a059d8"
+      }
+    }
+  }
+}

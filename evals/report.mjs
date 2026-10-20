@@ -12,9 +12,9 @@
  * instead: both runs' numbers over the wordings judged in both, and their
  * answers side by side, for telling whether a prompt change helped.
  *
- * With --board <run>... it writes board.html next to the runs: every target
- * of every run in one table, over the wordings judged in all of them, each
- * counted once, ranked by the share that are accurate.
+ * With --board <run>... it writes board.html and board.md next to the runs:
+ * every target of every run in one table, over the wordings judged in all of
+ * them, each counted once, ranked by the share that are accurate.
  *
  * box.mjs runs this after copying a run back.
  */
@@ -140,11 +140,17 @@ const esc = (s) =>
       ],
   );
 const pct = (x) => `${Math.round(x * 100)}%`;
-const rate = (k, n) => {
+const rateParts = (k, n) => {
   const [lo, hi] = wilson(k, n);
-  return n
-    ? `<b>${Number.isInteger(k) ? k : k.toFixed(1)}/${n}</b> <span class="dim">${pct(k / n)} (${pct(lo)}–${pct(hi)})</span>`
-    : "—";
+  return [
+    `${Number.isInteger(k) ? k : k.toFixed(1)}/${n}`,
+    `${pct(k / n)} (${pct(lo)}–${pct(hi)})`,
+  ];
+};
+const rate = (k, n) => {
+  if (!n) return "—";
+  const [count, share] = rateParts(k, n);
+  return `<b>${count}</b> <span class="dim">${share}</span>`;
 };
 
 function percentile(xs, q) {
@@ -398,7 +404,7 @@ const reviewOrder = (all) => {
     .map(({ a }) => a);
 };
 
-function boardPage(runs) {
+function board(runs) {
   const entries = runs.flatMap((run) =>
     [...new Set(run.answers.map((a) => a.target))].map((target) => ({
       run,
@@ -435,38 +441,94 @@ function boardPage(runs) {
       return { e, all, judged, score: n ? k / n : 0 };
     })
     .sort((x, y) => y.score - x.score);
-  const setting = ({ run }) =>
-    [
-      run.meta.args?.think ? `think ${run.meta.args.think}` : "",
-      run.meta.args?.extra && run.meta.args.extra !== "{}"
-        ? run.meta.args.extra
-        : "",
-    ]
-      .filter(Boolean)
-      .join(" · ") || "production settings";
   const median = (xs) => percentile(xs, 0.5);
-  const body = rows
-    .map(({ e, all, judged }) => {
-      const t = e.run.meta.targets?.[e.target] ?? {};
-      const tok = median(all.map((a) => a.tokPerSec));
-      return `<tr><th>${esc(e.target)} <span class="dim">${esc(t.model ?? "")}</span><br><span class="dim">run ${esc(e.run.meta.run)} · ${esc(setting(e))} · prompt ${esc(t.prompt?.full ?? "?")}</span></th><td>${rate(...share(judged, accurate))}</td><td>${rate(...share(judged, ok))}</td>${crit
-        .map((n) => {
-          const js = judged.filter((a) => a.verdicts?.[n] !== undefined);
-          return `<td>${rate(...share(js, (a) => a.verdicts[n] === "PASS"))}</td>`;
-        })
-        .join(
-          "",
-        )}<td>${rate(...share(all, (a) => !a.failed.length))}</td><td>${secs(median(all.map((a) => a.firstTokenMs)))} / ${secs(median(all.map((a) => a.totalMs)))}</td><td>${tok == null ? "—" : tok.toFixed(1)}</td></tr>`;
-    })
-    .join("");
+  const lines = rows.map(({ e, all, judged }) => {
+    const t = e.run.meta.targets?.[e.target] ?? {};
+    const tok = median(all.map((a) => a.tokPerSec));
+    return {
+      target: e.target,
+      model: t.model ?? "",
+      run: e.run.meta.run,
+      think: e.run.meta.args?.think,
+      extra:
+        e.run.meta.args?.extra && e.run.meta.args.extra !== "{}"
+          ? e.run.meta.args.extra
+          : "",
+      prompt: t.prompt?.full ?? "?",
+      cells: [
+        share(judged, accurate),
+        share(judged, ok),
+        ...crit.map((n) =>
+          share(
+            judged.filter((a) => a.verdicts?.[n] !== undefined),
+            (a) => a.verdicts[n] === "PASS",
+          ),
+        ),
+        share(all, (a) => !a.failed.length),
+      ],
+      speed: `${secs(median(all.map((a) => a.firstTokenMs)))} / ${secs(median(all.map((a) => a.totalMs)))}`,
+      tok: tok == null ? "—" : tok.toFixed(1),
+    };
+  });
   const prompts = new Set(
     entries.map((e) => e.run.meta.targets?.[e.target]?.prompt?.rules),
   );
+  return {
+    note: `Ranked by accurate: facts and behaviour right, by code checks and the judges' grounded, behaves, covers and in-role, leaving out layout and suggested questions. A blank answer counts as judged and wrong. Every row counts the same ${shared.size} wordings, those judged in all ${entries.length} rows, each once however many times a run asked it. Intervals are 95% Wilson.${prompts.size > 1 ? " The rows were not all asked with the same rules, so prompt and model differences are mixed." : ""}`,
+    heads: [
+      "accurate",
+      "judged and all right",
+      ...crit.map((n) => `judge: ${n}`),
+      "code checks",
+      "first word / whole answer, p50",
+      "tok/s p50",
+    ],
+    lines,
+  };
+}
+
+const settingOf = (l, code = (s) => s) =>
+  [l.think ? `think ${l.think}` : "", l.extra ? code(l.extra) : ""]
+    .filter(Boolean)
+    .join(" · ") || "production settings";
+
+function boardPage(b) {
+  const body = b.lines
+    .map(
+      (l) =>
+        `<tr><th>${esc(l.target)} <span class="dim">${esc(l.model)}</span><br><span class="dim">run ${esc(l.run)} · ${esc(settingOf(l))} · prompt ${esc(l.prompt)}</span></th>${l.cells.map((c) => `<td>${rate(...c)}</td>`).join("")}<td>${l.speed}</td><td>${l.tok}</td></tr>`,
+    )
+    .join("");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Model board</title><style>${STYLE}</style></head><body><main>
 <h1>Model board</h1>
-<p class="dim">Ranked by accurate: facts and behaviour right, by code checks and the judges' grounded, behaves, covers and in-role, leaving out layout and suggested questions. A blank answer counts as judged and wrong. Every row counts the same ${shared.size} wordings, those judged in all ${entries.length} rows, each once however many times a run asked it. Intervals are 95% Wilson.${prompts.size > 1 ? " The rows were not all asked with the same rules, so prompt and model differences are mixed." : ""}</p>
-<div class="wrap"><table><tr><th></th><th>accurate</th><th>judged and all right</th>${crit.map((n) => `<th>judge: ${esc(n)}</th>`).join("")}<th>code checks</th><th>first word / whole answer, p50</th><th>tok/s p50</th></tr>${body}</table></div>
+<p class="dim">${esc(b.note)}</p>
+<div class="wrap"><table><tr><th></th>${b.heads.map((h) => `<th>${esc(h)}</th>`).join("")}</tr>${body}</table></div>
 </main></body></html>`;
+}
+
+/** The same table in Markdown, for a write-up that has to render on GitHub. */
+function boardMarkdown(b) {
+  const cell = ([k, n]) => {
+    if (!n) return "—";
+    const [count, share] = rateParts(k, n);
+    return `**${count}** ${share}`;
+  };
+  const row = (xs) => `| ${xs.join(" | ")} |`;
+  return [
+    b.note,
+    "",
+    row(["", ...b.heads]),
+    row(["", ...b.heads].map(() => "---")),
+    ...b.lines.map((l) =>
+      row([
+        `**${l.target.endsWith(l.model) ? l.target : `${l.target} (${l.model})`}**<br>run ${l.run} · ${settingOf(l, (s) => `\`${s}\``)} · prompt ${l.prompt}`,
+        ...l.cells.map(cell),
+        l.speed,
+        l.tok,
+      ]),
+    ),
+    "",
+  ].join("\n");
 }
 
 function reviewPage(all) {
@@ -572,9 +634,11 @@ if (mode === "--compare") {
   writeFileSync(out, comparePage(runs[0], runs[1]));
   console.log(out);
 } else if (mode === "--board") {
-  const out = join(dirname(runs[0].dir), "board.html");
-  writeFileSync(out, boardPage(runs));
-  console.log(out);
+  const b = board(runs);
+  const out = join(dirname(runs[0].dir), "board");
+  writeFileSync(`${out}.html`, boardPage(b));
+  writeFileSync(`${out}.md`, boardMarkdown(b));
+  console.log(`${out}.html\n${out}.md`);
 } else {
   writeFileSync(join(main.dir, "report.html"), reportPage(main));
   writeFileSync(

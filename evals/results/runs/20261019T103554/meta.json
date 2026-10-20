@@ -1,0 +1,49 @@
+{
+  "run": "20261019T103554",
+  "started": "2026-10-19T10:35:54.783Z",
+  "sha": "a3c3046-dirty",
+  "node": "v24.21.0",
+  "args": {
+    "sha": "a3c3046-dirty",
+    "resume": "20261019T103554",
+    "target": "desk,fallback",
+    "set": "dev",
+    "kinds": "answerable,unanswerable,false-premise,opinion,multi-turn",
+    "reps": "1",
+    "judge": true,
+    "judge-reps": "1",
+    "budget-usd": "1",
+    "cases": "",
+    "run": "",
+    "ollama": "http://127.0.0.1:11434",
+    "extra": "{}",
+    "judge-only": false,
+    "floor-usd": "5"
+  },
+  "targets": {
+    "desk": {
+      "model": "gpt-oss-16k:20b",
+      "maker": "openai",
+      "prompt": {
+        "full": "5b194f3f1291",
+        "rules": "0211d3d47786",
+        "facts": "e293e6a059d8"
+      },
+      "onDesk": true
+    },
+    "fallback": {
+      "model": "ds-v4.1-flash-1017",
+      "maker": "deepseek",
+      "prompt": {
+        "full": "17c095dc2022",
+        "rules": "de1a8c4ebec8",
+        "facts": "e293e6a059d8"
+      },
+      "onDesk": false
+    }
+  },
+  "ollama": "0.34.4",
+  "resumed": [
+    "2026-10-19T10:55:32.169Z"
+  ]
+}

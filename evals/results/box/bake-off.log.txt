@@ -1,0 +1,10 @@
+== 2026-10-20T10:01:08Z gemma4:26b-a4b-it-qat -> run 20261020T100108
+== 2026-10-20T10:21:44Z gemma4:26b-a4b-it-qat -> run 20261020T100108
+== 2026-10-20T10:21:45Z gemma4:26b-a4b-it-qat finished with exit 0
+== 2026-10-20T10:50:45Z qwen3.6:35b-a3b-q4_K_M -> run 20261020T105045
+== 2026-10-20T11:12:12Z qwen3.6:35b-a3b-q4_K_M finished with exit 0
+== 2026-10-20T11:15:12Z qwen3.6:27b-q4_K_M -> run 20261020T111512
+== 2026-10-20T14:07:14Z qwen3.6:27b-q4_K_M -> run 20261020T111512
+== 2026-10-20T14:10:00Z qwen3.6:27b-q4_K_M finished with exit 0
+== 2026-10-20T14:13:00Z glm-4.7-flash:q4_K_M -> run 20261020T141300
+== 2026-10-20T14:34:37Z glm-4.7-flash:q4_K_M finished with exit 0

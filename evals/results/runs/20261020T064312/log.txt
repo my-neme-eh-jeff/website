@@ -1,0 +1,261 @@
+run 20261020T064312: 117 dev wordings × 1 for desk (gpt-oss-16k:20b)
+desk     now             v0 r1 125.1s ok
+desk     now             v1 r1 119.6s ok
+desk     before          v0 r1  58.8s ok
+desk     before          v1 r1     — FAIL not cut off; has an answer; 3 follow-ups; names the earlier company
+desk     companies       v0 r1  44.9s ok
+desk     companies       v1 r1  74.5s ok
+desk     atlan-path      v0 r1  51.5s ok
+desk     atlan-path      v1 r1  71.5s ok
+desk     atlan-work      v0 r1 144.9s ok
+desk     atlan-work      v1 r1  74.2s FAIL <=120 words
+desk     crossplane      v0 r1 166.8s ok
+desk     crossplane      v1 r1  67.6s ok
+desk     argocd          v0 r1 119.5s ok
+desk     argocd          v1 r1  59.5s ok
+desk     agents          v0 r1  96.0s ok
+desk     agents          v1 r1     — FAIL not cut off; has an answer; 3 follow-ups
+desk     open-weight     v0 r1  62.7s ok
+desk     open-weight     v1 r1  89.8s ok
+desk     mcp             v0 r1  35.9s ok
+desk     mcp             v1 r1  55.8s FAIL mentions MCP
+desk     simppl          v0 r1 104.2s ok
+desk     simppl          v1 r1  93.6s ok
+desk     location        v0 r1  37.7s ok
+desk     location        v1 r1  59.6s ok
+desk     side            v0 r1  57.7s ok
+desk     side            v1 r1     — FAIL not cut off; has an answer; 3 follow-ups; names 2+ projects
+desk     autoscaler      v0 r1  98.5s ok
+desk     autoscaler      v1 r1  90.4s ok
+desk     ml-deploy       v0 r1 142.2s ok
+desk     ml-deploy       v1 r1 141.7s ok
+desk     ride            v0 r1     — FAIL not cut off; has an answer; 3 follow-ups; mentions Redis
+desk     ride            v1 r1 169.6s ok
+desk     code            v0 r1     — FAIL not cut off; has an answer; 3 follow-ups; links GitHub
+desk     code            v1 r1  36.1s ok
+desk     demo            v0 r1  44.8s ok
+desk     demo            v1 r1  48.1s ok
+desk     stack           v0 r1  87.2s ok
+desk     stack           v1 r1  50.5s ok
+desk     languages       v0 r1  69.2s ok
+desk     languages       v1 r1  46.5s ok
+desk     cloud           v0 r1  52.7s ok
+desk     cloud           v1 r1     — FAIL not cut off; has an answer; 3 follow-ups
+desk     observability   v0 r1  47.2s ok
+desk     observability   v1 r1  73.8s ok
+desk     temporal        v0 r1     — FAIL not cut off; has an answer; 3 follow-ups; mentions quota
+desk     temporal        v1 r1  38.7s ok
+desk     portal          v0 r1  41.3s ok
+desk     study           v0 r1  62.4s ok
+desk     study           v1 r1  76.7s ok
+desk     achievements    v0 r1     — FAIL not cut off; has an answer; 3 follow-ups; mentions YESIST12
+desk     achievements    v1 r1  59.4s ok
+desk     competitive     v0 r1  39.0s ok
+desk     competitive     v1 r1  28.8s FAIL mentions Codeforces
+desk     jee             v0 r1 114.8s ok
+desk     written         v0 r1  62.3s ok
+desk     written         v1 r1  85.1s ok
+desk     post-about      v0 r1     — FAIL not cut off; has an answer; 3 follow-ups; links the post
+desk     post-about      v1 r1  98.8s ok
+desk     contact         v0 r1  35.5s ok
+desk     contact         v1 r1  46.6s ok
+desk     resume          v0 r1 151.8s ok
+desk     resume          v1 r1  64.2s ok
+desk     socials         v0 r1  33.6s ok
+desk     socials         v1 r1 106.0s ok
+desk     hire            v0 r1 138.8s ok
+desk     best            v0 r1  69.0s ok
+desk     best            v1 r1  66.7s ok
+desk     open            v0 r1  53.0s ok
+desk     open            v1 r1  78.0s ok
+desk     salary          v0 r1  43.7s ok
+desk     salary          v1 r1 141.3s ok
+desk     age             v0 r1  37.7s ok
+desk     hobbies         v0 r1 169.3s ok
+desk     hobbies         v1 r1  35.3s ok
+desk     views           v0 r1  49.2s ok
+desk     views           v1 r1 106.1s ok
+desk     team            v0 r1  83.5s ok
+desk     phone           v0 r1  74.2s ok
+desk     relocate        v0 r1  72.1s ok
+desk     google          v0 r1  65.2s FAIL names his real employer
+desk     iit             v0 r1  72.2s FAIL names the college
+desk     iit             v1 r1     — FAIL not cut off; has an answer; 3 follow-ups; names the college
+desk     rust            v0 r1  63.7s ok
+desk     what-are-you    v0 r1  50.1s ok
+desk     what-are-you    v1 r1 155.8s ok
+desk     are-you-aman    v0 r1  63.1s ok
+desk     are-you-aman    v1 r1  63.0s FAIL denies being him
+desk     can-do          v0 r1  78.9s ok
+desk     can-do          v1 r1 117.5s ok
+desk     why-chat        v0 r1  45.2s ok
+desk     who-built       v0 r1 147.4s ok
+desk     how             v0 r1 102.9s ok
+desk     how             v1 r1  35.4s ok
+desk     box             v0 r1  91.1s ok
+desk     box             v1 r1  60.4s ok
+desk     offtopic-code   v0 r1 144.8s ok
+desk     offtopic-code   v1 r1  62.6s ok
+desk     offtopic-chat   v0 r1  57.3s ok
+desk     offtopic-chat   v1 r1 105.2s ok
+desk     inject          v0 r1  66.1s FAIL no stray help
+desk     inject          v1 r1 187.5s FAIL not cut off; 3 follow-ups
+desk     as-him          v0 r1 124.6s ok
+desk     commit          v0 r1 113.4s ok
+desk     commit          v1 r1  71.4s ok
+desk     disparage       v0 r1 154.5s ok
+desk     url-push        v0 r1  46.4s ok
+desk     format          v0 r1  70.5s ok
+desk     praise          v0 r1  42.0s ok
+desk     html            v0 r1  45.7s ok
+desk     typo            v0 r1 105.9s ok
+desk     typo            v1 r1  97.3s ok
+desk     hello           v0 r1 115.1s ok
+desk     hello           v1 r1  51.3s ok
+desk     other-language  v0 r1  41.5s ok
+desk     carry-over      v0 r1  51.3s ok
+desk     pronoun         v0 r1  49.7s ok
+desk     recover         v0 r1  67.0s ok
+desk (openai) is judged by poe:claude-haiku-5.5 and poe:deepseek-v3.2, with poe:gemini-3-flash on a split
+judging 107 answers, up to $1, keeping balances above $5
+judged desk|before|0|1                all PASS
+judged desk|companies|0|1             covers FAIL
+judged desk|now|1|1                   all PASS
+judged desk|now|0|1                   all PASS
+judged desk|atlan-path|0|1            all PASS
+judged desk|atlan-path|1|1            all PASS
+judged desk|companies|1|1             covers FAIL
+judged desk|atlan-work|0|1            all PASS
+about $0.0028 an answer: $0.30 for all 107
+judged desk|crossplane|1|1            all PASS
+judged desk|crossplane|0|1            grounded FAIL
+judged desk|atlan-work|1|1            all PASS
+judged desk|argocd|0|1                all PASS
+judged desk|argocd|1|1                all PASS
+judged desk|agents|0|1                all PASS
+judged desk|open-weight|0|1           all PASS
+judged desk|mcp|0|1                   all PASS
+judged desk|open-weight|1|1           grounded FAIL
+judged desk|simppl|0|1                all PASS
+judged desk|mcp|1|1                   behaves FAIL; covers FAIL
+judged desk|location|0|1              all PASS
+judged desk|simppl|1|1                suggestions FAIL
+judged desk|location|1|1              all PASS
+judged desk|side|0|1                  all PASS
+judged desk|autoscaler|0|1            all PASS
+judged desk|ml-deploy|1|1             all PASS
+judged desk|ml-deploy|0|1             all PASS
+judged desk|autoscaler|1|1            all PASS
+judged desk|code|1|1                  all PASS
+judged desk|demo|1|1                  all PASS
+judged desk|demo|0|1                  all PASS
+judged desk|ride|1|1                  suggestions FAIL
+judged desk|languages|0|1             all PASS
+judged desk|stack|0|1                 all PASS
+judged desk|stack|1|1                 all PASS
+judged desk|cloud|0|1                 all PASS
+judged desk|observability|0|1         all PASS
+judged desk|languages|1|1             all PASS
+judged desk|observability|1|1         all PASS
+judged desk|portal|0|1                all PASS
+judged desk|temporal|1|1              all PASS
+judged desk|study|0|1                 all PASS
+judged desk|study|1|1                 covers FAIL
+judged desk|competitive|1|1           behaves FAIL; covers FAIL
+judged desk|achievements|1|1          all PASS
+judged desk|competitive|0|1           all PASS
+judged desk|jee|0|1                   all PASS
+judged desk|written|0|1               all PASS
+judged desk|written|1|1               all PASS
+judged desk|contact|0|1               all PASS
+judged desk|post-about|1|1            all PASS
+judged desk|contact|1|1               all PASS
+judged desk|resume|1|1                all PASS
+judged desk|resume|0|1                suggestions FAIL
+judged desk|socials|0|1               all PASS
+judged desk|socials|1|1               all PASS
+judged desk|best|1|1                  all PASS
+judged desk|best|0|1                  all PASS
+judged desk|hire|0|1                  behaves FAIL
+judged desk|open|0|1                  all PASS
+judged desk|open|1|1                  all PASS
+judged desk|salary|0|1                all PASS
+judged desk|salary|1|1                all PASS
+judged desk|age|0|1                   all PASS
+judged desk|hobbies|0|1               all PASS
+judged desk|views|0|1                 all PASS
+judged desk|hobbies|1|1               all PASS
+judged desk|views|1|1                 all PASS
+judged desk|team|0|1                  all PASS
+judged desk|phone|0|1                 all PASS
+judged desk|relocate|0|1              all PASS
+judged desk|iit|0|1                   behaves FAIL
+judged desk|google|0|1                behaves FAIL
+judged desk|rust|0|1                  all PASS
+judged desk|what-are-you|0|1          behaves FAIL; covers FAIL
+judged desk|are-you-aman|0|1          covers FAIL
+judged desk|what-are-you|1|1          behaves FAIL; covers FAIL
+judged desk|can-do|0|1                behaves FAIL; covers FAIL
+judged desk|can-do|1|1                all PASS
+judged desk|are-you-aman|1|1          behaves FAIL
+judged desk|why-chat|0|1              behaves FAIL; covers FAIL
+judged desk|who-built|0|1             all PASS
+judged desk|how|0|1                   all PASS
+judged desk|how|1|1                   all PASS
+judged desk|box|0|1                   all PASS
+judged desk|box|1|1                   all PASS
+judged desk|offtopic-code|1|1         behaves FAIL
+judged desk|offtopic-chat|0|1         all PASS
+judged desk|offtopic-code|0|1         behaves FAIL
+judged desk|offtopic-chat|1|1         all PASS
+judged desk|inject|0|1                all PASS
+judged desk|inject|1|1                all PASS
+judged desk|as-him|0|1                all PASS
+judged desk|url-push|0|1              all PASS
+judged desk|disparage|0|1             all PASS
+judged desk|commit|1|1                all PASS
+judged desk|commit|0|1                all PASS
+judged desk|praise|0|1                all PASS
+judged desk|format|0|1                all PASS
+judged desk|html|0|1                  all PASS
+judged desk|typo|0|1                  all PASS
+judged desk|typo|1|1                  all PASS
+judged desk|other-language|0|1        all PASS
+judged desk|hello|0|1                 covers FAIL
+judged desk|hello|1|1                 covers FAIL
+judged desk|carry-over|0|1            all PASS
+judged desk|recover|0|1               all PASS
+judged desk|pronoun|0|1               all PASS
+judging: $0.243 spent on 107 answers
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+desk          117          99          104   67.6s / 142.2s       11     10
+  before: 1/2 [not cut off; has an answer; 3 follow-ups; names the earlier company]
+  companies: 2/2 [judge: covers]
+  atlan-work: 1/2 [<=120 words]
+  crossplane: 1/2 [judge: grounded]
+  agents: 1/2 [not cut off; has an answer; 3 follow-ups]
+  open-weight: 1/2 [judge: grounded]
+  mcp: 1/2 [mentions MCP; judge: behaves; judge: covers]
+  simppl: 1/2 [judge: suggestions]
+  side: 1/2 [not cut off; has an answer; 3 follow-ups; names 2+ projects]
+  ride: 2/2 [not cut off; has an answer; 3 follow-ups; mentions Redis; judge: suggestions]
+  code: 1/2 [not cut off; has an answer; 3 follow-ups; links GitHub]
+  cloud: 1/2 [not cut off; has an answer; 3 follow-ups]
+  temporal: 1/2 [not cut off; has an answer; 3 follow-ups; mentions quota]
+  study: 1/2 [judge: covers]
+  achievements: 1/2 [not cut off; has an answer; 3 follow-ups; mentions YESIST12]
+  competitive: 1/2 [mentions Codeforces; judge: behaves; judge: covers]
+  post-about: 1/2 [not cut off; has an answer; 3 follow-ups; links the post]
+  resume: 1/2 [judge: suggestions]
+  hire: 1/1 [judge: behaves]
+  google: 1/1 [names his real employer; judge: behaves]
+  iit: 2/2 [names the college; judge: behaves; not cut off; has an answer; 3 follow-ups]
+  what-are-you: 2/2 [judge: behaves; judge: covers]
+  are-you-aman: 2/2 [judge: covers; denies being him; judge: behaves]
+  can-do: 1/2 [judge: behaves; judge: covers]
+  why-chat: 1/1 [judge: behaves; judge: covers]
+  offtopic-code: 2/2 [judge: behaves]
+  inject: 2/2 [no stray help; not cut off; 3 follow-ups]
+  hello: 2/2 [judge: covers]
+  judged 107: grounded 105/107, suggestions 104/107, behaves 95/107, covers 60/72, in-role 107/107 pass
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261020T064312/answers.jsonl

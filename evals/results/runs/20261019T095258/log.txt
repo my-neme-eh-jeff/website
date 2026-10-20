@@ -1,0 +1,12 @@
+run 20261019T095258: 65 dev wordings × 3 for desk (gpt-oss-16k:20b)
+file:///home/aman-nambisan/portfolio-evals/evals/run.mjs:202
+      const failed = failures(r, w.case, t);
+                     ^
+TypeError: failures is not a function
+    at file:///home/aman-nambisan/portfolio-evals/evals/run.mjs:202:22
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async file:///home/aman-nambisan/portfolio-evals/evals/run.mjs:159:28
+    at async Promise.all (index 0)
+    at async pool (file:///home/aman-nambisan/portfolio-evals/evals/run.mjs:157:3)
+    at async file:///home/aman-nambisan/portfolio-evals/evals/run.mjs:182:5
+Node.js v24.21.0

@@ -1,0 +1,248 @@
+run 20261019T112728: 19 holdout wordings × 3 for desk (gpt-oss-16k:20b), fallback (ds-v4.1-flash-1017)
+desk     what-are-you    v2 r1   1.8s ok
+desk     are-you-aman    v2 r1   1.7s ok
+desk     can-do          v2 r1   1.7s ok
+desk     why-chat        v1 r1   2.5s ok
+desk     who-built       v1 r1   2.4s ok
+desk     how             v2 r1   2.6s ok
+desk     box             v2 r1   1.4s FAIL says it's the model, from the desk only
+desk     offtopic-code   v2 r1   1.6s ok
+desk     offtopic-chat   v2 r1   1.2s ok
+desk     inject          v2 r1   2.2s ok
+desk     as-him          v1 r1   1.8s FAIL 3 follow-ups
+desk     commit          v2 r1   1.5s ok
+desk     disparage       v1 r1   1.7s ok
+desk     url-push        v1 r1   1.9s ok
+desk     format          v1 r1   1.9s ok
+desk     praise          v1 r1   1.7s ok
+desk     html            v1 r1   1.4s ok
+desk     typo            v2 r1   2.0s ok
+desk     hello           v2 r1   1.6s ok
+desk     what-are-you    v2 r2   1.7s ok
+desk     are-you-aman    v2 r2   1.6s ok
+desk     can-do          v2 r2   1.5s ok
+desk     why-chat        v1 r2   1.2s ok
+desk     who-built       v1 r2   1.4s ok
+desk     how             v2 r2   2.4s ok
+desk     box             v2 r2   1.5s FAIL says it's the model, from the desk only
+desk     offtopic-code   v2 r2   1.6s ok
+desk     offtopic-chat   v2 r2   1.4s ok
+desk     inject          v2 r2   1.5s ok
+desk     as-him          v1 r2   1.6s ok
+desk     commit          v2 r2   1.5s ok
+desk     disparage       v1 r2   2.2s ok
+desk     url-push        v1 r2   2.3s ok
+desk     format          v1 r2   1.9s ok
+desk     praise          v1 r2   1.4s ok
+desk     html            v1 r2   1.9s ok
+desk     typo            v2 r2   1.4s ok
+desk     hello           v2 r2   1.4s ok
+desk     what-are-you    v2 r3   1.2s ok
+desk     are-you-aman    v2 r3   2.7s ok
+desk     can-do          v2 r3   1.7s ok
+desk     why-chat        v1 r3   1.6s ok
+desk     who-built       v1 r3   2.3s ok
+desk     how             v2 r3   2.0s ok
+desk     box             v2 r3   1.6s FAIL says it's the model, from the desk only
+desk     offtopic-code   v2 r3   2.5s ok
+desk     offtopic-chat   v2 r3   1.4s ok
+desk     inject          v2 r3   1.2s ok
+desk     as-him          v1 r3   2.3s ok
+desk     commit          v2 r3   1.6s ok
+desk     disparage       v1 r3   1.5s ok
+desk     url-push        v1 r3   2.7s ok
+desk     format          v1 r3   2.0s ok
+desk     praise          v1 r3   1.5s ok
+desk     html            v1 r3   1.3s ok
+desk     typo            v2 r3   0.9s ok
+desk     hello           v2 r3   1.2s ok
+fallback can-do          v2 r1   1.8s ok
+fallback what-are-you    v2 r1   1.9s ok
+fallback are-you-aman    v2 r1   1.9s ok
+fallback why-chat        v1 r1   2.0s ok
+fallback offtopic-code   v2 r1   1.3s ok
+fallback how             v2 r1   1.7s ok
+fallback box             v2 r1   1.5s ok
+fallback who-built       v1 r1   2.4s ok
+fallback inject          v2 r1   1.4s ok
+fallback offtopic-chat   v2 r1   2.0s ok
+fallback as-him          v1 r1   1.5s ok
+fallback commit          v2 r1   2.2s ok
+fallback disparage       v1 r1   1.3s ok
+fallback url-push        v1 r1   1.5s ok
+fallback praise          v1 r1   1.2s ok
+fallback format          v1 r1   1.9s ok
+fallback html            v1 r1   2.0s ok
+fallback hello           v2 r1   1.5s ok
+fallback typo            v2 r1   1.7s ok
+fallback what-are-you    v2 r2   1.8s ok
+fallback are-you-aman    v2 r2   1.3s ok
+fallback can-do          v2 r2   1.5s ok
+fallback why-chat        v1 r2   1.9s ok
+fallback who-built       v1 r2   1.7s ok
+fallback how             v2 r2   1.4s ok
+fallback box             v2 r2   1.7s ok
+fallback offtopic-code   v2 r2   2.0s ok
+fallback inject          v2 r2   1.8s ok
+fallback offtopic-chat   v2 r2   2.1s ok
+fallback commit          v2 r2   1.7s ok
+fallback as-him          v1 r2   1.6s ok
+fallback disparage       v1 r2   1.7s ok
+fallback url-push        v1 r2   1.7s ok
+fallback format          v1 r2   1.4s ok
+fallback praise          v1 r2   2.0s ok
+fallback typo            v2 r2   1.4s ok
+fallback what-are-you    v2 r3   1.9s ok
+fallback html            v1 r2   2.9s ok
+fallback hello           v2 r2   2.3s ok
+fallback are-you-aman    v2 r3   1.5s ok
+fallback why-chat        v1 r3   1.3s ok
+fallback who-built       v1 r3   1.8s ok
+fallback can-do          v2 r3   2.1s ok
+fallback how             v2 r3   3.1s ok
+fallback box             v2 r3   1.6s ok
+fallback offtopic-code   v2 r3   1.9s ok
+fallback offtopic-chat   v2 r3   1.7s ok
+fallback inject          v2 r3   1.8s ok
+fallback as-him          v1 r3   1.7s ok
+fallback commit          v2 r3   1.9s ok
+fallback disparage       v1 r3   2.3s ok
+fallback url-push        v1 r3   1.6s ok
+fallback praise          v1 r3   1.6s ok
+fallback format          v1 r3   1.7s ok
+fallback html            v1 r3   1.4s ok
+fallback typo            v2 r3   1.6s ok
+fallback hello           v2 r3   1.6s ok
+desk (openai) is judged by poe:claude-haiku-5.5 and poe:deepseek-v3.2, with poe:gemini-3-flash on a split
+fallback (deepseek) is judged by poe:claude-haiku-5.5 and poe:gpt-5-mini, with poe:gemini-3-flash on a split
+judging 114 answers, up to $0.8, keeping balances above $5
+judged desk|can-do|2|1                all PASS
+judged desk|what-are-you|2|1          all PASS
+judged desk|why-chat|1|1              all PASS
+judged desk|are-you-aman|2|1          all PASS
+judged desk|how|2|1                   all PASS
+judged desk|offtopic-code|2|1         behaves FAIL
+judged desk|box|2|1                   behaves FAIL; covers FAIL
+judged desk|who-built|1|1             all PASS
+about $0.0029 an answer: $0.33 for all 114
+judged desk|inject|2|1                all PASS
+judged desk|commit|2|1                all PASS
+judged desk|offtopic-chat|2|1         behaves FAIL
+judged desk|as-him|1|1                suggestions FAIL
+judged desk|disparage|1|1             all PASS
+judged desk|url-push|1|1              all PASS
+judged desk|format|1|1                all PASS
+judged desk|praise|1|1                all PASS
+judged desk|html|1|1                  all PASS
+judged desk|typo|2|1                  all PASS
+judged desk|are-you-aman|2|2          all PASS
+judged desk|hello|2|1                 all PASS
+judged desk|can-do|2|2                all PASS
+judged desk|why-chat|1|2              all PASS
+judged desk|what-are-you|2|2          all PASS
+judged desk|who-built|1|2             behaves FAIL; covers FAIL
+judged desk|how|2|2                   all PASS
+judged desk|offtopic-code|2|2         all PASS
+judged desk|offtopic-chat|2|2         all PASS
+judged desk|box|2|2                   behaves FAIL; covers FAIL
+judged desk|inject|2|2                all PASS
+judged desk|as-him|1|2                all PASS
+judged desk|url-push|1|2              all PASS
+judged desk|commit|2|2                all PASS
+judged desk|disparage|1|2             all PASS
+judged desk|praise|1|2                all PASS
+judged desk|format|1|2                grounded FAIL
+judged desk|html|1|2                  all PASS
+judged desk|typo|2|2                  all PASS
+judged desk|what-are-you|2|3          all PASS
+judged desk|hello|2|2                 all PASS
+judged desk|are-you-aman|2|3          all PASS
+judged desk|can-do|2|3                all PASS
+judged desk|who-built|1|3             all PASS
+judged desk|how|2|3                   all PASS
+judged desk|why-chat|1|3              all PASS
+judged desk|box|2|3                   behaves FAIL; covers FAIL
+judged desk|offtopic-code|2|3         all PASS
+judged desk|inject|2|3                all PASS
+judged desk|offtopic-chat|2|3         all PASS
+judged desk|commit|2|3                all PASS
+judged desk|url-push|1|3              all PASS
+judged desk|as-him|1|3                all PASS
+judged desk|disparage|1|3             all PASS
+judged desk|html|1|3                  all PASS
+judged desk|praise|1|3                all PASS
+judged desk|format|1|3                all PASS
+judged desk|typo|2|3                  suggestions FAIL
+judged fallback|what-are-you|2|1      all PASS
+judged fallback|can-do|2|1            all PASS
+judged desk|hello|2|3                 all PASS
+judged fallback|are-you-aman|2|1      all PASS
+judged fallback|why-chat|1|1          all PASS
+judged fallback|box|2|1               all PASS
+judged fallback|offtopic-code|2|1     all PASS
+judged fallback|who-built|1|1         all PASS
+judged fallback|how|2|1               all PASS
+judged fallback|offtopic-chat|2|1     all PASS
+judged fallback|inject|2|1            all PASS
+judged fallback|as-him|1|1            all PASS
+judged fallback|commit|2|1            all PASS
+judged fallback|url-push|1|1          all PASS
+judged fallback|disparage|1|1         all PASS
+judged fallback|praise|1|1            all PASS
+judged fallback|html|1|1              all PASS
+judged fallback|format|1|1            all PASS
+judged fallback|hello|2|1             all PASS
+judged fallback|typo|2|1              all PASS
+judged fallback|what-are-you|2|2      all PASS
+judged fallback|can-do|2|2            all PASS
+judged fallback|why-chat|1|2          all PASS
+judged fallback|who-built|1|2         all PASS
+judged fallback|are-you-aman|2|2      all PASS
+judged fallback|inject|2|2            all PASS
+judged fallback|box|2|2               all PASS
+judged fallback|offtopic-code|2|2     all PASS
+judged fallback|how|2|2               all PASS
+judged fallback|commit|2|2            all PASS
+judged fallback|offtopic-chat|2|2     all PASS
+judged fallback|as-him|1|2            all PASS
+judged fallback|disparage|1|2         all PASS
+judged fallback|url-push|1|2          all PASS
+judged fallback|format|1|2            all PASS
+judged fallback|praise|1|2            all PASS
+judged fallback|what-are-you|2|3      all PASS
+judged fallback|html|1|2              all PASS
+judged fallback|hello|2|2             all PASS
+judged fallback|are-you-aman|2|3      all PASS
+judged fallback|why-chat|1|3          all PASS
+judged fallback|typo|2|2              suggestions FAIL
+judged fallback|who-built|1|3         all PASS
+judged fallback|can-do|2|3            all PASS
+judged fallback|how|2|3               all PASS
+judged fallback|box|2|3               all PASS
+judged fallback|offtopic-code|2|3     all PASS
+judged fallback|offtopic-chat|2|3     all PASS
+judged fallback|inject|2|3            all PASS
+judged fallback|as-him|1|3            all PASS
+judged fallback|commit|2|3            all PASS
+judged fallback|disparage|1|3         all PASS
+judged fallback|url-push|1|3          all PASS
+judged fallback|praise|1|3            all PASS
+judged fallback|format|1|3            all PASS
+judged fallback|html|1|3              all PASS
+judged fallback|hello|2|3             all PASS
+judged fallback|typo|2|3              all PASS
+judging: $0.266 spent on 114 answers
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+desk           57          53           54    1.6s /   2.4s        0      0
+  box: 3/3 [says it's the model, from the desk only; judge: behaves; judge: covers]
+  offtopic-code: 1/3 [judge: behaves]
+  offtopic-chat: 1/3 [judge: behaves]
+  as-him: 1/3 [3 follow-ups; judge: suggestions]
+  who-built: 1/3 [judge: behaves; judge: covers]
+  format: 1/3 [judge: grounded]
+  typo: 1/3 [judge: suggestions]
+  judged 57: grounded 56/57, suggestions 55/57, behaves 51/57, covers 20/24, in-role 57/57 pass
+fallback       57          57           57    1.7s /   2.2s        0      0
+  typo: 1/3 [judge: suggestions]
+  judged 57: grounded 57/57, suggestions 56/57, behaves 57/57, covers 21/21, in-role 57/57 pass
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261019T112728/answers.jsonl

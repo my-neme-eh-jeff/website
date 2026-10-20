@@ -47,3 +47,7 @@ server/
 
 # `*.local` doesn't match this: it ends in .md.
 CLAUDE.local.md
+
+# Pages evals/report.mjs regenerates from the committed runs.
+evals/results/runs/**/*.html
+evals/results/runs/board.md

@@ -1,0 +1,33 @@
+== 2026-10-20T05:46:25Z gemma4:26b-a4b-it-qat
+verifying sha256 digest 
+writing manifest 
+success 
+== 2026-10-20T07:09:23Z gemma4:26b-a4b-it-qat finished
+== 2026-10-20T07:09:23Z qwen3.6:27b-q4_K_M
+verifying sha256 digest 
+writing manifest 
+success 
+== 2026-10-20T08:45:19Z qwen3.6:35b-a3b-q4_K_M
+verifying sha256 digest 
+writing manifest 
+success 
+== 2026-10-20T10:47:26Z gemma4:31b-it-qat
+pulling manifest ⠋ pulling manifest ⠙ pulling manifest ⠹ pulling manifest ⠸ pulling manifest ⠼ pulling manifest ⠴ pulling manifest ⠦ pulling manifest ⠧ pulling manifest ⠇ pulling manifest ⠏ pulling manifest ⠋ pulling manifest ⠹ pulling manifest ⠹ pulling manifest ⠸ pulling manifest ⠼ pulling manifest ⠴ pulling manifest ⠦ pulling manifest ⠧ pulling manifest ⠇ pulling manifest ⠏ pulling manifest ⠋ pulling manifest ⠙ pulling manifest ⠹ pulling manifest 
+== 2026-10-20T10:53:47Z qwen3.6:35b-a3b-q4_K_M
+verifying sha256 digest 
+writing manifest 
+success 
+== 2026-10-20T10:53:48Z glm-4.7-flash:q4_K_M
+verifying sha256 digest 
+writing manifest 
+success 
+== 2026-10-20T12:22:12Z nemotron-3.5-lightning:30b
+== 2026-10-20T14:04:44Z qwen3.6:35b-a3b-q4_K_M
+verifying sha256 digest 
+writing manifest 
+success 
+== 2026-10-20T14:04:51Z glm-4.7-flash:q4_K_M
+verifying sha256 digest 
+writing manifest 
+success 
+== 2026-10-20T14:04:52Z nemotron-3.5-lightning:30b

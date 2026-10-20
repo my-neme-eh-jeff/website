@@ -141,6 +141,7 @@ Only what a filename doesn't say; `ls` for the rest.
     desk/                       runs on Aman's desk, not the site: the chat log proxy
     evals/                      the shell's test questions (cases.mjs), the runner that asks them, and
                                 the judges that grade the answers (models.mjs: any OpenAI-compatible API)
+    evals/results/              every eval run's raw data, and what it showed (start at its README)
     public/                     copied verbatim into dist/
       _headers                  cache + security headers, rationale in its comments
       robots.txt                crawler allow/deny, rationale in its comments

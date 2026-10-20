@@ -1,0 +1,21 @@
+run 20261019T084925: 6 dev wordings × 1 for poe:claude-haiku-5.5 (claude-haiku-5.5)
+poe:claude-haiku-5.5 best            v1 r1   5.6s FAIL not cut off; 3 follow-ups
+poe:claude-haiku-5.5 best            v0 r1   8.0s FAIL not cut off; 3 follow-ups
+poe:claude-haiku-5.5 now             v1 r1   6.9s FAIL not cut off; 3 follow-ups
+poe:claude-haiku-5.5 now             v0 r1     — FAIL not cut off; has an answer; 3 follow-ups; names his employer
+poe:claude-haiku-5.5 how             v0 r1   6.5s ok
+poe:claude-haiku-5.5 how             v1 r1   7.6s ok
+poe:claude-haiku-5.5 (anthropic) is judged by poe:deepseek-v3.2 and poe:gpt-5-mini, with poe:gemini-3-flash on a split
+judging 5 answers, up to $0.05, keeping balances above $5
+judged poe:claude-haiku-5.5|best|0|1  suggestions FAIL
+judged poe:claude-haiku-5.5|now|1|1   suggestions FAIL
+judged poe:claude-haiku-5.5|best|1|1  suggestions FAIL
+judged poe:claude-haiku-5.5|how|0|1   all PASS
+judged poe:claude-haiku-5.5|how|1|1   all PASS
+judging: $0.016 spent on 5 answers
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+poe:claude-haiku-5.5       6           2            5    6.9s /   8.0s        4      1
+  best: 2/2 [not cut off; 3 follow-ups; judge: suggestions]
+  now: 2/2 [not cut off; 3 follow-ups; judge: suggestions; has an answer; names his employer]
+  judged 5: grounded 5/5, suggestions 2/5, behaves 5/5, in-role 5/5, covers 3/3 pass
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261019T084925/answers.jsonl

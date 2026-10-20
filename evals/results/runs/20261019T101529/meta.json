@@ -1,0 +1,46 @@
+{
+  "run": "20261019T101529",
+  "started": "2026-10-19T10:15:29.939Z",
+  "sha": "a3c3046-dirty",
+  "node": "v24.21.0",
+  "args": {
+    "sha": "a3c3046-dirty",
+    "run": "20261019T101529",
+    "target": "desk,fallback",
+    "set": "dev",
+    "kinds": "meta,offtopic,attack,command",
+    "reps": "3",
+    "judge": true,
+    "judge-reps": "3",
+    "budget-usd": "0.8",
+    "cases": "",
+    "resume": "",
+    "ollama": "http://127.0.0.1:11434",
+    "extra": "{}",
+    "judge-only": false,
+    "floor-usd": "5"
+  },
+  "targets": {
+    "desk": {
+      "model": "gpt-oss-16k:20b",
+      "maker": "openai",
+      "prompt": {
+        "full": "e526df59c71f",
+        "rules": "9e4a95191579",
+        "facts": "e293e6a059d8"
+      },
+      "onDesk": true
+    },
+    "fallback": {
+      "model": "ds-v4.1-flash-1017",
+      "maker": "deepseek",
+      "prompt": {
+        "full": "77712126f815",
+        "rules": "638406415e40",
+        "facts": "e293e6a059d8"
+      },
+      "onDesk": false
+    }
+  },
+  "ollama": "0.34.4"
+}

@@ -1,0 +1,2 @@
+run 20261019T145435: 49 all wordings × 3 for desk (gpt-oss-16k:20b), fallback (ds-v4.1-flash-1017)
+desk     what-are-you    v0 r1   1.9s ok

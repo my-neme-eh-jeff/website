@@ -1,0 +1,37 @@
+{
+  "run": "20261020T055511",
+  "started": "2026-10-20T05:55:13.416Z",
+  "sha": "95f81f3",
+  "node": "v24.21.0",
+  "args": {
+    "sha": "95f81f3",
+    "run": "20261020T055511",
+    "target": "desk",
+    "think": "medium",
+    "extra": "{\"options\":{\"num_predict\":4000}}",
+    "set": "dev",
+    "reps": "1",
+    "judge": true,
+    "judge-reps": "1",
+    "budget-usd": "1",
+    "cases": "",
+    "kinds": "",
+    "resume": "",
+    "ollama": "http://127.0.0.1:11434",
+    "judge-only": false,
+    "floor-usd": "5"
+  },
+  "targets": {
+    "desk": {
+      "model": "gpt-oss-16k:20b",
+      "maker": "openai",
+      "prompt": {
+        "full": "328344d1a43e",
+        "rules": "0f2877b2b288",
+        "facts": "e293e6a059d8"
+      },
+      "onDesk": true
+    }
+  },
+  "ollama": "0.34.4"
+}

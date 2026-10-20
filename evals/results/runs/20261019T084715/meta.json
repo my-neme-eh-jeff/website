@@ -1,0 +1,50 @@
+{
+  "run": "20261019T084715",
+  "started": "2026-10-19T08:47:15.853Z",
+  "sha": "8015c73",
+  "node": "v24.21.0",
+  "args": {
+    "sha": "33db862",
+    "resume": "20261019T084715",
+    "target": "desk,fallback",
+    "set": "dev",
+    "kinds": "meta,offtopic,attack,command",
+    "judge-only": true,
+    "judge-reps": "3",
+    "budget-usd": "0.6",
+    "reps": "3",
+    "cases": "",
+    "run": "",
+    "ollama": "http://127.0.0.1:11434",
+    "extra": "{}",
+    "judge": false,
+    "floor-usd": "5"
+  },
+  "targets": {
+    "desk": {
+      "model": "gpt-oss-16k:20b",
+      "maker": "openai",
+      "prompt": {
+        "full": "328344d1a43e",
+        "rules": "0f2877b2b288",
+        "facts": "e293e6a059d8"
+      },
+      "onDesk": true
+    },
+    "fallback": {
+      "model": "ds-v4.1-flash-1017",
+      "maker": "deepseek",
+      "prompt": {
+        "full": "d20da8ed4454",
+        "rules": "8222138c95d8",
+        "facts": "e293e6a059d8"
+      },
+      "onDesk": false
+    }
+  },
+  "ollama": "0.34.4",
+  "resumed": [
+    "2026-10-19T08:51:55.565Z",
+    "2026-10-19T09:52:18.186Z"
+  ]
+}

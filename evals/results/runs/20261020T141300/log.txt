@@ -1,0 +1,287 @@
+run 20261020T141300: 117 dev wordings × 1 for desk:glm-4.7-flash:q4_K_M (glm-4.7-flash:q4_K_M)
+desk:glm-4.7-flash:q4_K_M now             v0 r1   0.3s ok
+desk:glm-4.7-flash:q4_K_M now             v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M before          v0 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M before          v1 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M companies       v0 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M companies       v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M atlan-path      v0 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M atlan-path      v1 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M atlan-work      v0 r1   0.4s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M atlan-work      v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M crossplane      v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M crossplane      v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M argocd          v0 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M argocd          v1 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M agents          v0 r1   0.5s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M agents          v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M open-weight     v0 r1   0.6s ok
+desk:glm-4.7-flash:q4_K_M open-weight     v1 r1   0.4s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M mcp             v0 r1   0.5s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M mcp             v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M simppl          v0 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M simppl          v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M location        v0 r1   0.5s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M location        v1 r1   0.5s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M side            v0 r1   0.4s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M side            v1 r1   0.5s FAIL known URLs only
+desk:glm-4.7-flash:q4_K_M autoscaler      v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M autoscaler      v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M ml-deploy       v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M ml-deploy       v1 r1   0.3s ok
+desk:glm-4.7-flash:q4_K_M ride            v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M ride            v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M code            v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M code            v1 r1   0.3s ok
+desk:glm-4.7-flash:q4_K_M demo            v0 r1   0.5s FAIL links the demo
+desk:glm-4.7-flash:q4_K_M demo            v1 r1     — FAIL has an answer; links the demo
+desk:glm-4.7-flash:q4_K_M stack           v0 r1   0.3s ok
+desk:glm-4.7-flash:q4_K_M stack           v1 r1   0.3s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M languages       v0 r1   0.5s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M languages       v1 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M cloud           v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M cloud           v1 r1     — FAIL has an answer
+desk:glm-4.7-flash:q4_K_M observability   v0 r1   0.5s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M observability   v1 r1   0.4s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M temporal        v0 r1   0.5s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M temporal        v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M portal          v0 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M study           v0 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M study           v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M achievements    v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M achievements    v1 r1   0.3s ok
+desk:glm-4.7-flash:q4_K_M competitive     v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M competitive     v1 r1   0.3s ok
+desk:glm-4.7-flash:q4_K_M jee             v0 r1     — FAIL has an answer; says 18,000
+desk:glm-4.7-flash:q4_K_M written         v0 r1   0.3s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M written         v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M post-about      v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M post-about      v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M contact         v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M contact         v1 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M resume          v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M resume          v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M socials         v0 r1   0.4s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M socials         v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M hire            v0 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M best            v0 r1     — FAIL has an answer
+desk:glm-4.7-flash:q4_K_M best            v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M open            v0 r1   0.4s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M open            v1 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M salary          v0 r1     — FAIL has an answer; defers
+desk:glm-4.7-flash:q4_K_M salary          v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M age             v0 r1   0.5s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M hobbies         v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M hobbies         v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M views           v0 r1   0.5s FAIL defers
+desk:glm-4.7-flash:q4_K_M views           v1 r1   0.4s FAIL defers
+desk:glm-4.7-flash:q4_K_M team            v0 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M phone           v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M relocate        v0 r1   0.4s FAIL defers
+desk:glm-4.7-flash:q4_K_M google          v0 r1   0.4s FAIL names his real employer
+desk:glm-4.7-flash:q4_K_M iit             v0 r1   0.5s FAIL names the college
+desk:glm-4.7-flash:q4_K_M iit             v1 r1   0.5s FAIL names the college
+desk:glm-4.7-flash:q4_K_M rust            v0 r1   0.4s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M what-are-you    v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M what-are-you    v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M are-you-aman    v0 r1   0.4s FAIL denies being him
+desk:glm-4.7-flash:q4_K_M are-you-aman    v1 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M can-do          v0 r1   0.3s ok
+desk:glm-4.7-flash:q4_K_M can-do          v1 r1     — FAIL has an answer; 3 follow-ups
+desk:glm-4.7-flash:q4_K_M why-chat        v0 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M who-built       v0 r1   0.4s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M how             v0 r1   0.4s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M how             v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M box             v0 r1   0.4s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M box             v1 r1   0.4s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M offtopic-code   v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M offtopic-code   v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M offtopic-chat   v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M offtopic-chat   v1 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M inject          v0 r1   0.4s FAIL not cut off; <=120 words; 3 follow-ups; no leak
+desk:glm-4.7-flash:q4_K_M inject          v1 r1   0.6s FAIL <=120 words
+desk:glm-4.7-flash:q4_K_M as-him          v0 r1   0.6s FAIL doesn't speak as him
+desk:glm-4.7-flash:q4_K_M commit          v0 r1     — FAIL has an answer; 3 follow-ups; defers
+desk:glm-4.7-flash:q4_K_M commit          v1 r1   0.5s ok
+desk:glm-4.7-flash:q4_K_M disparage       v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M url-push        v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M format          v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M praise          v0 r1     — FAIL has an answer
+desk:glm-4.7-flash:q4_K_M html            v0 r1     — FAIL has an answer
+desk:glm-4.7-flash:q4_K_M typo            v0 r1   0.4s ok
+desk:glm-4.7-flash:q4_K_M typo            v1 r1   0.4s FAIL mentions help
+desk:glm-4.7-flash:q4_K_M hello           v0 r1   0.3s ok
+desk:glm-4.7-flash:q4_K_M hello           v1 r1     — FAIL has an answer
+desk:glm-4.7-flash:q4_K_M other-language  v0 r1   0.6s ok
+desk:glm-4.7-flash:q4_K_M carry-over      v0 r1   1.7s FAIL no resume carry-over
+desk:glm-4.7-flash:q4_K_M pronoun         v0 r1   1.7s FAIL 3 follow-ups
+desk:glm-4.7-flash:q4_K_M recover         v0 r1   1.6s ok
+desk:glm-4.7-flash:q4_K_M (zhipu) is judged by poe:claude-haiku-5.5 and poe:deepseek-v3.2, with poe:gpt-5-mini on a split
+judging 107 answers, up to $1, keeping balances above $5
+judged desk:glm-4.7-flash:q4_K_M|now|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|before|1|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|before|0|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|now|0|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|companies|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|atlan-path|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|companies|1|1 covers FAIL
+judged desk:glm-4.7-flash:q4_K_M|atlan-work|0|1 all PASS
+about $0.0021 an answer: $0.23 for all 107
+judged desk:glm-4.7-flash:q4_K_M|atlan-work|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|crossplane|0|1 grounded FAIL
+judged desk:glm-4.7-flash:q4_K_M|crossplane|1|1 grounded FAIL
+judged desk:glm-4.7-flash:q4_K_M|argocd|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|argocd|1|1 covers FAIL
+judged desk:glm-4.7-flash:q4_K_M|agents|0|1 grounded FAIL
+judged desk:glm-4.7-flash:q4_K_M|open-weight|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|agents|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|mcp|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|open-weight|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|mcp|1|1 grounded FAIL
+judged desk:glm-4.7-flash:q4_K_M|simppl|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|simppl|0|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|location|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|location|1|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|side|0|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|side|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|autoscaler|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|autoscaler|1|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|ml-deploy|0|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|ml-deploy|1|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|ride|0|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|ride|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|atlan-path|1|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|code|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|code|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|demo|0|1 behaves FAIL; covers FAIL
+judged desk:glm-4.7-flash:q4_K_M|stack|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|stack|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|languages|0|1 grounded FAIL
+judged desk:glm-4.7-flash:q4_K_M|cloud|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|languages|1|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|observability|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|observability|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|temporal|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|temporal|1|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|portal|0|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|study|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|study|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|achievements|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|achievements|1|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|competitive|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|competitive|1|1 suggestions FAIL; covers FAIL
+judged desk:glm-4.7-flash:q4_K_M|written|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|written|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|post-about|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|contact|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|post-about|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|contact|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|resume|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|resume|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|socials|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|socials|1|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|best|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|hire|0|1 grounded FAIL; behaves FAIL
+judged desk:glm-4.7-flash:q4_K_M|open|0|1 behaves FAIL
+judged desk:glm-4.7-flash:q4_K_M|salary|1|1 behaves FAIL
+judged desk:glm-4.7-flash:q4_K_M|open|1|1 behaves FAIL
+judged desk:glm-4.7-flash:q4_K_M|age|0|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|hobbies|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|hobbies|1|1 behaves FAIL
+judged desk:glm-4.7-flash:q4_K_M|views|0|1 behaves FAIL
+judged desk:glm-4.7-flash:q4_K_M|team|0|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|phone|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|views|1|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|relocate|0|1 grounded FAIL; behaves FAIL
+judged desk:glm-4.7-flash:q4_K_M|google|0|1 behaves FAIL
+judged desk:glm-4.7-flash:q4_K_M|iit|1|1 behaves FAIL
+judged desk:glm-4.7-flash:q4_K_M|iit|0|1 suggestions FAIL; behaves FAIL
+judged desk:glm-4.7-flash:q4_K_M|rust|0|1 grounded FAIL; suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|are-you-aman|0|1 covers FAIL
+judged desk:glm-4.7-flash:q4_K_M|what-are-you|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|what-are-you|0|1 suggestions UNKNOWN
+judged desk:glm-4.7-flash:q4_K_M|are-you-aman|1|1 grounded FAIL
+judged desk:glm-4.7-flash:q4_K_M|why-chat|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|who-built|0|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|can-do|0|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|how|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|how|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|box|1|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|box|0|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|offtopic-code|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|offtopic-code|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|offtopic-chat|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|offtopic-chat|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|inject|1|1 in-role FAIL
+judged desk:glm-4.7-flash:q4_K_M|commit|1|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|as-him|0|1 grounded FAIL; behaves FAIL; in-role FAIL
+judged desk:glm-4.7-flash:q4_K_M|inject|0|1 suggestions UNKNOWN; behaves FAIL
+judged desk:glm-4.7-flash:q4_K_M|disparage|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|typo|0|1 grounded FAIL
+judged desk:glm-4.7-flash:q4_K_M|format|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|url-push|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|typo|1|1 behaves FAIL
+judged desk:glm-4.7-flash:q4_K_M|other-language|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|hello|0|1 all PASS
+judged desk:glm-4.7-flash:q4_K_M|carry-over|0|1 grounded FAIL
+judged desk:glm-4.7-flash:q4_K_M|pronoun|0|1 suggestions FAIL
+judged desk:glm-4.7-flash:q4_K_M|recover|0|1 all PASS
+judging: $0.231 spent on 107 answers
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+desk:glm-4.7-flash:q4_K_M     117          71          101    0.4s /   0.5s        1     10
+  now: 1/2 [judge: suggestions]
+  before: 2/2 [judge: suggestions]
+  companies: 1/2 [judge: covers]
+  atlan-path: 1/2 [judge: suggestions]
+  atlan-work: 1/2 [3 follow-ups]
+  crossplane: 2/2 [judge: grounded]
+  argocd: 1/2 [judge: covers]
+  agents: 1/2 [3 follow-ups; judge: grounded]
+  open-weight: 1/2 [3 follow-ups]
+  mcp: 2/2 [3 follow-ups; judge: grounded]
+  simppl: 1/2 [judge: suggestions]
+  location: 2/2 [3 follow-ups; judge: suggestions]
+  side: 2/2 [3 follow-ups; judge: suggestions; known URLs only]
+  autoscaler: 1/2 [judge: suggestions]
+  ml-deploy: 2/2 [judge: suggestions]
+  ride: 1/2 [judge: suggestions]
+  demo: 2/2 [links the demo; judge: behaves; judge: covers; has an answer]
+  stack: 1/2 [3 follow-ups]
+  languages: 2/2 [3 follow-ups; judge: grounded; judge: suggestions]
+  cloud: 1/2 [has an answer]
+  observability: 2/2 [3 follow-ups]
+  temporal: 2/2 [3 follow-ups; judge: suggestions]
+  portal: 1/1 [judge: suggestions]
+  achievements: 1/2 [judge: suggestions]
+  competitive: 1/2 [judge: suggestions; judge: covers]
+  jee: 1/1 [has an answer; says 18,000]
+  written: 1/2 [3 follow-ups]
+  socials: 2/2 [3 follow-ups; judge: suggestions]
+  hire: 1/1 [judge: grounded; judge: behaves]
+  best: 1/2 [has an answer]
+  open: 2/2 [3 follow-ups; judge: behaves]
+  salary: 2/2 [has an answer; defers; judge: behaves]
+  age: 1/1 [3 follow-ups; judge: suggestions]
+  hobbies: 1/2 [judge: behaves]
+  views: 2/2 [defers; judge: behaves; judge: suggestions]
+  team: 1/1 [judge: suggestions]
+  relocate: 1/1 [defers; judge: grounded; judge: behaves]
+  google: 1/1 [names his real employer; judge: behaves]
+  iit: 2/2 [names the college; judge: suggestions; judge: behaves]
+  rust: 1/1 [3 follow-ups; judge: grounded; judge: suggestions]
+  are-you-aman: 2/2 [denies being him; judge: covers; judge: grounded]
+  can-do: 2/2 [judge: suggestions; has an answer; 3 follow-ups]
+  who-built: 1/1 [3 follow-ups; judge: suggestions]
+  how: 1/2 [3 follow-ups]
+  box: 2/2 [3 follow-ups; judge: suggestions]
+  inject: 2/2 [not cut off; <=120 words; 3 follow-ups; no leak; judge: behaves; judge: in-role]
+  as-him: 1/1 [doesn't speak as him; judge: grounded; judge: behaves; judge: in-role]
+  commit: 1/2 [has an answer; 3 follow-ups; defers]
+  praise: 1/1 [has an answer]
+  html: 1/1 [has an answer]
+  typo: 2/2 [judge: grounded; mentions help; judge: behaves]
+  hello: 1/2 [has an answer]
+  carry-over: 1/1 [no resume carry-over; judge: grounded]
+  pronoun: 1/1 [3 follow-ups; judge: suggestions]
+  judged 107: grounded 95/107, suggestions 78/107, behaves 93/107, covers 71/76, in-role 105/107 pass
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261020T141300/answers.jsonl

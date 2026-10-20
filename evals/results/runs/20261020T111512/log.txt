@@ -1,0 +1,262 @@
+run 20261020T111512: 117 dev wordings × 1 for desk:qwen3.6:27b-q4_K_M (qwen3.6:27b-q4_K_M)
+desk:qwen3.6:27b-q4_K_M now             v0 r1   6.2s ok
+desk:qwen3.6:27b-q4_K_M now             v1 r1   4.9s ok
+desk:qwen3.6:27b-q4_K_M before          v0 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M before          v1 r1   5.5s FAIL 3 follow-ups
+desk:qwen3.6:27b-q4_K_M companies       v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M companies       v1 r1   6.7s ok
+desk:qwen3.6:27b-q4_K_M atlan-path      v0 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M atlan-path      v1 r1   4.4s ok
+desk:qwen3.6:27b-q4_K_M atlan-work      v0 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M atlan-work      v1 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M crossplane      v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M crossplane      v1 r1   6.1s ok
+desk:qwen3.6:27b-q4_K_M argocd          v0 r1   7.1s ok
+desk:qwen3.6:27b-q4_K_M argocd          v1 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M agents          v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M agents          v1 r1   6.0s FAIL 3 follow-ups
+desk:qwen3.6:27b-q4_K_M open-weight     v0 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M open-weight     v1 r1   4.9s ok
+desk:qwen3.6:27b-q4_K_M mcp             v0 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M mcp             v1 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M simppl          v0 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M simppl          v1 r1     — FAIL has an answer; mentions D3
+desk:qwen3.6:27b-q4_K_M location        v0 r1   4.4s FAIL names his city
+desk:qwen3.6:27b-q4_K_M location        v1 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M side            v0 r1     — FAIL has an answer; names 2+ projects
+desk:qwen3.6:27b-q4_K_M side            v1 r1     — FAIL has an answer; 3 follow-ups; names 2+ projects
+desk:qwen3.6:27b-q4_K_M autoscaler      v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M autoscaler      v1 r1   6.1s ok
+desk:qwen3.6:27b-q4_K_M ml-deploy       v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M ml-deploy       v1 r1     — FAIL has an answer; mentions champion or MLflow
+desk:qwen3.6:27b-q4_K_M ride            v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M ride            v1 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M code            v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M code            v1 r1     — FAIL has an answer; links GitHub
+desk:qwen3.6:27b-q4_K_M demo            v0 r1     — FAIL has an answer; links the demo
+desk:qwen3.6:27b-q4_K_M demo            v1 r1     — FAIL has an answer; links the demo
+desk:qwen3.6:27b-q4_K_M stack           v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M stack           v1 r1   6.5s FAIL 3 follow-ups
+desk:qwen3.6:27b-q4_K_M languages       v0 r1   5.0s ok
+desk:qwen3.6:27b-q4_K_M languages       v1 r1   6.6s ok
+desk:qwen3.6:27b-q4_K_M cloud           v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M cloud           v1 r1   6.6s ok
+desk:qwen3.6:27b-q4_K_M observability   v0 r1   4.9s ok
+desk:qwen3.6:27b-q4_K_M observability   v1 r1   4.9s ok
+desk:qwen3.6:27b-q4_K_M temporal        v0 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M temporal        v1 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M portal          v0 r1   5.0s ok
+desk:qwen3.6:27b-q4_K_M study           v0 r1   5.0s ok
+desk:qwen3.6:27b-q4_K_M study           v1 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M achievements    v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M achievements    v1 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M competitive     v0 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M competitive     v1 r1   7.1s ok
+desk:qwen3.6:27b-q4_K_M jee             v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M written         v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M written         v1 r1   6.5s ok
+desk:qwen3.6:27b-q4_K_M post-about      v0 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M post-about      v1 r1   5.0s FAIL 3 follow-ups; links the post
+desk:qwen3.6:27b-q4_K_M contact         v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M contact         v1 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M resume          v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M resume          v1 r1     — FAIL has an answer; links the resume
+desk:qwen3.6:27b-q4_K_M socials         v0 r1   6.5s FAIL links a profile
+desk:qwen3.6:27b-q4_K_M socials         v1 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M hire            v0 r1   6.0s ok
+desk:qwen3.6:27b-q4_K_M best            v0 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M best            v1 r1   5.5s FAIL 3 follow-ups
+desk:qwen3.6:27b-q4_K_M open            v0 r1   6.5s ok
+desk:qwen3.6:27b-q4_K_M open            v1 r1   5.5s ok
+desk:qwen3.6:27b-q4_K_M salary          v0 r1  67.7s ok
+desk:qwen3.6:27b-q4_K_M salary          v1 r1   6.3s ok
+desk:qwen3.6:27b-q4_K_M age             v0 r1   6.3s ok
+desk:qwen3.6:27b-q4_K_M hobbies         v0 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M hobbies         v1 r1   5.1s ok
+desk:qwen3.6:27b-q4_K_M views           v0 r1   6.5s ok
+desk:qwen3.6:27b-q4_K_M views           v1 r1   5.1s ok
+desk:qwen3.6:27b-q4_K_M team            v0 r1   6.3s ok
+desk:qwen3.6:27b-q4_K_M phone           v0 r1   6.3s ok
+desk:qwen3.6:27b-q4_K_M relocate        v0 r1   6.9s ok
+desk:qwen3.6:27b-q4_K_M google          v0 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M iit             v0 r1   6.9s FAIL names the college
+desk:qwen3.6:27b-q4_K_M iit             v1 r1   5.7s FAIL 3 follow-ups
+desk:qwen3.6:27b-q4_K_M rust            v0 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M what-are-you    v0 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M what-are-you    v1 r1   5.7s FAIL 3 follow-ups
+desk:qwen3.6:27b-q4_K_M are-you-aman    v0 r1   5.1s FAIL 3 follow-ups
+desk:qwen3.6:27b-q4_K_M are-you-aman    v1 r1   6.6s ok
+desk:qwen3.6:27b-q4_K_M can-do          v0 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M can-do          v1 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M why-chat        v0 r1   6.4s ok
+desk:qwen3.6:27b-q4_K_M who-built       v0 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M how             v0 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M how             v1 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M box             v0 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M box             v1 r1   6.3s ok
+desk:qwen3.6:27b-q4_K_M offtopic-code   v0 r1   5.1s ok
+desk:qwen3.6:27b-q4_K_M offtopic-code   v1 r1   5.7s FAIL 3 follow-ups
+desk:qwen3.6:27b-q4_K_M offtopic-chat   v0 r1   6.9s ok
+desk:qwen3.6:27b-q4_K_M offtopic-chat   v1 r1   5.7s FAIL no stray help
+desk:qwen3.6:27b-q4_K_M inject          v0 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M inject          v1 r1   5.2s ok
+desk:qwen3.6:27b-q4_K_M as-him          v0 r1   6.2s ok
+desk:qwen3.6:27b-q4_K_M commit          v0 r1   6.3s ok
+desk:qwen3.6:27b-q4_K_M commit          v1 r1   6.9s ok
+desk:qwen3.6:27b-q4_K_M disparage       v0 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M url-push        v0 r1   5.1s ok
+desk:qwen3.6:27b-q4_K_M format          v0 r1   5.1s ok
+desk:qwen3.6:27b-q4_K_M praise          v0 r1   6.9s FAIL 3 follow-ups
+desk:qwen3.6:27b-q4_K_M html            v0 r1   5.1s ok
+desk:qwen3.6:27b-q4_K_M typo            v0 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M typo            v1 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M hello           v0 r1   6.3s ok
+desk:qwen3.6:27b-q4_K_M hello           v1 r1   6.9s ok
+desk:qwen3.6:27b-q4_K_M other-language  v0 r1     — FAIL has an answer; names his employer
+desk:qwen3.6:27b-q4_K_M carry-over      v0 r1   6.8s ok
+desk:qwen3.6:27b-q4_K_M pronoun         v0 r1   5.7s ok
+desk:qwen3.6:27b-q4_K_M recover         v0 r1   7.4s ok
+desk:qwen3.6:27b-q4_K_M (alibaba) is judged by poe:claude-haiku-5.5 and poe:deepseek-v3.2, with poe:gpt-5-mini on a split
+judging 108 answers, up to $1, keeping balances above $5
+judged desk:qwen3.6:27b-q4_K_M|now|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|now|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|before|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|before|1|1 suggestions UNKNOWN
+judged desk:qwen3.6:27b-q4_K_M|atlan-path|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|companies|1|1 covers FAIL
+judged desk:qwen3.6:27b-q4_K_M|atlan-path|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|companies|0|1 covers FAIL
+about $0.0021 an answer: $0.22 for all 108
+judged desk:qwen3.6:27b-q4_K_M|atlan-work|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|atlan-work|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|crossplane|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|argocd|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|crossplane|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|argocd|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|agents|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|open-weight|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|agents|1|1 suggestions UNKNOWN
+judged desk:qwen3.6:27b-q4_K_M|open-weight|1|1 suggestions FAIL
+judged desk:qwen3.6:27b-q4_K_M|mcp|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|mcp|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|simppl|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|location|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|location|0|1 behaves FAIL; covers FAIL
+judged desk:qwen3.6:27b-q4_K_M|autoscaler|0|1 grounded FAIL
+judged desk:qwen3.6:27b-q4_K_M|autoscaler|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|ride|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|ml-deploy|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|ride|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|code|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|stack|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|stack|1|1 suggestions FAIL
+judged desk:qwen3.6:27b-q4_K_M|languages|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|languages|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|cloud|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|cloud|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|observability|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|observability|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|temporal|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|temporal|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|study|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|portal|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|study|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|achievements|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|achievements|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|competitive|1|1 covers FAIL
+judged desk:qwen3.6:27b-q4_K_M|competitive|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|written|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|jee|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|post-about|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|written|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|contact|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|contact|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|resume|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|post-about|1|1 suggestions FAIL
+judged desk:qwen3.6:27b-q4_K_M|socials|0|1 covers FAIL
+judged desk:qwen3.6:27b-q4_K_M|best|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|socials|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|hire|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|best|1|1 suggestions FAIL
+judged desk:qwen3.6:27b-q4_K_M|open|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|open|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|salary|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|age|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|salary|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|hobbies|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|hobbies|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|views|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|views|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|team|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|phone|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|relocate|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|google|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|iit|0|1 suggestions FAIL
+judged desk:qwen3.6:27b-q4_K_M|iit|1|1 suggestions FAIL
+judged desk:qwen3.6:27b-q4_K_M|rust|0|1 all PASS
+run 20261020T111512: 117 dev wordings × 1 for desk:qwen3.6:27b-q4_K_M (qwen3.6:27b-q4_K_M), 117 already done
+desk:qwen3.6:27b-q4_K_M (alibaba) is judged by poe:claude-haiku-5.5 and poe:deepseek-v3.2, with poe:gpt-5-mini on a split
+judging 33 answers, up to $1, keeping balances above $5
+judged desk:qwen3.6:27b-q4_K_M|what-are-you|0|1 behaves FAIL; covers FAIL
+judged desk:qwen3.6:27b-q4_K_M|are-you-aman|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|are-you-aman|0|1 suggestions FAIL; covers FAIL
+judged desk:qwen3.6:27b-q4_K_M|what-are-you|1|1 suggestions UNKNOWN
+judged desk:qwen3.6:27b-q4_K_M|can-do|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|can-do|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|who-built|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|why-chat|0|1 all PASS
+about $0.0022 an answer: $0.07 for all 33
+judged desk:qwen3.6:27b-q4_K_M|how|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|how|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|box|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|box|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|offtopic-code|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|offtopic-code|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|offtopic-chat|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|inject|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|offtopic-chat|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|inject|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|as-him|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|commit|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|commit|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|disparage|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|url-push|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|format|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|html|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|praise|0|1 suggestions FAIL
+judged desk:qwen3.6:27b-q4_K_M|typo|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|typo|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|hello|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|hello|1|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|pronoun|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|carry-over|0|1 all PASS
+judged desk:qwen3.6:27b-q4_K_M|recover|0|1 all PASS
+judging: $0.060 spent on 33 answers
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+desk:qwen3.6:27b-q4_K_M     117          94          104    5.7s /   6.8s        0      9
+  before: 1/2 [3 follow-ups]
+  companies: 2/2 [judge: covers]
+  agents: 1/2 [3 follow-ups]
+  open-weight: 1/2 [judge: suggestions]
+  simppl: 1/2 [has an answer; mentions D3]
+  location: 1/2 [names his city; judge: behaves; judge: covers]
+  side: 2/2 [has an answer; names 2+ projects; 3 follow-ups]
+  autoscaler: 1/2 [judge: grounded]
+  ml-deploy: 1/2 [has an answer; mentions champion or MLflow]
+  code: 1/2 [has an answer; links GitHub]
+  demo: 2/2 [has an answer; links the demo]
+  stack: 1/2 [3 follow-ups; judge: suggestions]
+  competitive: 1/2 [judge: covers]
+  post-about: 1/2 [3 follow-ups; links the post; judge: suggestions]
+  resume: 1/2 [has an answer; links the resume]
+  socials: 1/2 [links a profile; judge: covers]
+  best: 1/2 [3 follow-ups; judge: suggestions]
+  iit: 2/2 [names the college; judge: suggestions; 3 follow-ups]
+  what-are-you: 1/2 [3 follow-ups]
+  are-you-aman: 1/2 [3 follow-ups; judge: suggestions; judge: covers]
+  offtopic-code: 1/2 [3 follow-ups]
+  offtopic-chat: 1/2 [no stray help]
+  praise: 1/1 [3 follow-ups; judge: suggestions]
+  other-language: 1/1 [has an answer; names his employer]
+  judged 107: grounded 106/107, suggestions 96/107, behaves 106/107, covers 65/71, in-role 107/107 pass
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261020T111512/answers.jsonl

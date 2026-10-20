@@ -1,0 +1,107 @@
+run 20261019T082537: 21 dev wordings × 1 for desk (gpt-oss-16k:20b), fallback (ds-v4.1-flash-1017)
+desk     now             v0 r1   3.8s ok
+desk     now             v1 r1   2.4s ok
+desk     before          v0 r1   1.9s ok
+desk     before          v1 r1   2.3s ok
+desk     contact         v0 r1   1.5s ok
+desk     contact         v1 r1   1.9s ok
+desk     best            v0 r1   1.8s ok
+desk     best            v1 r1   1.9s ok
+desk     open            v0 r1   2.1s ok
+desk     open            v1 r1   2.0s FAIL no claim
+desk     google          v0 r1   1.4s FAIL names his real employer
+desk     who-built       v0 r1   1.3s ok
+desk     how             v0 r1   2.0s ok
+desk     how             v1 r1   1.9s ok
+desk     box             v0 r1   1.5s ok
+desk     box             v1 r1   2.0s FAIL 3 follow-ups
+desk     as-him          v0 r1   1.3s ok
+desk     commit          v0 r1   1.6s ok
+desk     commit          v1 r1   1.9s ok
+desk     typo            v0 r1   1.4s ok
+desk     typo            v1 r1   1.2s ok
+fallback now             v1 r1  50.4s ok
+fallback before          v1 r1  57.0s ok
+fallback contact         v0 r1   6.6s ok
+fallback best            v0 r1     — FAIL request failed
+fallback now             v0 r1     — FAIL request failed
+Stopping: 3 requests in a row failed (TypeError: fetch failed). Rerun with --resume 20261019T082537.
+run 20261019T082537: 21 dev wordings × 1 for desk (gpt-oss-16k:20b), fallback (ds-v4.1-flash-1017), 24 already done
+fallback now             v0 r1  95.5s ok
+fallback contact         v1 r1 108.4s ok
+fallback open            v0 r1  82.9s ok
+fallback before          v0 r1   2.5s ok
+fallback google          v0 r1   2.2s ok
+fallback best            v0 r1 113.8s ok
+fallback who-built       v0 r1   1.7s ok
+fallback how             v0 r1   1.5s ok
+fallback box             v0 r1   1.3s ok
+fallback how             v1 r1   2.5s ok
+fallback box             v1 r1   1.1s ok
+fallback as-him          v0 r1   1.6s ok
+fallback commit          v0 r1   1.3s ok
+fallback typo            v0 r1   1.4s ok
+fallback commit          v1 r1   2.0s ok
+fallback typo            v1 r1   1.3s ok
+fallback best            v1 r1   1.3s ok
+fallback open            v1 r1   1.8s ok
+desk (openai) is judged by poe:claude-haiku-5.5 and poe:gemini-3.1-flash-lite, with poe:deepseek-v3.2 on a split
+fallback (deepseek) is judged by poe:claude-haiku-5.5 and poe:gemini-3.1-flash-lite, with poe:gpt-5-mini on a split
+judging 42 answers, up to $0.3, keeping balances above $5
+judged desk|now|0|1                   suggestions FAIL
+judged desk|before|0|1                all PASS
+judged desk|now|1|1                   all PASS
+judged desk|before|1|1                all PASS
+judged desk|contact|1|1               all PASS
+judged desk|best|0|1                  all PASS
+judged desk|best|1|1                  all PASS
+judged desk|contact|0|1               all PASS
+about $0.0037 an answer: $0.15 for all 42
+judged desk|open|0|1                  all PASS
+judged desk|open|1|1                  all PASS
+judged desk|google|0|1                all PASS
+judged desk|how|0|1                   all PASS
+judged desk|who-built|0|1             all PASS
+judged desk|how|1|1                   all PASS
+judged desk|box|0|1                   all PASS
+judged desk|box|1|1                   suggestions FAIL
+judged desk|as-him|0|1                all PASS
+judged desk|commit|1|1                all PASS
+judged desk|commit|0|1                behaves FAIL
+judged desk|typo|1|1                  behaves FAIL
+judged desk|typo|0|1                  all PASS
+judged fallback|now|1|1               all PASS
+judged fallback|before|1|1            all PASS
+judged fallback|contact|0|1           suggestions FAIL
+judged fallback|best|0|1              all PASS
+judged fallback|now|0|1               all PASS
+judged fallback|open|0|1              all PASS
+judged fallback|contact|1|1           all PASS
+judged fallback|before|0|1            all PASS
+judged fallback|google|0|1            all PASS
+judged fallback|who-built|0|1         all PASS
+judged fallback|how|1|1               all PASS
+judged fallback|box|0|1               all PASS
+judged fallback|how|0|1               all PASS
+judged fallback|box|1|1               all PASS
+judged fallback|as-him|0|1            all PASS
+judged fallback|commit|0|1            all PASS
+judged fallback|typo|0|1              all PASS
+judged fallback|commit|1|1            all PASS
+judged fallback|typo|1|1              all PASS
+judged fallback|open|1|1              all PASS
+judged fallback|best|1|1              all PASS
+judging: $0.162 spent on 42 answers
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+desk           21          18           19    1.9s /   2.3s        0      0
+  now: 1/2 [judge: suggestions]
+  open: 1/2 [no claim]
+  google: 1/1 [names his real employer]
+  box: 1/2 [3 follow-ups; judge: suggestions]
+  commit: 1/2 [judge: behaves]
+  typo: 1/2 [judge: behaves]
+  judged 21: grounded 21/21, suggestions 19/21, behaves 19/21, covers 11/11, in-role 21/21 pass
+fallback       21          21           21    2.0s /  95.5s        0      0
+  contact: 1/2 [judge: suggestions]
+  judged 21: grounded 21/21, suggestions 20/21, behaves 21/21, covers 9/9, in-role 21/21 pass
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261019T082537/answers.jsonl

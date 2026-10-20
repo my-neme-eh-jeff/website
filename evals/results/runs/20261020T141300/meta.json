@@ -1,0 +1,36 @@
+{
+  "run": "20261020T141300",
+  "started": "2026-10-20T14:13:00.433Z",
+  "sha": "95f81f3",
+  "node": "v24.21.0",
+  "args": {
+    "sha": "95f81f3",
+    "run": "20261020T141300",
+    "target": "desk:glm-4.7-flash:q4_K_M",
+    "think": "false",
+    "extra": "{\"options\":{\"num_ctx\":8192,\"num_predict\":2000}}",
+    "set": "dev",
+    "reps": "1",
+    "judge": true,
+    "judge-reps": "1",
+    "budget-usd": "1",
+    "cases": "",
+    "kinds": "",
+    "resume": "",
+    "ollama": "http://127.0.0.1:11434",
+    "judge-only": false,
+    "floor-usd": "5"
+  },
+  "targets": {
+    "desk:glm-4.7-flash:q4_K_M": {
+      "model": "glm-4.7-flash:q4_K_M",
+      "maker": "zhipu",
+      "prompt": {
+        "full": "328344d1a43e",
+        "rules": "0f2877b2b288",
+        "facts": "e293e6a059d8"
+      },
+      "onDesk": true
+    }
+  }
+}

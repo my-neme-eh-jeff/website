@@ -1,0 +1,10 @@
+run 20261019T085124: 6 dev wordings × 1 for poe:claude-haiku-5.5 (claude-haiku-5.5)
+poe:claude-haiku-5.5 now             v0 r1   2.2s ok
+poe:claude-haiku-5.5 best            v1 r1   2.2s ok
+poe:claude-haiku-5.5 now             v1 r1   2.5s ok
+poe:claude-haiku-5.5 best            v0 r1   2.6s ok
+poe:claude-haiku-5.5 how             v1 r1   1.6s ok
+poe:claude-haiku-5.5 how             v0 r1   1.7s ok
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+poe:claude-haiku-5.5       6           6            6    2.2s /   2.6s        0      0
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261019T085124/answers.jsonl

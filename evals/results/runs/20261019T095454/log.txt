@@ -1,0 +1,217 @@
+run 20261019T095454: 65 dev wordings × 3 for desk (gpt-oss-16k:20b)
+desk     now             v0 r1   2.7s ok
+desk     now             v1 r1   1.7s ok
+desk     before          v0 r1   2.3s FAIL 3 follow-ups
+desk     before          v1 r1   3.0s ok
+desk     companies       v0 r1   2.2s ok
+desk     companies       v1 r1   1.7s ok
+desk     atlan-path      v0 r1   5.2s FAIL 3 follow-ups
+desk     atlan-path      v1 r1   1.7s ok
+desk     atlan-work      v0 r1   1.8s FAIL <=120 words; 3 follow-ups
+desk     atlan-work      v1 r1   1.9s FAIL 3 follow-ups
+desk     crossplane      v0 r1   2.3s ok
+desk     crossplane      v1 r1   3.1s ok
+desk     argocd          v0 r1   2.8s ok
+desk     argocd          v1 r1   3.0s ok
+desk     agents          v0 r1   2.0s ok
+desk     agents          v1 r1   2.0s ok
+desk     open-weight     v0 r1   1.9s ok
+desk     open-weight     v1 r1   2.5s ok
+desk     mcp             v0 r1   2.6s ok
+desk     mcp             v1 r1   2.2s FAIL 3 follow-ups; mentions MCP
+desk     simppl          v0 r1   5.3s ok
+desk     simppl          v1 r1   2.1s ok
+desk     location        v0 r1   1.3s ok
+desk     location        v1 r1   1.5s ok
+desk     side            v0 r1   2.0s ok
+desk     side            v1 r1   1.7s ok
+desk     autoscaler      v0 r1   1.9s FAIL 3 follow-ups
+desk     autoscaler      v1 r1   1.8s ok
+desk     ml-deploy       v0 r1   1.9s ok
+desk     ml-deploy       v1 r1   1.6s ok
+desk     ride            v0 r1   1.6s ok
+desk     ride            v1 r1   2.0s ok
+desk     code            v0 r1   2.0s ok
+desk     code            v1 r1   1.5s ok
+desk     demo            v0 r1   2.9s ok
+desk     demo            v1 r1   1.8s FAIL 3 follow-ups
+desk     stack           v0 r1   1.8s ok
+desk     stack           v1 r1   1.7s ok
+desk     languages       v0 r1   2.1s ok
+desk     languages       v1 r1   2.0s ok
+desk     cloud           v0 r1   2.4s FAIL 3 follow-ups
+desk     cloud           v1 r1   2.8s ok
+desk     observability   v0 r1   2.1s ok
+desk     observability   v1 r1   3.2s ok
+desk     temporal        v0 r1   2.5s ok
+desk     temporal        v1 r1   1.4s ok
+desk     portal          v0 r1   2.5s ok
+desk     study           v0 r1   1.9s ok
+desk     study           v1 r1   2.0s ok
+desk     achievements    v0 r1   1.6s ok
+desk     achievements    v1 r1   1.5s ok
+desk     competitive     v0 r1   2.5s ok
+desk     competitive     v1 r1   1.3s FAIL mentions Codeforces
+desk     jee             v0 r1   2.2s ok
+desk     written         v0 r1   2.3s ok
+desk     written         v1 r1   2.0s ok
+desk     post-about      v0 r1   2.1s FAIL 3 follow-ups
+desk     post-about      v1 r1   1.7s FAIL 3 follow-ups
+desk     contact         v0 r1   1.4s ok
+desk     contact         v1 r1   2.2s ok
+desk     resume          v0 r1   1.6s ok
+desk     resume          v1 r1   1.5s ok
+desk     socials         v0 r1   1.7s ok
+desk     socials         v1 r1   1.9s FAIL links a profile
+desk     other-language  v0 r1   1.9s ok
+desk     now             v0 r2   1.7s ok
+desk     now             v1 r2   2.9s ok
+desk     before          v0 r2   2.2s ok
+desk     before          v1 r2   1.8s ok
+desk     companies       v0 r2   1.6s ok
+desk     companies       v1 r2   1.6s ok
+desk     atlan-path      v0 r2   2.8s ok
+desk     atlan-path      v1 r2   1.9s FAIL 3 follow-ups
+desk     atlan-work      v0 r2   2.2s ok
+desk     atlan-work      v1 r2   1.6s ok
+desk     crossplane      v0 r2   4.0s ok
+desk     crossplane      v1 r2   1.9s ok
+desk     argocd          v0 r2   3.8s ok
+desk     argocd          v1 r2   3.2s ok
+desk     agents          v0 r2   1.5s ok
+desk     agents          v1 r2   2.0s ok
+desk     open-weight     v0 r2   2.4s ok
+desk     open-weight     v1 r2   2.4s ok
+desk     mcp             v0 r2   2.9s ok
+desk     mcp             v1 r2   2.3s FAIL 3 follow-ups; mentions MCP
+desk     simppl          v0 r2   2.7s ok
+desk     simppl          v1 r2   2.0s ok
+desk     location        v0 r2   1.5s ok
+desk     location        v1 r2   1.6s ok
+desk     side            v0 r2   2.5s ok
+desk     side            v1 r2   2.0s ok
+desk     autoscaler      v0 r2   2.0s ok
+desk     autoscaler      v1 r2   1.9s FAIL mentions the KV cache
+desk     ml-deploy       v0 r2   1.7s ok
+desk     ml-deploy       v1 r2   1.5s ok
+desk     ride            v0 r2   1.9s ok
+desk     ride            v1 r2   1.9s FAIL known URLs only
+desk     code            v0 r2   1.8s ok
+desk     code            v1 r2   1.9s FAIL 3 follow-ups
+desk     demo            v0 r2   1.5s ok
+desk     demo            v1 r2   2.0s ok
+desk     stack           v0 r2   1.7s ok
+desk     stack           v1 r2   2.0s ok
+desk     languages       v0 r2   1.2s ok
+desk     languages       v1 r2   2.0s ok
+desk     cloud           v0 r2   2.5s ok
+desk     cloud           v1 r2   2.4s ok
+desk     observability   v0 r2   1.7s ok
+desk     observability   v1 r2   3.2s ok
+desk     temporal        v0 r2   3.7s ok
+desk     temporal        v1 r2   1.7s ok
+desk     portal          v0 r2   2.4s ok
+desk     study           v0 r2   2.4s ok
+desk     study           v1 r2   3.1s FAIL 3 follow-ups
+desk     achievements    v0 r2   3.0s ok
+desk     achievements    v1 r2   1.3s ok
+desk     competitive     v0 r2   2.2s ok
+desk     competitive     v1 r2   1.7s ok
+desk     jee             v0 r2   2.0s ok
+desk     written         v0 r2   2.6s ok
+desk     written         v1 r2   1.2s FAIL 3 follow-ups
+desk     post-about      v0 r2   1.2s FAIL 3 follow-ups
+desk     post-about      v1 r2   1.7s ok
+desk     contact         v0 r2   1.5s ok
+desk     contact         v1 r2   1.5s ok
+desk     resume          v0 r2   1.6s FAIL 3 follow-ups
+desk     resume          v1 r2   1.5s ok
+desk     socials         v0 r2   1.5s ok
+desk     socials         v1 r2   2.0s ok
+desk     other-language  v0 r2   2.2s ok
+desk     now             v0 r3   1.8s ok
+desk     now             v1 r3   3.3s ok
+desk     before          v0 r3   2.1s ok
+desk     before          v1 r3   2.1s ok
+desk     companies       v0 r3   1.8s ok
+desk     companies       v1 r3   2.3s ok
+desk     atlan-path      v0 r3   4.7s FAIL 3 follow-ups
+desk     atlan-path      v1 r3   1.2s ok
+desk     atlan-work      v0 r3   1.3s FAIL 3 follow-ups
+desk     atlan-work      v1 r3   1.7s FAIL <=120 words
+desk     crossplane      v0 r3   2.3s ok
+desk     crossplane      v1 r3   1.5s ok
+desk     argocd          v0 r3   3.3s ok
+desk     argocd          v1 r3   3.0s FAIL 3 follow-ups
+desk     agents          v0 r3   1.7s ok
+desk     agents          v1 r3   3.8s ok
+desk     open-weight     v0 r3   2.4s ok
+desk     open-weight     v1 r3   2.4s ok
+desk     mcp             v0 r3   1.4s ok
+desk     mcp             v1 r3   1.8s FAIL mentions MCP
+desk     simppl          v0 r3   4.8s ok
+desk     simppl          v1 r3   2.0s ok
+desk     location        v0 r3   1.8s ok
+desk     location        v1 r3   1.8s ok
+desk     side            v0 r3   2.0s ok
+desk     side            v1 r3   1.8s ok
+desk     autoscaler      v0 r3   1.8s ok
+desk     autoscaler      v1 r3   1.2s ok
+desk     ml-deploy       v0 r3   1.6s ok
+desk     ml-deploy       v1 r3   1.9s FAIL 3 follow-ups
+desk     ride            v0 r3   2.3s ok
+desk     ride            v1 r3   2.1s FAIL 3 follow-ups
+desk     code            v0 r3   1.9s ok
+desk     code            v1 r3   1.8s ok
+desk     demo            v0 r3   2.6s ok
+desk     demo            v1 r3   2.2s ok
+desk     stack           v0 r3   1.7s ok
+desk     stack           v1 r3   1.6s ok
+desk     languages       v0 r3   2.0s ok
+desk     languages       v1 r3   2.0s ok
+desk     cloud           v0 r3   2.1s ok
+desk     cloud           v1 r3   2.0s ok
+desk     observability   v0 r3   2.8s ok
+desk     observability   v1 r3   2.1s ok
+desk     temporal        v0 r3   3.0s ok
+desk     temporal        v1 r3   1.8s ok
+desk     portal          v0 r3   2.2s ok
+desk     study           v0 r3   2.4s ok
+desk     study           v1 r3   1.8s ok
+desk     achievements    v0 r3   2.1s ok
+desk     achievements    v1 r3   1.4s FAIL 3 follow-ups
+desk     competitive     v0 r3   2.5s ok
+desk     competitive     v1 r3   1.8s ok
+desk     jee             v0 r3   1.9s ok
+desk     written         v0 r3   2.7s ok
+desk     written         v1 r3   1.8s ok
+desk     post-about      v0 r3   1.9s ok
+desk     post-about      v1 r3   1.7s ok
+desk     contact         v0 r3   1.6s ok
+desk     contact         v1 r3   1.8s ok
+desk     resume          v0 r3   1.6s ok
+desk     resume          v1 r3   1.6s FAIL 3 follow-ups
+desk     socials         v0 r3   2.0s ok
+desk     socials         v1 r3   1.7s ok
+desk     other-language  v0 r3   2.1s ok
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+desk          195         165          189    2.0s /   3.0s        0      0
+  before: 1/6 [3 follow-ups]
+  atlan-path: 3/6 [3 follow-ups]
+  atlan-work: 4/6 [<=120 words; 3 follow-ups]
+  mcp: 3/6 [3 follow-ups; mentions MCP]
+  autoscaler: 2/6 [3 follow-ups; mentions the KV cache]
+  demo: 1/6 [3 follow-ups]
+  cloud: 1/6 [3 follow-ups]
+  competitive: 1/6 [mentions Codeforces]
+  post-about: 3/6 [3 follow-ups]
+  socials: 1/6 [links a profile]
+  ride: 2/6 [known URLs only; 3 follow-ups]
+  code: 1/6 [3 follow-ups]
+  study: 1/6 [3 follow-ups]
+  written: 1/6 [3 follow-ups]
+  resume: 2/6 [3 follow-ups]
+  argocd: 1/6 [3 follow-ups]
+  ml-deploy: 1/6 [3 follow-ups]
+  achievements: 1/6 [3 follow-ups]
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261019T095454/answers.jsonl

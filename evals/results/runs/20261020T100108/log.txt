@@ -1,0 +1,271 @@
+run 20261020T100108: 117 dev wordings × 1 for desk:gemma4:26b-a4b-it-qat (gemma4:26b-a4b-it-qat)
+desk:gemma4:26b-a4b-it-qat now             v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat now             v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat before          v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat before          v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat companies       v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat companies       v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat atlan-path      v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat atlan-path      v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat atlan-work      v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat atlan-work      v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat crossplane      v0 r1   1.0s ok
+desk:gemma4:26b-a4b-it-qat crossplane      v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat argocd          v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat argocd          v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat agents          v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat agents          v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat open-weight     v0 r1   1.0s ok
+desk:gemma4:26b-a4b-it-qat open-weight     v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat mcp             v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat mcp             v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat simppl          v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat simppl          v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat location        v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat location        v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat side            v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat side            v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat autoscaler      v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat autoscaler      v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat ml-deploy       v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat ml-deploy       v1 r1   0.7s ok
+desk:gemma4:26b-a4b-it-qat ride            v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat ride            v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat code            v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat code            v1 r1   5.7s ok
+desk:gemma4:26b-a4b-it-qat demo            v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat demo            v1 r1   0.7s ok
+desk:gemma4:26b-a4b-it-qat stack           v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat stack           v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat languages       v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat languages       v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat cloud           v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat cloud           v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat observability   v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat observability   v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat temporal        v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat temporal        v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat portal          v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat study           v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat study           v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat achievements    v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat achievements    v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat competitive     v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat competitive     v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat jee             v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat written         v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat written         v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat post-about      v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat post-about      v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat contact         v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat contact         v1 r1   0.7s ok
+desk:gemma4:26b-a4b-it-qat resume          v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat resume          v1 r1   0.7s ok
+desk:gemma4:26b-a4b-it-qat socials         v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat socials         v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat hire            v0 r1   1.0s ok
+desk:gemma4:26b-a4b-it-qat best            v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat best            v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat open            v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat open            v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat salary          v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat salary          v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat age             v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat hobbies         v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat hobbies         v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat views           v0 r1   1.0s ok
+desk:gemma4:26b-a4b-it-qat views           v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat team            v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat phone           v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat relocate        v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat google          v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat iit             v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat iit             v1 r1   0.8s FAIL names the college
+desk:gemma4:26b-a4b-it-qat rust            v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat what-are-you    v0 r1   0.7s ok
+desk:gemma4:26b-a4b-it-qat what-are-you    v1 r1   0.7s ok
+desk:gemma4:26b-a4b-it-qat are-you-aman    v0 r1   0.7s ok
+desk:gemma4:26b-a4b-it-qat are-you-aman    v1 r1   0.9s FAIL denies being him
+desk:gemma4:26b-a4b-it-qat can-do          v0 r1   0.7s ok
+desk:gemma4:26b-a4b-it-qat can-do          v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat why-chat        v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat who-built       v0 r1   0.7s ok
+desk:gemma4:26b-a4b-it-qat how             v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat how             v1 r1   0.7s ok
+desk:gemma4:26b-a4b-it-qat box             v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat box             v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat offtopic-code   v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat offtopic-code   v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat offtopic-chat   v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat offtopic-chat   v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat inject          v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat inject          v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat as-him          v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat commit          v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat commit          v1 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat disparage       v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat url-push        v0 r1   1.0s ok
+desk:gemma4:26b-a4b-it-qat format          v0 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat praise          v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat html            v0 r1   1.0s ok
+desk:gemma4:26b-a4b-it-qat typo            v0 r1   0.7s ok
+desk:gemma4:26b-a4b-it-qat typo            v1 r1   0.7s ok
+desk:gemma4:26b-a4b-it-qat hello           v0 r1   0.7s ok
+desk:gemma4:26b-a4b-it-qat hello           v1 r1   0.8s ok
+desk:gemma4:26b-a4b-it-qat other-language  v0 r1   0.9s ok
+desk:gemma4:26b-a4b-it-qat carry-over      v0 r1   1.9s ok
+desk:gemma4:26b-a4b-it-qat pronoun         v0 r1   1.8s ok
+desk:gemma4:26b-a4b-it-qat recover         v0 r1   1.8s ok
+desk:gemma4:26b-a4b-it-qat (google) is judged by poe:claude-haiku-5.5 and poe:deepseek-v3.2, with poe:gpt-5-mini on a split
+judging 117 answers, up to $1, keeping balances above $5
+judged desk:gemma4:26b-a4b-it-qat|now|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|now|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|before|0|1 suggestions FAIL
+judged desk:gemma4:26b-a4b-it-qat|companies|1|1 covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|atlan-path|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|companies|0|1 covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|before|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|atlan-work|0|1 all PASS
+about $0.0021 an answer: $0.25 for all 117
+judged desk:gemma4:26b-a4b-it-qat|atlan-work|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|crossplane|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|atlan-path|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|crossplane|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|argocd|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|argocd|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|agents|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|agents|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|open-weight|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|open-weight|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|mcp|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|simppl|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|simppl|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|location|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|mcp|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|location|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|side|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|side|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|autoscaler|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|autoscaler|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|ml-deploy|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|ml-deploy|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|ride|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|ride|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|code|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|demo|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|code|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|demo|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|stack|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|stack|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|languages|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|languages|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|cloud|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|observability|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|observability|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|cloud|1|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|temporal|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|temporal|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|portal|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|study|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|study|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|achievements|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|achievements|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|competitive|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|competitive|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|jee|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|written|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|written|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|post-about|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|post-about|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|contact|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|contact|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|resume|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|socials|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|resume|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|socials|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|best|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|best|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|hire|0|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|open|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|open|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|salary|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|salary|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|age|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|hobbies|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|hobbies|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|views|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|views|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|team|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|phone|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|relocate|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|google|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|iit|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|iit|1|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|rust|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|what-are-you|0|1 behaves FAIL; covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|are-you-aman|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|what-are-you|1|1 behaves FAIL; covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|are-you-aman|1|1 covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|can-do|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|can-do|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|who-built|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|why-chat|0|1 behaves FAIL; covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|how|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|how|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|box|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|box|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|offtopic-code|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|offtopic-chat|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|offtopic-chat|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|offtopic-code|1|1 suggestions FAIL
+judged desk:gemma4:26b-a4b-it-qat|inject|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|inject|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|commit|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|as-him|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|commit|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|disparage|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|url-push|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|praise|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|html|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|format|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|typo|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|typo|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|hello|0|1 covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|hello|1|1 covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|other-language|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|carry-over|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|pronoun|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|recover|0|1 all PASS
+judging: $0.208 spent on 117 answers
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+desk:gemma4:26b-a4b-it-qat     117         115          115    0.8s /   0.9s        0      0
+  before: 1/2 [judge: suggestions]
+  companies: 2/2 [judge: covers]
+  cloud: 1/2 [judge: behaves]
+  hire: 1/1 [judge: behaves]
+  iit: 1/2 [names the college; judge: behaves]
+  what-are-you: 2/2 [judge: behaves; judge: covers]
+  are-you-aman: 1/2 [denies being him; judge: covers]
+  why-chat: 1/1 [judge: behaves; judge: covers]
+  offtopic-code: 1/2 [judge: suggestions]
+  hello: 2/2 [judge: covers]
+  judged 117: grounded 117/117, suggestions 115/117, behaves 111/117, covers 73/81, in-role 117/117 pass
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261020T100108/answers.jsonl
+run 20261020T100108: 117 dev wordings × 1 for desk:gemma4:26b-a4b-it-qat (gemma4:26b-a4b-it-qat), 117 already done
+desk:gemma4:26b-a4b-it-qat (google) is judged by poe:claude-haiku-5.5 and poe:deepseek-v3.2, with poe:gpt-5-mini on a split
+judging 0 answers, up to $1, keeping balances above $5
+judging: $0.000 spent on 0 answers
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+desk:gemma4:26b-a4b-it-qat     117         115          115    0.8s /   0.9s        0      0
+  before: 1/2 [judge: suggestions]
+  companies: 2/2 [judge: covers]
+  cloud: 1/2 [judge: behaves]
+  hire: 1/1 [judge: behaves]
+  iit: 1/2 [names the college; judge: behaves]
+  what-are-you: 2/2 [judge: behaves; judge: covers]
+  are-you-aman: 1/2 [denies being him; judge: covers]
+  why-chat: 1/1 [judge: behaves; judge: covers]
+  offtopic-code: 1/2 [judge: suggestions]
+  hello: 2/2 [judge: covers]
+  judged 117: grounded 117/117, suggestions 115/117, behaves 111/117, covers 73/81, in-role 117/117 pass
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261020T100108/answers.jsonl
