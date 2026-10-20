@@ -233,11 +233,11 @@ const NOTES: Record<
   pc: {
     wide: {
       at: [1, 10],
-      rows: ["# my desktop at home", "  # answers your questions"],
+      rows: ["# my desktop at home", "# answers your questions"],
     },
     narrow: {
       at: [1, 4],
-      rows: ["# my desktop at home", "  # answers your questions"],
+      rows: ["# my desktop at home", "# answers your questions"],
     },
   },
   "pc-tick": {
