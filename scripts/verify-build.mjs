@@ -271,17 +271,26 @@ check(
   },
 );
 
-// desk/chat-log-proxy.mjs, run for real against a fake Ollama.
-const OLLAMA_DELAY_MS = 800;
+// desk/chat-log-proxy.mjs, run for real against a fake Ollama, polling it
+// every 50ms with a short in-use window.
+const OLLAMA_DELAY_MS = 400;
+const IN_USE_MS = 400;
 async function runProxy() {
-  let loaded = [];
+  // What /api/ps lists: each model's expires_at. This one was loaded before
+  // the proxy started.
+  let loaded = new Map([["eval-model", "t0"]]);
   let psStatus = 200;
   let chats = 0;
   const ollama = http.createServer(async (req, res) => {
     for await (const _ of req);
     if (req.url === "/api/ps") {
+      const models = [...loaded].map(([name, expires_at]) => ({
+        name,
+        model: name,
+        expires_at,
+      }));
       res.writeHead(psStatus, { "content-type": "application/json" });
-      return res.end(JSON.stringify({ models: loaded }));
+      return res.end(JSON.stringify({ models }));
     }
     chats++;
     // Slow to start, like a load: the proxy's headers mustn't wait for it.
@@ -310,9 +319,12 @@ async function runProxy() {
       PORT: String(port),
       OLLAMA_URL: `http://127.0.0.1:${ollamaPort}`,
       LOG_DIR: logs,
+      PS_POLL_MS: "50",
+      IN_USE_MS: String(IN_USE_MS),
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   try {
     await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error("no start in 5s")), 5000);
@@ -330,9 +342,7 @@ async function runProxy() {
       });
     });
 
-    const ask = async (models, status = 200) => {
-      loaded = models.map((name) => ({ name, model: name }));
-      psStatus = status;
+    const ask = async () => {
       const before = chats;
       const started = performance.now();
       const res = await fetch(`http://127.0.0.1:${port}/api/chat`, {
@@ -352,12 +362,26 @@ async function runProxy() {
         asked: chats - before,
       };
     };
-    const got = {
-      warm: await ask(["desk-model", "other"]),
-      cold: await ask([]),
-      busy: await ask(["eval-model"]),
-      down: await ask([], 500),
-    };
+    const got = {};
+    got.idle = await ask();
+    // A request on it finished.
+    loaded.set("eval-model", "t1");
+    got.moved = await ask();
+    // Between questions: only the poll sees this one move.
+    loaded.set("eval-model", "t2");
+    await wait(IN_USE_MS + 200);
+    got.aged = await ask();
+    loaded.set("other-model", "u0");
+    got.loadedSince = await ask();
+    loaded = new Map([
+      ["desk-model", "v0"],
+      ["other-model", "u1"],
+    ]);
+    got.warm = await ask();
+    loaded = new Map();
+    got.cold = await ask();
+    psStatus = 500;
+    got.down = await ask();
     // Each line is written after its response ends.
     for (let i = 0; i < 40; i++) {
       got.outcomes = readdirSync(logs)
@@ -365,8 +389,8 @@ async function runProxy() {
         .filter(Boolean)
         .map((l) => JSON.parse(l).outcome)
         .sort();
-      if (got.outcomes.length >= 4) break;
-      await new Promise((r) => setTimeout(r, 50));
+      if (got.outcomes.length >= 7) break;
+      await wait(50);
     }
     return got;
   } finally {
@@ -376,37 +400,33 @@ async function runProxy() {
   }
 }
 const desk = await runProxy().catch((err) => ({ error: err.message }));
+const shown = (o) =>
+  JSON.stringify({ ...o, headersMs: Math.round(o?.headersMs ?? -1) });
+const isBusy = (o) =>
+  o.status === 503 &&
+  o.state === null &&
+  o.asked === 0 &&
+  JSON.parse(o.body).error === "busy";
+const isCold = (o) => o.status === 200 && o.state === "cold" && o.asked === 1;
 
 check("the desk proxy says warm, cold or busy before Ollama answers", () => {
   assert(!desk.error, `desk/chat-log-proxy.mjs: ${desk.error}`);
-  const { warm, cold, busy, down } = desk;
-  const show = (o) =>
-    JSON.stringify({ ...o, headersMs: Math.round(o.headersMs) });
+  const { warm, cold, down } = desk;
   assert(
     warm.status === 200 && warm.state === "warm" && warm.body.includes("Hi"),
-    `with the model loaded: ${show(warm)}`,
+    `with the model loaded: ${shown(warm)}`,
   );
-  assert(
-    cold.status === 200 && cold.state === "cold",
-    `with nothing loaded: ${show(cold)}`,
-  );
-  // Anything but a 200 sends the Worker to Poe before the stream starts.
-  assert(
-    busy.status === 503 &&
-      busy.state === null &&
-      busy.asked === 0 &&
-      JSON.parse(busy.body).error === "busy",
-    `with only another model loaded: ${show(busy)}`,
-  );
-  assert(down.status === 502, `with /api/ps failing: ${show(down)}`);
+  assert(isCold(cold), `with nothing loaded: ${shown(cold)}`);
+  assert(down.status === 502, `with /api/ps failing: ${shown(down)}`);
   // The Worker's short HEADERS_TIMEOUT_MS relies on this order.
+  const slowest = Math.max(warm.headersMs, cold.headersMs);
   assert(
-    warm.headersMs < OLLAMA_DELAY_MS && cold.headersMs < OLLAMA_DELAY_MS,
-    `headers waited for Ollama: ${Math.round(warm.headersMs)}ms`,
+    slowest < OLLAMA_DELAY_MS,
+    `headers waited for Ollama: ${Math.round(slowest)}ms`,
   );
   assert(
     JSON.stringify(desk.outcomes) ===
-      JSON.stringify(["busy", "error", "ok", "ok"]),
+      JSON.stringify(["busy", "busy", "error", "ok", "ok", "ok", "ok"]),
     `logged outcomes ${desk.outcomes}`,
   );
   assert(
@@ -415,7 +435,17 @@ check("the desk proxy says warm, cold or busy before Ollama answers", () => {
       deskEvent(null) === null,
     "deskEvent no longer maps cold/warm/absent to true/false/null",
   );
-  return `headers in ${Math.round(warm.headersMs)}ms`;
+  return `headers in ${Math.round(slowest)}ms`;
+});
+
+check("the desk proxy says busy only while another model is in use", () => {
+  assert(!desk.error, `desk/chat-log-proxy.mjs: ${desk.error}`);
+  const { idle, moved, aged, loadedSince } = desk;
+  // Anything but a 200 sends the Worker to Poe before the stream starts.
+  assert(isBusy(moved), `right after a request on it: ${shown(moved)}`);
+  assert(isBusy(loadedSince), `loaded since start: ${shown(loadedSince)}`);
+  assert(isCold(idle), `left loaded and idle: ${shown(idle)}`);
+  assert(isCold(aged), `idle past IN_USE_MS: ${shown(aged)}`);
 });
 
 check(

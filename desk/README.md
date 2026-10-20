@@ -12,11 +12,14 @@ visitor -> Worker (/api/chat) -> Workers VPC -> Cloudflare Tunnel
   through unchanged, and appends each exchange to
   `~/.local/share/portfolio-chat/chats-YYYY-MM-DD.jsonl` (one file per UTC day).
   Before forwarding it asks Ollama's `/api/ps` what is loaded and answers at
-  once: `x-desk-model: warm` if the chat's model is, `cold` if nothing is (the
-  shell's "cold start" note). If only other models are, something else (an
-  eval) is using Ollama and a question would queue behind it, so it returns
-  503 `busy` without asking Ollama, and the Worker asks Poe. If Ollama doesn't
-  answer, it returns 502.
+  once: `x-desk-model: warm` if the chat's model is, `cold` if not (the shell's
+  "cold start" note). If another model is in use, such as an eval, a question
+  would queue behind it, so the proxy returns 503 `busy` without asking Ollama,
+  and the Worker asks Poe. "In use" means the model's `expires_at` moved within
+  the last 2 minutes: Ollama moves it as each request finishes. The proxy
+  reads `/api/ps` every 10s to time those moves. A model left loaded but idle
+  doesn't count; Ollama swaps it out for a cold start. If Ollama doesn't
+  answer, the proxy returns 502.
 - **Retention is 30 days.** The proxy deletes a day file once that day began
   more than 30 days ago, at startup and hourly. `/privacy/` promises this; change
   `RETENTION_DAYS` and that page together.
@@ -33,7 +36,7 @@ Written by the proxy, so it can only contain what reaches the desk:
 | `question`, `history`              | the conversation the browser sent (up to 8 turns)                                                                                                                            |
 | `answer`, `reasoning`              | Ollama's stream: the reply, suggested questions and hidden notes                                                                                                             |
 | `stats`, `firstTokenMs`, `totalMs` | Ollama's timings and the proxy's clock                                                                                                                                       |
-| `outcome`                          | `ok`, `cancelled` (the visitor hung up, or the Worker gave up waiting and asked Poe), `busy` (another model was loaded, so the Worker asked Poe), `error`, `upstream_<code>` |
+| `outcome`                          | `ok`, `cancelled` (the visitor hung up, or the Worker gave up waiting and asked Poe), `busy` (another model was in use, so the Worker asked Poe), `error`, `upstream_<code>` |
 | `systemPrompt`                     | a 12-character hash: which prompt version answered                                                                                                                           |
 | `country`                          | the one visitor fact the Worker forwards (Cloudflare's geo)                                                                                                                  |
 

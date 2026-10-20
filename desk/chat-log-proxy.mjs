@@ -15,6 +15,16 @@ const LOG_DIR =
   process.env.LOG_DIR ?? join(homedir(), ".local/share/portfolio-chat");
 const MAX_BODY = 64_000;
 
+/**
+ * Ollama moves a loaded model's expires_at when a request on it finishes, and
+ * on every read while it runs the first request after a load; an idle model's
+ * stands still (0.34.4, measured 2026-10-20). So a model whose expires_at
+ * moved within IN_USE_MS is in use. In that day's bake-off runs it stood still
+ * at most 104s while the eval was busy (591 answers, 5 models).
+ */
+const PS_POLL_MS = Number(process.env.PS_POLL_MS ?? 10_000);
+const IN_USE_MS = Number(process.env.IN_USE_MS ?? 120_000);
+
 /** What the privacy page promises. Change both together. */
 const RETENTION_DAYS = 30;
 const DAY_MS = 86_400_000;
@@ -54,13 +64,12 @@ async function readBody(req) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-/**
- * What Ollama has in memory: `warm` if `model`, `cold` if nothing, `busy` if
- * only other models, or null if Ollama didn't answer. Busy means something
- * else, like an eval, is using Ollama: a question would queue behind its
- * requests, then wait for a load. On 2026-10-20 one waited 53s that way.
- */
-async function deskState(model) {
+/** Each loaded model's last expires_at, and when the proxy saw it move. */
+const seen = new Map();
+let primed = false;
+
+/** Ollama's loaded models, noting which moved; null if it didn't answer. */
+async function readPs() {
   try {
     const res = await fetch(`${OLLAMA}/api/ps`, {
       signal: AbortSignal.timeout(2_000),
@@ -68,13 +77,42 @@ async function deskState(model) {
     if (!res.ok) return null;
     const { models } = await res.json();
     const loaded = Array.isArray(models) ? models : [];
-    if (loaded.some((m) => m?.name === model || m?.model === model)) {
-      return "warm";
+    const now = Date.now();
+    const names = new Set();
+    for (const m of loaded) {
+      const name = m?.name ?? m?.model;
+      const was = seen.get(name);
+      names.add(name);
+      if (was?.expiresAt === m?.expires_at) continue;
+      // One loaded before the proxy started may be idle; one loaded since
+      // was loaded by a request.
+      const movedAt = !was && !primed ? -Infinity : now;
+      seen.set(name, { expiresAt: m?.expires_at, movedAt });
     }
-    return loaded.length ? "busy" : "cold";
+    for (const name of seen.keys()) if (!names.has(name)) seen.delete(name);
+    primed = true;
+    return loaded;
   } catch {
     return null;
   }
+}
+
+/**
+ * `warm` if Ollama has `model` loaded, `busy` if not and another model is in
+ * use, `cold` otherwise, or null if Ollama didn't answer. Busy is an eval, say:
+ * a question would queue behind its requests, then a load (on 2026-10-20 one
+ * waited 53s). A model left loaded but idle is cold: Ollama swaps it out.
+ */
+async function deskState(model) {
+  const loaded = await readPs();
+  if (!loaded) return null;
+  if (loaded.some((m) => m?.name === model || m?.model === model)) {
+    return "warm";
+  }
+  const now = Date.now();
+  const inUse = (m) =>
+    now - (seen.get(m?.name ?? m?.model)?.movedAt ?? -Infinity) < IN_USE_MS;
+  return loaded.some(inUse) ? "busy" : "cold";
 }
 
 async function record(entry) {
@@ -217,6 +255,10 @@ server.listen(PORT, "127.0.0.1", () => {
     `chat log proxy on 127.0.0.1:${PORT} -> ${OLLAMA}, logs in ${LOG_DIR}`,
   );
 });
+
+// Between questions too, so a move is timed when it happens, not when asked.
+await readPs();
+setInterval(readPs, PS_POLL_MS);
 
 const pruneSafely = () =>
   prune().catch((err) => console.error("prune failed:", err));
