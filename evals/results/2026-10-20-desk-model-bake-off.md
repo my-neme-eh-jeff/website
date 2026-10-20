@@ -13,10 +13,11 @@ most accurate answers? Accuracy and answer quality come first. Speed and size
 are reported but don't rule a model out, and small models, 2–4B parameters in
 all, were left out on purpose.
 
-**Where it stands (one model still to run):** Qwen3.6-35B-A3B is the most
-accurate local model so far, at 96%. Gemma 4 26B-A4B is close behind at 91%,
-with perfect formatting and the fastest answers. Both clearly beat
-gpt-oss-20b's 82%. Giving gpt-oss more time to reason made it no better.
+**Where it stands, with every model run:** Qwen3.6-35B-A3B is the most
+accurate local model, at 96%. Gemma 4 26B-A4B is close behind at 91%, with
+perfect formatting and the fastest answers. Both clearly beat gpt-oss-20b's
+82%. The dense Gemma 4 31B matched them (92%, and the best fully-right score,
+92%) but took about 40 seconds an answer. Giving gpt-oss more time to reason made it no better.
 Nothing has been switched in production. Each model answered each question
 once, so the gap between the top two isn't settled yet; see
 [What's not settled](#whats-not-settled).
@@ -30,8 +31,9 @@ every answer graded. They're sorted by accurate.
 | -------------------------------- | ------------ | -------------------------- | --------------------------- | ------------------------- | ----- | ------------------- |
 | Poe fallback, ds-v4.1-flash-1017 | thinking off | **114/117** 97% (93%–99%)  | **109.3/117** 93% (87%–97%) | 1.3s / 2.5s               | —     | —, —                |
 | Qwen3.6-35B-A3B                  | think off    | **112/117** 96% (90%–98%)  | **72/117** 62% (52%–70%)    | 2.0s / 4.8s               | 27.4  | 23 GB, 83/17        |
+| Gemma 4 31B (dense)              | think off    | **108/117** 92% (86%–96%)  | **108/117** 92% (86%–96%)   | 7.5s / 39.4s              | 1.6   | 19 GB, 83/17        |
 | Gemma 4 26B-A4B                  | think off    | **106/117** 91% (84%–95%)  | **104/117** 89% (82%–93%)   | 0.8s / 3.7s               | 21.9  | 15 GB, 78/22        |
-| Qwen3.6-27B                      | think off    | **98/117** 84% (76%–89%)   | **88/117** 75% (67%–82%)    | 5.7s / 39.0s              | 1.9   | 17 GB, 77/23        |
+| Qwen3.6-27B (dense)              | think off    | **98/117** 84% (76%–89%)   | **88/117** 75% (67%–82%)    | 5.7s / 39.0s              | 1.9   | 17 GB, 77/23        |
 | gpt-oss-20b (production)         | think low    | **96.3/117** 82% (74%–88%) | **76.3/117** 65% (56%–73%)  | 1.8s / 4.5s               | —     | 14 GB, 69/31        |
 | gpt-oss-20b                      | think medium | **93/117** 79% (71%–86%)   | **86/117** 74% (65%–81%)    | 15.3s / 17.8s             | 21.5  | 14 GB, 69/31        |
 | gpt-oss-20b                      | think high   | **86/117** 74% (65%–81%)   | **81/117** 69% (60%–77%)    | 67.6s / 74.0s             | 21.4  | 14 GB, 69/31        |
@@ -91,6 +93,16 @@ know model context protocol" and "codeforces rating?" although the facts answer
 both, false premises left uncorrected ("Why did he leave Google?"), and the
 questions about itself. Thinking longer doesn't fix what the model can't do.
 
+**Gemma 4 31B (dense): the cleanest answers, at a tenth of the speed.** It got
+108 of 117 right on both scores, since its formatting and suggestions were
+never wrong. Like the 26B, it invented no detail. Its 9 misses were spread
+out: three lists of employers without dates, three questions about itself, a
+GitHub link left out, a hobbies answer in its own voice, and "Why did he leave
+Google?" declined without saying where he does work. But all 30.7B weights work on every token, so
+with 83% of them in system RAM it produced 1.6 tokens a second: 7.5 seconds
+to the first word and about 40 seconds for a whole answer. On accuracy it is
+two questions ahead of Gemma 4 26B-A4B, which is within noise.
+
 **Qwen3.6-27B (dense): slower and less accurate than its MoE sibling.** All
 27.8B weights take part in every token, so with most of them on the CPU it ran
 at 1.9 tokens a second, about 40 seconds an answer. On 9 of 117 questions it
@@ -116,10 +128,12 @@ and made up a link (`amannambisan.com/#projects`).
   and Qwen3.6-35B-A3B use only 4B and 3B of their parameters for each token.
   Even with 78–83% of the model in system RAM, they answered as fast as
   gpt-oss. The
-  dense 27B model was about 10× slower, and no more accurate.
+  dense 27B and 31B models were about 10× slower, and no more accurate than
+  the best MoE model.
 - **Bigger isn't automatically better.** The dense Qwen3.6-27B (84%) lost to
   the MoE Qwen3.6-35B-A3B (96%), partly because it sometimes skipped the
-  answer.
+  answer. The dense Gemma 4 31B (92%) only tied the MoE Gemma 4 26B-A4B
+  (91%).
 - **Some failures only show up once you count them.** Two models sometimes
   answered with nothing but the follow-up block. The board now counts a blank
   answer as wrong; before `7e6a259` those answers dropped out of the
@@ -152,9 +166,7 @@ and made up a link (`amannambisan.com/#projects`).
 
 ## What runs next
 
-- **Still running tonight:** Gemma 4 31B (`gemma4:31b-it-qat`, dense). It will
-  be added here when it finishes.
-- **Then a finalist round for Qwen3.6-35B-A3B and Gemma 4 26B-A4B:** three
+- **Next, a finalist round for Qwen3.6-35B-A3B and Gemma 4 26B-A4B:** three
   answers per question, dev and held-out wordings, thinking on and off, with
   and without the identity rule, plus a memory check at 16k context.
 - **Not before Aman decides:** switching the site's model, the identity rule,
@@ -182,6 +194,7 @@ and made up a link (`amannambisan.com/#projects`).
 | `qwen3.6:27b-q4_K_M`         | qwen35         | 27.8B      | Q4_K_M       | 8,192               |
 | `glm-4.7-flash:q4_K_M`       | glm4moelite    | 29.9B      | Q4_K_M       | 8,192               |
 | `nemotron-3.5-lightning:30b` | nemotron_h_moe | 32.9B      | Q4_K_M       | 8,192               |
+| `gemma4:31b-it-qat`          | gemma4         | 30.7B      | Q4_0         | 8,192               |
 
 `gpt-oss-16k:20b` is `gpt-oss:20b` with its context set to 16k, the way the
 site runs it.
@@ -227,8 +240,8 @@ row comes from the 2026-10-19 baseline.
   gemini-3-flash and kimi-k2.6. For each model under test, the panel is the
   first two in the pool not made by its maker, and a third breaks a tie. No
   judge ever grades its own maker's model.
-- **Cost:** about $0.21–0.29 per 117 answers. All 20 runs in this folder
-  cost $5.95 together.
+- **Cost:** about $0.21–0.29 per 117 answers. All 21 runs in this folder
+  cost $6.15 together.
 
 **The order of events (UTC).**
 
@@ -243,6 +256,8 @@ row comes from the 2026-10-19 baseline.
   was being judged. The run resumed at 14:07.
 - **The last two:** GLM-4.7-Flash ran from 14:13 to 14:34. Nemotron ran from
   15:52 to 16:19, once its 25 GB download had landed.
+- **Gemma 4 31B:** this ran last, from 17:31 to 19:20. It took 100 minutes for
+  its answers alone.
 
 The scripts and their logs are in [`box/`](box/).
 
@@ -264,16 +279,17 @@ This command rebuilds the board below from the committed data, as
       evals/results/runs/20261020T055511 evals/results/runs/20261020T064312 \
       evals/results/runs/20261020T100108 evals/results/runs/20261020T105045 \
       evals/results/runs/20261020T111512 evals/results/runs/20261020T141300 \
-      evals/results/runs/20261020T155238
+      evals/results/runs/20261020T155238 evals/results/runs/20261020T173111
 
 ## The full board
 
-Ranked by accurate: facts and behaviour right, by code checks and the judges' grounded, behaves, covers and in-role, leaving out layout and suggested questions. A blank answer counts as judged and wrong. Every row counts the same 117 wordings, those judged in all 9 rows, each once however many times a run asked it. Intervals are 95% Wilson. The rows were not all asked with the same rules, so prompt and model differences are mixed.
+Ranked by accurate: facts and behaviour right, by code checks and the judges' grounded, behaves, covers and in-role, leaving out layout and suggested questions. A blank answer counts as judged and wrong. Every row counts the same 117 wordings, those judged in all 10 rows, each once however many times a run asked it. Intervals are 95% Wilson. The rows were not all asked with the same rules, so prompt and model differences are mixed.
 
 |                                                                                                                                                    | accurate                   | judged and all right        | judge: grounded              | judge: suggestions          | judge: behaves               | judge: covers             | judge: in-role               | code checks                 | first word / whole answer, p50 | tok/s p50 |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | --------------------------- | ---------------------------- | --------------------------- | ---------------------------- | ------------------------- | ---------------------------- | --------------------------- | ------------------------------ | --------- |
 | **fallback (ds-v4.1-flash-1017)**<br>run 20261019T084715 · production settings · prompt d20da8ed4454                                               | **114/117** 97% (93%–99%)  | **109.3/117** 93% (87%–97%) | **116.3/117** 99% (96%–100%) | **108.3/117** 93% (86%–96%) | **115.7/117** 99% (95%–100%) | **78/79** 99% (93%–100%)  | **117/117** 100% (97%–100%)  | **113.3/117** 97% (92%–99%) | 1.3s / 2.5s                    | —         |
 | **desk:qwen3.6:35b-a3b-q4_K_M**<br>run 20261020T105045 · think false · `{"options":{"num_ctx":8192,"num_predict":2000}}` · prompt 328344d1a43e     | **112/117** 96% (90%–98%)  | **72/117** 62% (52%–70%)    | **114/117** 97% (93%–99%)    | **78/117** 67% (58%–75%)    | **115/117** 98% (94%–100%)   | **81/81** 100% (95%–100%) | **117/117** 100% (97%–100%)  | **79/117** 68% (59%–75%)    | 2.0s / 4.8s                    | 27.4      |
+| **desk:gemma4:31b-it-qat**<br>run 20261020T173111 · think false · `{"options":{"num_ctx":8192,"num_predict":2000}}` · prompt 328344d1a43e          | **108/117** 92% (86%–96%)  | **108/117** 92% (86%–96%)   | **117/117** 100% (97%–100%)  | **117/117** 100% (97%–100%) | **114/117** 97% (93%–99%)    | **74/81** 91% (83%–96%)   | **116/117** 99% (95%–100%)   | **115/117** 98% (94%–100%)  | 7.5s / 39.4s                   | 1.6       |
 | **desk:gemma4:26b-a4b-it-qat**<br>run 20261020T100108 · think false · `{"options":{"num_ctx":8192,"num_predict":2000}}` · prompt 328344d1a43e      | **106/117** 91% (84%–95%)  | **104/117** 89% (82%–93%)   | **117/117** 100% (97%–100%)  | **115/117** 98% (94%–100%)  | **111/117** 95% (89%–98%)    | **73/81** 90% (82%–95%)   | **117/117** 100% (97%–100%)  | **115/117** 98% (94%–100%)  | 0.8s / 3.7s                    | 21.9      |
 | **desk:qwen3.6:27b-q4_K_M**<br>run 20261020T111512 · think false · `{"options":{"num_ctx":8192,"num_predict":2000}}` · prompt 328344d1a43e         | **98/117** 84% (76%–89%)   | **88/117** 75% (67%–82%)    | **107/108** 99% (95%–100%)   | **97/108** 90% (83%–94%)    | **106/108** 98% (93%–99%)    | **65/72** 90% (81%–95%)   | **108/108** 100% (97%–100%)  | **94/117** 80% (72%–87%)    | 5.7s / 39.0s                   | 1.9       |
 | **desk (gpt-oss-16k:20b)**<br>run 20261019T084715 · production settings · prompt 328344d1a43e                                                      | **96.3/117** 82% (74%–88%) | **76.3/117** 65% (56%–73%)  | **108.3/117** 93% (86%–96%)  | **100.0/117** 85% (78%–91%) | **106.7/117** 91% (85%–95%)  | **72.3/81** 89% (81%–94%) | **115.0/117** 98% (94%–100%) | **96.3/117** 82% (74%–88%)  | 1.8s / 4.5s                    | —         |

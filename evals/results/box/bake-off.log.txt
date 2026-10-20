@@ -10,3 +10,6 @@
 == 2026-10-20T14:34:37Z glm-4.7-flash:q4_K_M finished with exit 0
 == 2026-10-20T15:52:38Z nemotron-3.5-lightning:30b -> run 20261020T155238
 == 2026-10-20T16:19:09Z nemotron-3.5-lightning:30b finished with exit 0
+== 2026-10-20T17:31:11Z gemma4:31b-it-qat -> run 20261020T173111
+== 2026-10-20T19:20:50Z gemma4:31b-it-qat finished with exit 0
+== all done 2026-10-20T19:20:50Z
