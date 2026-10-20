@@ -18,9 +18,10 @@ const MAX_BODY = 64_000;
 /**
  * Ollama moves a loaded model's expires_at when a request on it finishes, and
  * on every read while it runs the first request after a load; an idle model's
- * stands still (0.34.4, measured 2026-10-20). So a model whose expires_at
- * moved within IN_USE_MS is in use. In that day's bake-off runs it stood still
- * at most 104s while the eval was busy (591 answers, 5 models).
+ * stands still (0.34.4, 2026-10-20; probe-ps.mjs re-checks it after an Ollama
+ * upgrade). So a model whose expires_at moved within IN_USE_MS is in use. In
+ * that day's bake-off runs it stood still at most 104s while the eval was busy
+ * (591 answers, 5 models).
  */
 const PS_POLL_MS = Number(process.env.PS_POLL_MS ?? 10_000);
 const IN_USE_MS = Number(process.env.IN_USE_MS ?? 120_000);

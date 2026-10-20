@@ -24,6 +24,8 @@ visitor -> Worker (/api/chat) -> Workers VPC -> Cloudflare Tunnel
   more than 30 days ago, at startup and hourly. `/privacy/` promises this; change
   `RETENTION_DAYS` and that page together.
 - `chatlog.mjs` prints that log. Its options are in the comment at its top.
+- `probe-ps.mjs` checks that Ollama still moves `expires_at` the way the busy
+  check assumes. Run it on the desk after upgrading Ollama.
 - `portfolio-chat-proxy.service` keeps the proxy running as a user unit.
 
 ## What one log line holds
@@ -53,7 +55,7 @@ From the repo root on a machine that can `ssh box`:
 
 ```sh
 ssh box 'mkdir -p ~/.local/lib/portfolio-desk ~/.config/systemd/user'
-scp desk/chat-log-proxy.mjs desk/chatlog.mjs box:.local/lib/portfolio-desk/
+scp desk/chat-log-proxy.mjs desk/chatlog.mjs desk/probe-ps.mjs box:.local/lib/portfolio-desk/
 scp desk/portfolio-chat-proxy.service box:.config/systemd/user/
 ssh box 'systemctl --user daemon-reload && systemctl --user enable --now portfolio-chat-proxy && systemctl --user restart portfolio-chat-proxy'
 ```
