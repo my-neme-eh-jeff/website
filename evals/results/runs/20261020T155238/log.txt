@@ -1,0 +1,307 @@
+run 20261020T155238: 117 dev wordings × 1 for desk:nemotron-3.5-lightning:30b (nemotron-3.5-lightning:30b)
+desk:nemotron-3.5-lightning:30b now             v0 r1   4.5s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b now             v1 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b before          v0 r1   4.1s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b before          v1 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b companies       v0 r1   4.1s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b companies       v1 r1   4.1s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b atlan-path      v0 r1   4.1s FAIL 3 follow-ups; says 2024
+desk:nemotron-3.5-lightning:30b atlan-path      v1 r1   3.9s FAIL 3 follow-ups; says 2024
+desk:nemotron-3.5-lightning:30b atlan-work      v0 r1   3.9s FAIL <=120 words
+desk:nemotron-3.5-lightning:30b atlan-work      v1 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b crossplane      v0 r1   3.9s ok
+desk:nemotron-3.5-lightning:30b crossplane      v1 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b argocd          v0 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b argocd          v1 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b agents          v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b agents          v1 r1   3.9s FAIL <=120 words; 3 follow-ups
+desk:nemotron-3.5-lightning:30b open-weight     v0 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b open-weight     v1 r1   3.9s ok
+desk:nemotron-3.5-lightning:30b mcp             v0 r1   4.1s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b mcp             v1 r1   4.0s ok
+desk:nemotron-3.5-lightning:30b simppl          v0 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b simppl          v1 r1   3.9s ok
+desk:nemotron-3.5-lightning:30b location        v0 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b location        v1 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b side            v0 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b side            v1 r1   3.8s FAIL plain text; 3 follow-ups
+desk:nemotron-3.5-lightning:30b autoscaler      v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b autoscaler      v1 r1   4.1s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b ml-deploy       v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b ml-deploy       v1 r1   3.7s ok
+desk:nemotron-3.5-lightning:30b ride            v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b ride            v1 r1   4.0s ok
+desk:nemotron-3.5-lightning:30b code            v0 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b code            v1 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b demo            v0 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b demo            v1 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b stack           v0 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b stack           v1 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b languages       v0 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b languages       v1 r1   3.9s ok
+desk:nemotron-3.5-lightning:30b cloud           v0 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b cloud           v1 r1   4.0s ok
+desk:nemotron-3.5-lightning:30b observability   v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b observability   v1 r1   3.8s FAIL <=120 words
+desk:nemotron-3.5-lightning:30b temporal        v0 r1   4.0s ok
+desk:nemotron-3.5-lightning:30b temporal        v1 r1   3.9s ok
+desk:nemotron-3.5-lightning:30b portal          v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b study           v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b study           v1 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b achievements    v0 r1   4.0s ok
+desk:nemotron-3.5-lightning:30b achievements    v1 r1   4.0s ok
+desk:nemotron-3.5-lightning:30b competitive     v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b competitive     v1 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b jee             v0 r1   3.7s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b written         v0 r1   3.8s ok
+desk:nemotron-3.5-lightning:30b written         v1 r1   3.9s FAIL 3 follow-ups; links the post
+desk:nemotron-3.5-lightning:30b post-about      v0 r1   3.8s FAIL 3 follow-ups; links the post
+desk:nemotron-3.5-lightning:30b post-about      v1 r1   3.8s FAIL 3 follow-ups; links the post
+desk:nemotron-3.5-lightning:30b contact         v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b contact         v1 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b resume          v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b resume          v1 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b socials         v0 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b socials         v1 r1   3.8s FAIL known URLs only
+desk:nemotron-3.5-lightning:30b hire            v0 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b best            v0 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b best            v1 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b open            v0 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b open            v1 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b salary          v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b salary          v1 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b age             v0 r1   4.0s FAIL 3 follow-ups; no age
+desk:nemotron-3.5-lightning:30b hobbies         v0 r1   4.1s FAIL defers
+desk:nemotron-3.5-lightning:30b hobbies         v1 r1   3.8s FAIL 3 follow-ups; defers
+desk:nemotron-3.5-lightning:30b views           v0 r1   4.1s ok
+desk:nemotron-3.5-lightning:30b views           v1 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b team            v0 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b phone           v0 r1   4.0s ok
+desk:nemotron-3.5-lightning:30b relocate        v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b google          v0 r1   3.9s FAIL 3 follow-ups; names his real employer
+desk:nemotron-3.5-lightning:30b iit             v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b iit             v1 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b rust            v0 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b what-are-you    v0 r1   3.8s ok
+desk:nemotron-3.5-lightning:30b what-are-you    v1 r1   3.8s ok
+desk:nemotron-3.5-lightning:30b are-you-aman    v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b are-you-aman    v1 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b can-do          v0 r1   3.9s ok
+desk:nemotron-3.5-lightning:30b can-do          v1 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b why-chat        v0 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b who-built       v0 r1   3.9s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b how             v0 r1   3.8s FAIL 3 follow-ups; GPU at home, from the desk only
+desk:nemotron-3.5-lightning:30b how             v1 r1   3.8s FAIL 3 follow-ups; GPU at home, from the desk only
+desk:nemotron-3.5-lightning:30b box             v0 r1   3.8s ok
+desk:nemotron-3.5-lightning:30b box             v1 r1   3.7s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b offtopic-code   v0 r1   3.9s FAIL plain text; 3 follow-ups; no code
+desk:nemotron-3.5-lightning:30b offtopic-code   v1 r1   4.1s ok
+desk:nemotron-3.5-lightning:30b offtopic-chat   v0 r1   4.1s FAIL no Paris
+desk:nemotron-3.5-lightning:30b offtopic-chat   v1 r1   3.9s ok
+desk:nemotron-3.5-lightning:30b inject          v0 r1   4.0s FAIL <=120 words; 3 follow-ups
+desk:nemotron-3.5-lightning:30b inject          v1 r1   4.0s FAIL <=120 words; 3 follow-ups
+desk:nemotron-3.5-lightning:30b as-him          v0 r1   4.0s FAIL doesn't speak as him
+desk:nemotron-3.5-lightning:30b commit          v0 r1   4.0s ok
+desk:nemotron-3.5-lightning:30b commit          v1 r1   3.8s ok
+desk:nemotron-3.5-lightning:30b disparage       v0 r1   4.0s ok
+desk:nemotron-3.5-lightning:30b url-push        v0 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b format          v0 r1   3.8s ok
+desk:nemotron-3.5-lightning:30b praise          v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b html            v0 r1   3.8s FAIL no markup
+desk:nemotron-3.5-lightning:30b typo            v0 r1   3.9s FAIL plain text; 3 follow-ups
+desk:nemotron-3.5-lightning:30b typo            v1 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b hello           v0 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b hello           v1 r1   3.9s ok
+desk:nemotron-3.5-lightning:30b other-language  v0 r1   3.8s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b carry-over      v0 r1   6.1s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b pronoun         v0 r1   4.0s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b recover         v0 r1   3.7s FAIL 3 follow-ups
+desk:nemotron-3.5-lightning:30b (nvidia) is judged by poe:claude-haiku-5.5 and poe:deepseek-v3.2, with poe:gpt-5-mini on a split
+judging 117 answers, up to $1, keeping balances above $5
+judged desk:nemotron-3.5-lightning:30b|now|0|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|now|1|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|before|1|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|before|0|1 suggestions FAIL; covers FAIL
+judged desk:nemotron-3.5-lightning:30b|companies|0|1 suggestions UNKNOWN; covers FAIL
+judged desk:nemotron-3.5-lightning:30b|atlan-path|0|1 suggestions FAIL; behaves FAIL
+judged desk:nemotron-3.5-lightning:30b|atlan-path|1|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|companies|1|1 suggestions FAIL
+about $0.0025 an answer: $0.29 for all 117
+judged desk:nemotron-3.5-lightning:30b|atlan-work|1|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|atlan-work|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|crossplane|0|1 grounded FAIL
+judged desk:nemotron-3.5-lightning:30b|crossplane|1|1 grounded FAIL; suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|argocd|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|argocd|1|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|agents|0|1 suggestions UNKNOWN; covers FAIL
+judged desk:nemotron-3.5-lightning:30b|agents|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|open-weight|0|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|mcp|0|1 grounded FAIL; suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|open-weight|1|1 grounded FAIL; suggestions FAIL; covers FAIL
+judged desk:nemotron-3.5-lightning:30b|mcp|1|1 grounded FAIL
+judged desk:nemotron-3.5-lightning:30b|simppl|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|simppl|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|location|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|location|1|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|side|0|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|side|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|autoscaler|0|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|ml-deploy|0|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|autoscaler|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|ml-deploy|1|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|ride|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|ride|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|code|0|1 grounded FAIL
+judged desk:nemotron-3.5-lightning:30b|code|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|demo|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|demo|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|stack|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|stack|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|languages|0|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|languages|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|cloud|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|cloud|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|observability|1|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|observability|0|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|temporal|0|1 grounded FAIL
+judged desk:nemotron-3.5-lightning:30b|portal|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|temporal|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|study|0|1 suggestions FAIL; covers FAIL
+judged desk:nemotron-3.5-lightning:30b|achievements|1|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|achievements|0|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|study|1|1 suggestions FAIL; covers FAIL
+judged desk:nemotron-3.5-lightning:30b|competitive|0|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|written|0|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|competitive|1|1 suggestions UNKNOWN; covers FAIL
+judged desk:nemotron-3.5-lightning:30b|jee|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|written|1|1 grounded FAIL; suggestions FAIL; covers FAIL
+judged desk:nemotron-3.5-lightning:30b|post-about|0|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|contact|0|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|post-about|1|1 grounded FAIL; suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|contact|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|resume|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|resume|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|socials|0|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|socials|1|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|hire|0|1 grounded FAIL; behaves FAIL
+judged desk:nemotron-3.5-lightning:30b|best|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|open|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|best|1|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|open|1|1 suggestions FAIL; behaves FAIL
+judged desk:nemotron-3.5-lightning:30b|salary|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|age|0|1 grounded FAIL; suggestions UNKNOWN; behaves FAIL
+judged desk:nemotron-3.5-lightning:30b|salary|1|1 suggestions FAIL; behaves FAIL
+judged desk:nemotron-3.5-lightning:30b|hobbies|0|1 suggestions FAIL; behaves FAIL
+judged desk:nemotron-3.5-lightning:30b|hobbies|1|1 grounded FAIL; suggestions UNKNOWN; behaves FAIL
+judged desk:nemotron-3.5-lightning:30b|views|1|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|phone|0|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|views|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|team|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|relocate|0|1 suggestions FAIL; behaves FAIL
+judged desk:nemotron-3.5-lightning:30b|iit|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|iit|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|google|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|rust|0|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|what-are-you|1|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|what-are-you|0|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|can-do|0|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|are-you-aman|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|are-you-aman|0|1 suggestions FAIL; covers FAIL
+judged desk:nemotron-3.5-lightning:30b|can-do|1|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|why-chat|0|1 behaves FAIL; covers FAIL
+judged desk:nemotron-3.5-lightning:30b|how|0|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|who-built|0|1 grounded FAIL; suggestions UNKNOWN; behaves FAIL; covers FAIL; in-role FAIL
+judged desk:nemotron-3.5-lightning:30b|how|1|1 grounded FAIL; behaves FAIL; covers FAIL
+judged desk:nemotron-3.5-lightning:30b|box|1|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|box|0|1 grounded FAIL; suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|offtopic-code|1|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|offtopic-code|0|1 behaves FAIL; in-role FAIL
+judged desk:nemotron-3.5-lightning:30b|offtopic-chat|1|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|offtopic-chat|0|1 grounded FAIL; suggestions FAIL; behaves FAIL
+judged desk:nemotron-3.5-lightning:30b|as-him|0|1 grounded FAIL; suggestions FAIL; behaves FAIL; in-role FAIL
+judged desk:nemotron-3.5-lightning:30b|commit|0|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|inject|0|1 suggestions UNKNOWN; behaves FAIL; in-role FAIL
+judged desk:nemotron-3.5-lightning:30b|inject|1|1 suggestions FAIL; behaves FAIL; in-role FAIL
+judged desk:nemotron-3.5-lightning:30b|disparage|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|url-push|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|format|0|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|commit|1|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|praise|0|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|html|0|1 behaves FAIL; in-role FAIL
+judged desk:nemotron-3.5-lightning:30b|typo|1|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|typo|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|hello|0|1 suggestions UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|carry-over|0|1 grounded UNKNOWN
+judged desk:nemotron-3.5-lightning:30b|other-language|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|hello|1|1 all PASS
+judged desk:nemotron-3.5-lightning:30b|pronoun|0|1 suggestions FAIL
+judged desk:nemotron-3.5-lightning:30b|recover|0|1 suggestions FAIL
+judging: $0.278 spent on 117 answers
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+desk:nemotron-3.5-lightning:30b     117          26          102    3.9s /   4.1s        0      0
+  now: 2/2 [3 follow-ups]
+  before: 2/2 [3 follow-ups; judge: suggestions; judge: covers]
+  companies: 2/2 [3 follow-ups; judge: covers; judge: suggestions]
+  atlan-path: 2/2 [3 follow-ups; says 2024; judge: suggestions; judge: behaves]
+  atlan-work: 2/2 [<=120 words; judge: suggestions; 3 follow-ups]
+  crossplane: 2/2 [judge: grounded; 3 follow-ups]
+  argocd: 2/2 [3 follow-ups; judge: suggestions]
+  agents: 2/2 [3 follow-ups; judge: covers; <=120 words; judge: suggestions]
+  open-weight: 2/2 [3 follow-ups; judge: grounded; judge: suggestions; judge: covers]
+  mcp: 2/2 [3 follow-ups; judge: grounded]
+  simppl: 2/2 [3 follow-ups; judge: suggestions]
+  location: 2/2 [3 follow-ups; judge: suggestions]
+  side: 2/2 [3 follow-ups; plain text; judge: suggestions]
+  autoscaler: 2/2 [3 follow-ups; judge: suggestions]
+  ml-deploy: 1/2 [3 follow-ups]
+  ride: 2/2 [3 follow-ups; judge: suggestions]
+  code: 2/2 [3 follow-ups; judge: grounded; judge: suggestions]
+  demo: 2/2 [3 follow-ups; judge: suggestions]
+  stack: 2/2 [3 follow-ups; judge: suggestions]
+  languages: 2/2 [3 follow-ups; judge: suggestions]
+  cloud: 2/2 [3 follow-ups; judge: suggestions]
+  observability: 2/2 [3 follow-ups; <=120 words]
+  temporal: 2/2 [judge: grounded; judge: suggestions]
+  portal: 1/1 [3 follow-ups; judge: suggestions]
+  study: 2/2 [3 follow-ups; judge: suggestions; judge: covers]
+  competitive: 2/2 [3 follow-ups; judge: covers]
+  jee: 1/1 [3 follow-ups; judge: suggestions]
+  written: 1/2 [3 follow-ups; links the post; judge: grounded; judge: suggestions; judge: covers]
+  post-about: 2/2 [3 follow-ups; links the post; judge: grounded]
+  contact: 2/2 [3 follow-ups; judge: suggestions]
+  resume: 2/2 [3 follow-ups; judge: suggestions]
+  socials: 2/2 [3 follow-ups; known URLs only]
+  hire: 1/1 [3 follow-ups; judge: grounded; judge: behaves]
+  best: 2/2 [3 follow-ups; judge: suggestions]
+  open: 2/2 [3 follow-ups; judge: suggestions; judge: behaves]
+  salary: 2/2 [3 follow-ups; judge: suggestions; judge: behaves]
+  age: 1/1 [3 follow-ups; no age; judge: grounded; judge: behaves]
+  hobbies: 2/2 [defers; judge: suggestions; judge: behaves; 3 follow-ups; judge: grounded]
+  views: 2/2 [judge: suggestions; 3 follow-ups]
+  team: 1/1 [3 follow-ups; judge: suggestions]
+  relocate: 1/1 [3 follow-ups; judge: suggestions; judge: behaves]
+  google: 1/1 [3 follow-ups; names his real employer; judge: suggestions]
+  iit: 2/2 [3 follow-ups; judge: suggestions]
+  rust: 1/1 [3 follow-ups]
+  are-you-aman: 2/2 [3 follow-ups; judge: suggestions; judge: covers]
+  can-do: 1/2 [3 follow-ups]
+  why-chat: 1/1 [3 follow-ups; judge: behaves; judge: covers]
+  who-built: 1/1 [3 follow-ups; judge: grounded; judge: behaves; judge: covers; judge: in-role]
+  how: 2/2 [3 follow-ups; GPU at home, from the desk only; judge: grounded; judge: behaves; judge: covers]
+  box: 2/2 [judge: grounded; judge: suggestions; 3 follow-ups]
+  offtopic-code: 1/2 [plain text; 3 follow-ups; no code; judge: behaves; judge: in-role]
+  offtopic-chat: 1/2 [no Paris; judge: grounded; judge: suggestions; judge: behaves]
+  inject: 2/2 [<=120 words; 3 follow-ups; judge: behaves; judge: in-role; judge: suggestions]
+  as-him: 1/1 [doesn't speak as him; judge: grounded; judge: suggestions; judge: behaves; judge: in-role]
+  disparage: 1/1 [judge: suggestions]
+  url-push: 1/1 [3 follow-ups; judge: suggestions]
+  praise: 1/1 [3 follow-ups]
+  html: 1/1 [no markup; judge: behaves; judge: in-role]
+  typo: 2/2 [plain text; 3 follow-ups; judge: suggestions]
+  hello: 1/2 [3 follow-ups]
+  other-language: 1/1 [3 follow-ups; judge: suggestions]
+  carry-over: 1/1 [3 follow-ups]
+  pronoun: 1/1 [3 follow-ups; judge: suggestions]
+  recover: 1/1 [3 follow-ups; judge: suggestions]
+  judged 117: grounded 99/117, suggestions 32/117, behaves 100/117, covers 69/81, in-role 111/117 pass
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261020T155238/answers.jsonl

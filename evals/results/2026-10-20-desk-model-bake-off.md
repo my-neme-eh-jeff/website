@@ -13,7 +13,7 @@ most accurate answers? Accuracy and answer quality come first. Speed and size
 are reported but don't rule a model out, and small models, 2–4B parameters in
 all, were left out on purpose.
 
-**Where it stands (two models still to run):** Qwen3.6-35B-A3B is the most
+**Where it stands (one model still to run):** Qwen3.6-35B-A3B is the most
 accurate local model so far, at 96%. Gemma 4 26B-A4B is close behind at 91%,
 with perfect formatting and the fastest answers. Both clearly beat
 gpt-oss-20b's 82%. Giving gpt-oss more time to reason made it no better.
@@ -35,6 +35,7 @@ every answer graded. They're sorted by accurate.
 | gpt-oss-20b (production)         | think low    | **96.3/117** 82% (74%–88%) | **76.3/117** 65% (56%–73%)  | 1.8s / 4.5s               | —     | 14 GB, 69/31        |
 | gpt-oss-20b                      | think medium | **93/117** 79% (71%–86%)   | **86/117** 74% (65%–81%)    | 15.3s / 17.8s             | 21.5  | 14 GB, 69/31        |
 | gpt-oss-20b                      | think high   | **86/117** 74% (65%–81%)   | **81/117** 69% (60%–77%)    | 67.6s / 74.0s             | 21.4  | 14 GB, 69/31        |
+| Nemotron 3.5 Lightning           | think off    | **78/117** 67% (58%–75%)   | **14/117** 12% (7%–19%)     | 3.9s / 5.9s               | 21.6  | 25 GB, 87/13        |
 | GLM-4.7-Flash                    | think off    | **77/117** 66% (57%–74%)   | **43/117** 37% (29%–46%)    | 0.4s / 3.2s               | 21.2  | 19 GB, 76/24        |
 
 - **Accurate** means the facts and the behaviour are right: no invented
@@ -95,10 +96,16 @@ questions about itself. Thinking longer doesn't fix what the model can't do.
 at 1.9 tokens a second, about 40 seconds an answer. On 9 of 117 questions it
 wrote only the suggested questions, with no answer.
 
+**Nemotron 3.5 Lightning: drops the follow-ups and mixes up facts.** 84 of
+117 answers showed fewer than three suggested questions, mostly because it
+never wrote the `<<next>>` block, so only 12% were fully right. The judges
+found an invented detail in 18 answers, such as putting the Frontend Intern
+role at Atlan or starting his time there in June 2025. It is also the biggest:
+25 GB, 87% of it in system RAM.
+
 **GLM-4.7-Flash: the least accurate.** It returned the suggestions alone on 10
-questions, had an invented detail in 12 of the 107 answers the judges read, and made up
-a link
-(`amannambisan.com/#projects`).
+questions, had an invented detail in 12 of the 107 answers the judges read,
+and made up a link (`amannambisan.com/#projects`).
 
 ## What we learned
 
@@ -145,9 +152,8 @@ a link
 
 ## What runs next
 
-- **Still running tonight:** Nemotron 3.5 Lightning (`nemotron-3.5-lightning:30b`)
-  and Gemma 4 31B (`gemma4:31b-it-qat`, dense). They'll be added here when they
-  finish.
+- **Still running tonight:** Gemma 4 31B (`gemma4:31b-it-qat`, dense). It will
+  be added here when it finishes.
 - **Then a finalist round for Qwen3.6-35B-A3B and Gemma 4 26B-A4B:** three
   answers per question, dev and held-out wordings, thinking on and off, with
   and without the identity rule, plus a memory check at 16k context.
@@ -168,13 +174,14 @@ a link
 
 **The models.** Details are from `ollama show`.
 
-| Ollama tag               | Architecture | Parameters | Quantization | Context in the test |
-| ------------------------ | ------------ | ---------- | ------------ | ------------------- |
-| `gpt-oss-16k:20b`        | gptoss       | 20.9B      | MXFP4        | 16,384              |
-| `gemma4:26b-a4b-it-qat`  | gemma4       | 25.2B      | Q4_0         | 8,192               |
-| `qwen3.6:35b-a3b-q4_K_M` | qwen35moe    | 36.0B      | Q4_K_M       | 8,192               |
-| `qwen3.6:27b-q4_K_M`     | qwen35       | 27.8B      | Q4_K_M       | 8,192               |
-| `glm-4.7-flash:q4_K_M`   | glm4moelite  | 29.9B      | Q4_K_M       | 8,192               |
+| Ollama tag                   | Architecture   | Parameters | Quantization | Context in the test |
+| ---------------------------- | -------------- | ---------- | ------------ | ------------------- |
+| `gpt-oss-16k:20b`            | gptoss         | 20.9B      | MXFP4        | 16,384              |
+| `gemma4:26b-a4b-it-qat`      | gemma4         | 25.2B      | Q4_0         | 8,192               |
+| `qwen3.6:35b-a3b-q4_K_M`     | qwen35moe      | 36.0B      | Q4_K_M       | 8,192               |
+| `qwen3.6:27b-q4_K_M`         | qwen35         | 27.8B      | Q4_K_M       | 8,192               |
+| `glm-4.7-flash:q4_K_M`       | glm4moelite    | 29.9B      | Q4_K_M       | 8,192               |
+| `nemotron-3.5-lightning:30b` | nemotron_h_moe | 32.9B      | Q4_K_M       | 8,192               |
 
 `gpt-oss-16k:20b` is `gpt-oss:20b` with its context set to 16k, the way the
 site runs it.
@@ -220,8 +227,8 @@ row comes from the 2026-10-19 baseline.
   gemini-3-flash and kimi-k2.6. For each model under test, the panel is the
   first two in the pool not made by its maker, and a third breaks a tie. No
   judge ever grades its own maker's model.
-- **Cost:** about $0.21–0.29 per 117 answers. All 19 runs in this folder
-  cost $5.67 together.
+- **Cost:** about $0.21–0.29 per 117 answers. All 20 runs in this folder
+  cost $5.95 together.
 
 **The order of events (UTC).**
 
@@ -233,8 +240,11 @@ row comes from the 2026-10-19 baseline.
 - **Runner bug:** the first runner's "is an eval running?" check matched its
   own launcher, so it could never start a run. It was fixed at 09:57.
 - **Power cut:** the box lost power at 12:45 while the dense Qwen3.6-27B run
-  was being judged. The run resumed at 14:07. The scripts and their logs are
-  in [`box/`](box/).
+  was being judged. The run resumed at 14:07.
+- **The last two:** GLM-4.7-Flash ran from 14:13 to 14:34. Nemotron ran from
+  15:52 to 16:19, once its 25 GB download had landed.
+
+The scripts and their logs are in [`box/`](box/).
 
 ## Reproduce it
 
@@ -253,19 +263,21 @@ This command rebuilds the board below from the committed data, as
     node evals/report.mjs --board evals/results/runs/20261019T084715 \
       evals/results/runs/20261020T055511 evals/results/runs/20261020T064312 \
       evals/results/runs/20261020T100108 evals/results/runs/20261020T105045 \
-      evals/results/runs/20261020T111512 evals/results/runs/20261020T141300
+      evals/results/runs/20261020T111512 evals/results/runs/20261020T141300 \
+      evals/results/runs/20261020T155238
 
 ## The full board
 
-Ranked by accurate: facts and behaviour right, by code checks and the judges' grounded, behaves, covers and in-role, leaving out layout and suggested questions. A blank answer counts as judged and wrong. Every row counts the same 117 wordings, those judged in all 8 rows, each once however many times a run asked it. Intervals are 95% Wilson. The rows were not all asked with the same rules, so prompt and model differences are mixed.
+Ranked by accurate: facts and behaviour right, by code checks and the judges' grounded, behaves, covers and in-role, leaving out layout and suggested questions. A blank answer counts as judged and wrong. Every row counts the same 117 wordings, those judged in all 9 rows, each once however many times a run asked it. Intervals are 95% Wilson. The rows were not all asked with the same rules, so prompt and model differences are mixed.
 
-|                                                                                                                                                | accurate                   | judged and all right        | judge: grounded              | judge: suggestions          | judge: behaves               | judge: covers             | judge: in-role               | code checks                 | first word / whole answer, p50 | tok/s p50 |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | --------------------------- | ---------------------------- | --------------------------- | ---------------------------- | ------------------------- | ---------------------------- | --------------------------- | ------------------------------ | --------- |
-| **fallback (ds-v4.1-flash-1017)**<br>run 20261019T084715 · production settings · prompt d20da8ed4454                                           | **114/117** 97% (93%–99%)  | **109.3/117** 93% (87%–97%) | **116.3/117** 99% (96%–100%) | **108.3/117** 93% (86%–96%) | **115.7/117** 99% (95%–100%) | **78/79** 99% (93%–100%)  | **117/117** 100% (97%–100%)  | **113.3/117** 97% (92%–99%) | 1.3s / 2.5s                    | —         |
-| **desk:qwen3.6:35b-a3b-q4_K_M**<br>run 20261020T105045 · think false · `{"options":{"num_ctx":8192,"num_predict":2000}}` · prompt 328344d1a43e | **112/117** 96% (90%–98%)  | **72/117** 62% (52%–70%)    | **114/117** 97% (93%–99%)    | **78/117** 67% (58%–75%)    | **115/117** 98% (94%–100%)   | **81/81** 100% (95%–100%) | **117/117** 100% (97%–100%)  | **79/117** 68% (59%–75%)    | 2.0s / 4.8s                    | 27.4      |
-| **desk:gemma4:26b-a4b-it-qat**<br>run 20261020T100108 · think false · `{"options":{"num_ctx":8192,"num_predict":2000}}` · prompt 328344d1a43e  | **106/117** 91% (84%–95%)  | **104/117** 89% (82%–93%)   | **117/117** 100% (97%–100%)  | **115/117** 98% (94%–100%)  | **111/117** 95% (89%–98%)    | **73/81** 90% (82%–95%)   | **117/117** 100% (97%–100%)  | **115/117** 98% (94%–100%)  | 0.8s / 3.7s                    | 21.9      |
-| **desk:qwen3.6:27b-q4_K_M**<br>run 20261020T111512 · think false · `{"options":{"num_ctx":8192,"num_predict":2000}}` · prompt 328344d1a43e     | **98/117** 84% (76%–89%)   | **88/117** 75% (67%–82%)    | **107/108** 99% (95%–100%)   | **97/108** 90% (83%–94%)    | **106/108** 98% (93%–99%)    | **65/72** 90% (81%–95%)   | **108/108** 100% (97%–100%)  | **94/117** 80% (72%–87%)    | 5.7s / 39.0s                   | 1.9       |
-| **desk (gpt-oss-16k:20b)**<br>run 20261019T084715 · production settings · prompt 328344d1a43e                                                  | **96.3/117** 82% (74%–88%) | **76.3/117** 65% (56%–73%)  | **108.3/117** 93% (86%–96%)  | **100.0/117** 85% (78%–91%) | **106.7/117** 91% (85%–95%)  | **72.3/81** 89% (81%–94%) | **115.0/117** 98% (94%–100%) | **96.3/117** 82% (74%–88%)  | 1.8s / 4.5s                    | —         |
-| **desk (gpt-oss-16k:20b)**<br>run 20261020T055511 · think medium · `{"options":{"num_predict":4000}}` · prompt 328344d1a43e                    | **93/117** 79% (71%–86%)   | **86/117** 74% (65%–81%)    | **111/117** 95% (89%–98%)    | **112/117** 96% (90%–98%)   | **104/117** 89% (82%–93%)    | **71/81** 88% (79%–93%)   | **116/117** 99% (95%–100%)   | **104/117** 89% (82%–93%)   | 15.3s / 17.8s                  | 21.5      |
-| **desk (gpt-oss-16k:20b)**<br>run 20261020T064312 · think high · `{"options":{"num_predict":4000}}` · prompt 328344d1a43e                      | **86/117** 74% (65%–81%)   | **81/117** 69% (60%–77%)    | **105/107** 98% (93%–99%)    | **104/107** 97% (92%–99%)   | **95/107** 89% (81%–93%)     | **60/72** 83% (73%–90%)   | **107/107** 100% (97%–100%)  | **99/117** 85% (77%–90%)    | 67.6s / 74.0s                  | 21.4      |
-| **desk:glm-4.7-flash:q4_K_M**<br>run 20261020T141300 · think false · `{"options":{"num_ctx":8192,"num_predict":2000}}` · prompt 328344d1a43e   | **77/117** 66% (57%–74%)   | **43/117** 37% (29%–46%)    | **95/107** 89% (81%–93%)     | **78/107** 73% (64%–80%)    | **93/107** 87% (79%–92%)     | **71/76** 93% (86%–97%)   | **105/107** 98% (93%–99%)    | **71/117** 61% (52%–69%)    | 0.4s / 3.2s                    | 21.2      |
+|                                                                                                                                                    | accurate                   | judged and all right        | judge: grounded              | judge: suggestions          | judge: behaves               | judge: covers             | judge: in-role               | code checks                 | first word / whole answer, p50 | tok/s p50 |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | --------------------------- | ---------------------------- | --------------------------- | ---------------------------- | ------------------------- | ---------------------------- | --------------------------- | ------------------------------ | --------- |
+| **fallback (ds-v4.1-flash-1017)**<br>run 20261019T084715 · production settings · prompt d20da8ed4454                                               | **114/117** 97% (93%–99%)  | **109.3/117** 93% (87%–97%) | **116.3/117** 99% (96%–100%) | **108.3/117** 93% (86%–96%) | **115.7/117** 99% (95%–100%) | **78/79** 99% (93%–100%)  | **117/117** 100% (97%–100%)  | **113.3/117** 97% (92%–99%) | 1.3s / 2.5s                    | —         |
+| **desk:qwen3.6:35b-a3b-q4_K_M**<br>run 20261020T105045 · think false · `{"options":{"num_ctx":8192,"num_predict":2000}}` · prompt 328344d1a43e     | **112/117** 96% (90%–98%)  | **72/117** 62% (52%–70%)    | **114/117** 97% (93%–99%)    | **78/117** 67% (58%–75%)    | **115/117** 98% (94%–100%)   | **81/81** 100% (95%–100%) | **117/117** 100% (97%–100%)  | **79/117** 68% (59%–75%)    | 2.0s / 4.8s                    | 27.4      |
+| **desk:gemma4:26b-a4b-it-qat**<br>run 20261020T100108 · think false · `{"options":{"num_ctx":8192,"num_predict":2000}}` · prompt 328344d1a43e      | **106/117** 91% (84%–95%)  | **104/117** 89% (82%–93%)   | **117/117** 100% (97%–100%)  | **115/117** 98% (94%–100%)  | **111/117** 95% (89%–98%)    | **73/81** 90% (82%–95%)   | **117/117** 100% (97%–100%)  | **115/117** 98% (94%–100%)  | 0.8s / 3.7s                    | 21.9      |
+| **desk:qwen3.6:27b-q4_K_M**<br>run 20261020T111512 · think false · `{"options":{"num_ctx":8192,"num_predict":2000}}` · prompt 328344d1a43e         | **98/117** 84% (76%–89%)   | **88/117** 75% (67%–82%)    | **107/108** 99% (95%–100%)   | **97/108** 90% (83%–94%)    | **106/108** 98% (93%–99%)    | **65/72** 90% (81%–95%)   | **108/108** 100% (97%–100%)  | **94/117** 80% (72%–87%)    | 5.7s / 39.0s                   | 1.9       |
+| **desk (gpt-oss-16k:20b)**<br>run 20261019T084715 · production settings · prompt 328344d1a43e                                                      | **96.3/117** 82% (74%–88%) | **76.3/117** 65% (56%–73%)  | **108.3/117** 93% (86%–96%)  | **100.0/117** 85% (78%–91%) | **106.7/117** 91% (85%–95%)  | **72.3/81** 89% (81%–94%) | **115.0/117** 98% (94%–100%) | **96.3/117** 82% (74%–88%)  | 1.8s / 4.5s                    | —         |
+| **desk (gpt-oss-16k:20b)**<br>run 20261020T055511 · think medium · `{"options":{"num_predict":4000}}` · prompt 328344d1a43e                        | **93/117** 79% (71%–86%)   | **86/117** 74% (65%–81%)    | **111/117** 95% (89%–98%)    | **112/117** 96% (90%–98%)   | **104/117** 89% (82%–93%)    | **71/81** 88% (79%–93%)   | **116/117** 99% (95%–100%)   | **104/117** 89% (82%–93%)   | 15.3s / 17.8s                  | 21.5      |
+| **desk (gpt-oss-16k:20b)**<br>run 20261020T064312 · think high · `{"options":{"num_predict":4000}}` · prompt 328344d1a43e                          | **86/117** 74% (65%–81%)   | **81/117** 69% (60%–77%)    | **105/107** 98% (93%–99%)    | **104/107** 97% (92%–99%)   | **95/107** 89% (81%–93%)     | **60/72** 83% (73%–90%)   | **107/107** 100% (97%–100%)  | **99/117** 85% (77%–90%)    | 67.6s / 74.0s                  | 21.4      |
+| **desk:nemotron-3.5-lightning:30b**<br>run 20261020T155238 · think false · `{"options":{"num_ctx":8192,"num_predict":2000}}` · prompt 328344d1a43e | **78/117** 67% (58%–75%)   | **14/117** 12% (7%–19%)     | **99/117** 85% (77%–90%)     | **32/117** 27% (20%–36%)    | **100/117** 85% (78%–91%)    | **69/81** 85% (76%–91%)   | **111/117** 95% (89%–98%)    | **26/117** 22% (16%–31%)    | 3.9s / 5.9s                    | 21.6      |
+| **desk:glm-4.7-flash:q4_K_M**<br>run 20261020T141300 · think false · `{"options":{"num_ctx":8192,"num_predict":2000}}` · prompt 328344d1a43e       | **77/117** 66% (57%–74%)   | **43/117** 37% (29%–46%)    | **95/107** 89% (81%–93%)     | **78/107** 73% (64%–80%)    | **93/107** 87% (79%–92%)     | **71/76** 93% (86%–97%)   | **105/107** 98% (93%–99%)    | **71/117** 61% (52%–69%)    | 0.4s / 3.2s                    | 21.2      |

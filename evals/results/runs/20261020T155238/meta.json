@@ -1,0 +1,36 @@
+{
+  "run": "20261020T155238",
+  "started": "2026-10-20T15:52:38.809Z",
+  "sha": "95f81f3",
+  "node": "v24.21.0",
+  "args": {
+    "sha": "95f81f3",
+    "run": "20261020T155238",
+    "target": "desk:nemotron-3.5-lightning:30b",
+    "think": "false",
+    "extra": "{\"options\":{\"num_ctx\":8192,\"num_predict\":2000}}",
+    "set": "dev",
+    "reps": "1",
+    "judge": true,
+    "judge-reps": "1",
+    "budget-usd": "1",
+    "cases": "",
+    "kinds": "",
+    "resume": "",
+    "ollama": "http://127.0.0.1:11434",
+    "judge-only": false,
+    "floor-usd": "5"
+  },
+  "targets": {
+    "desk:nemotron-3.5-lightning:30b": {
+      "model": "nemotron-3.5-lightning:30b",
+      "maker": "nvidia",
+      "prompt": {
+        "full": "328344d1a43e",
+        "rules": "0f2877b2b288",
+        "facts": "e293e6a059d8"
+      },
+      "onDesk": true
+    }
+  }
+}

@@ -31,3 +31,7 @@ verifying sha256 digest
 writing manifest 
 success 
 == 2026-10-20T14:04:52Z nemotron-3.5-lightning:30b
+verifying sha256 digest 
+writing manifest 
+success 
+== 2026-10-20T15:48:57Z gemma4:31b-it-qat

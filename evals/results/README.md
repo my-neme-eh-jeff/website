@@ -60,7 +60,7 @@ The pages these write are gitignored.
 
 - **No visitor text.** Every visitor turn in these runs is a wording from
   `evals/cases.mjs`. `node evals/check-results.mjs` checks this against every
-  committed version of that file; on 2026-10-20 it read 2,966 turns, all
+  committed version of that file; on 2026-10-20 it read 3,086 turns, all
   clear. The visitor log stays on the box, and `/privacy/` promises it's
   deleted after 30 days.
 - **No secrets.** The runs hold no API key and no prompt text, only prompt
@@ -104,5 +104,6 @@ are in dollars.
 | `20261020T105045` | Qwen3.6-35B-A3B (`qwen3.6:35b-a3b-q4_K_M`), think off                                                                                                           | `95f81f3`       | 117     | 117    | 0.250  |
 | `20261020T111512` | Qwen3.6-27B (`qwen3.6:27b-q4_K_M`), think off; 9 answers blank; the box lost power during judging and the run was resumed                                       | `95f81f3`       | 117     | 108    | 0.212  |
 | `20261020T141300` | GLM-4.7-Flash (`glm-4.7-flash:q4_K_M`), think off; 10 answers blank                                                                                             | `95f81f3`       | 117     | 107    | 0.231  |
+| `20261020T155238` | Nemotron 3.5 Lightning (`nemotron-3.5-lightning:30b`), think off                                                                                                | `95f81f3`       | 117     | 117    | 0.278  |
 
-All 19 runs together: 2,922 answers, and $5.67 spent on judges.
+All 20 runs together: 3,039 answers, and $5.95 spent on judges.
