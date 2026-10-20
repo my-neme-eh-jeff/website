@@ -6,12 +6,13 @@ import {
   SYSTEM_PROMPT,
 } from "../content/chat";
 import { callPoe, fromPoe } from "./poe";
-import { DESK_STATE_HEADER, deskEvent, relay } from "./relay";
+import { DESK_STATE_HEADER, deskEvent, relay, untilAnswer } from "./relay";
 
 /**
  * `POST /api/chat`, streamed back as NDJSON events:
  *
  *   {"type":"desk","cold":true}      first, from the desk: must the model load?
+ *   {"type":"fallback"}              the desk took it but didn't start; Poe answers
  *   {"type":"token","text":"..."}
  *   {"type":"answered"}              the answer is whole; questions follow
  *   {"type":"next","text":"...?"}    one per question, as its line ends
@@ -34,7 +35,7 @@ interface Env {
   DESK: { fetch(input: Request): Promise<Response> };
   CHAT_LIMIT: RateLimit;
   DESK_MODEL: string;
-  /** A secret. Unset, a desk that's down is reported as offline. */
+  /** A secret. Unset, a desk that can't answer is reported as offline. */
   POE_API_KEY?: string;
   POE_LIMIT: RateLimit;
   POE_MODEL: string;
@@ -51,8 +52,18 @@ const MAX_BODY_BYTES = 16_000;
  */
 const HEADERS_TIMEOUT_MS = 5_000;
 
+/**
+ * From the desk's headers to its first answer text. Its log has 22 cold starts
+ * at 12.2-23.2s (2026-10-14 to 2026-10-20); one queued behind an eval's
+ * answers took 52.9s.
+ */
+const ANSWER_START_TIMEOUT_MS = 30_000;
+
 /** Poe's first byte came after about 2s (2026-10-19). */
 const POE_HEADERS_TIMEOUT_MS = 15_000;
+
+const encoder = new TextEncoder();
+const line = (event: object) => encoder.encode(JSON.stringify(event) + "\n");
 
 const stream = (body: ReadableStream<Uint8Array>) =>
   // A fresh Response, so none of the upstream's headers reach the browser.
@@ -161,34 +172,100 @@ async function chat(request: Request, env: Env): Promise<Response> {
   const upstream = await withTimeout(HEADERS_TIMEOUT_MS, (signal) =>
     callDesk(env, turns, signal, visitorHeaders(request)),
   );
-  if (!upstream) return fallback(env, turns, asked);
+  if (!upstream) {
+    const poe = await askPoe(env, turns, asked);
+    return poe ? stream(poe) : json({ error: "offline" }, 503);
+  }
 
   const first = deskEvent(upstream.headers.get(DESK_STATE_HEADER));
-  return stream(upstream.body.pipeThrough(relay(asked, { first })));
+  return stream(deskOrPoe(env, turns, asked, upstream.body, first));
 }
 
 /**
- * Poe, when the desk can't answer. Only before the desk's stream starts: a
- * cold desk is up, and an answer cut off midway isn't asked again.
+ * The desk's `desk` event at once, so a cold start shows, then its answer.
+ * If no answer text comes (see `untilAnswer`), Poe answers instead. Once the
+ * desk's text is out nothing switches: an answer cut off midway isn't asked
+ * again.
  */
-async function fallback(
+function deskOrPoe(
   env: Env,
   turns: Turn[],
   asked: string[],
-): Promise<Response> {
-  const offline = json({ error: "offline" }, 503);
+  desk: ReadableStream<Uint8Array>,
+  first: object | null,
+): ReadableStream<Uint8Array> {
+  const gone = new AbortController();
+  let source: ReadableStreamDefaultReader<Uint8Array> | null = null;
+
+  return new ReadableStream({
+    start(out) {
+      if (first) out.enqueue(line(first));
+    },
+    async pull(out) {
+      if (!source) {
+        const since = Date.now();
+        const answer = await untilAnswer(
+          desk,
+          ANSWER_START_TIMEOUT_MS,
+          gone.signal,
+        );
+        let picked = answer?.pipeThrough(relay(asked)) ?? null;
+        if (!picked && !gone.signal.aborted) {
+          console.log(`desk: no answer text after ${Date.now() - since}ms`);
+          picked = await askPoe(env, turns, asked, { type: "fallback" });
+        }
+        // The visitor hung up while this waited.
+        if (gone.signal.aborted) {
+          await picked?.cancel();
+          return;
+        }
+        if (!picked) {
+          out.enqueue(line({ type: "error", code: "offline" }));
+          out.close();
+          return;
+        }
+        source = picked.getReader();
+      }
+      const { value, done } = await source.read();
+      if (gone.signal.aborted) return;
+      if (done) out.close();
+      else out.enqueue(value);
+    },
+    cancel(reason) {
+      gone.abort();
+      return source?.cancel(reason);
+    },
+  });
+}
+
+/**
+ * Poe's answer as the shell's events, after `first`, or null: no key, over
+ * POE_LIMIT, or Poe didn't start.
+ */
+async function askPoe(
+  env: Env,
+  turns: Turn[],
+  asked: string[],
+  first: object | null = null,
+): Promise<ReadableStream<Uint8Array> | null> {
   const key = env.POE_API_KEY;
-  if (!key) return offline;
+  if (!key) return null;
   // One key for everyone: a cap on the points the public can spend.
-  if (!(await env.POE_LIMIT.limit({ key: "poe" })).success) return offline;
+  if (!(await env.POE_LIMIT.limit({ key: "poe" })).success) {
+    console.log("poe: over POE_LIMIT");
+    return null;
+  }
 
   const res = await withTimeout(POE_HEADERS_TIMEOUT_MS, (signal) =>
     callPoe(key, env.POE_MODEL, turns, signal),
   );
-  if (!res) return offline;
-  return stream(
-    res.body.pipeThrough(fromPoe()).pipeThrough(relay(asked, { stats: false })),
-  );
+  if (!res) {
+    console.log("poe: no answer");
+    return null;
+  }
+  return res.body
+    .pipeThrough(fromPoe())
+    .pipeThrough(relay(asked, { first, stats: false }));
 }
 
 /** An ok response with a body, or null; the timeout covers headers only. */

@@ -15,6 +15,8 @@ export type Outcome =
 export type Handlers = {
   /** Before any token: whether the model had to be loaded first. */
   desk: (cold: boolean) => void;
+  /** The desk took the question but didn't start an answer; Poe's follows. */
+  fallback: () => void;
   token: (text: string) => void;
   /** The answer is whole; its next questions are being written. */
   answered: () => void;
@@ -75,6 +77,7 @@ export async function sendChat(turns: Turn[], on: Handlers): Promise<Outcome> {
         if (!line.trim()) continue;
         const event = JSON.parse(line) as
           | { type: "desk"; cold: unknown }
+          | { type: "fallback" }
           | { type: "token"; text: string }
           | { type: "answered" }
           | { type: "next"; text: unknown }
@@ -82,6 +85,8 @@ export async function sendChat(turns: Turn[], on: Handlers): Promise<Outcome> {
           | { type: "error"; code: string };
         if (event.type === "desk") {
           on.desk(event.cold === true);
+        } else if (event.type === "fallback") {
+          on.fallback();
         } else if (event.type === "token") {
           if (firstTokenMs < 0) firstTokenMs = performance.now() - started;
           on.token(event.text);

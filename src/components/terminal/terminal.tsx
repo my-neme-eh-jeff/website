@@ -397,7 +397,7 @@ function markAnswered() {
 /**
  * Whether the desk's own model answered the last question; the LED on the
  * drawn desk goes dark while it hasn't. Only a reply tells: the desk's comes
- * with a desk event and stats, Poe's with neither.
+ * with a desk event and stats, Poe's with neither or after a fallback event.
  */
 function markDesk(up: boolean) {
   document
@@ -513,6 +513,9 @@ export const Terminal = component$(() => {
           if (!cold) return;
           convo.note = "cold start, ~20s";
           document.querySelector("[data-shell]")?.setAttribute("data-cold", "");
+        },
+        fallback: () => {
+          fromDesk = false;
         },
         token: (t) => {
           got = (got + t).trimStart();

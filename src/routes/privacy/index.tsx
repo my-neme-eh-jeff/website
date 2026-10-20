@@ -70,10 +70,11 @@ export default component$(() => {
         computer never receives it.
       </p>
       <p>
-        If my computer is off or can't be reached, your question and the earlier
-        turns go to Poe, a service run by Quora, Inc., and an AI model there
-        answers instead. Your IP address and country are not sent. Those
-        exchanges are not in my log; Poe's privacy policy covers what it keeps.
+        If my computer is off, can't be reached or is too slow to start an
+        answer, your question and the earlier turns go to Poe, a service run by
+        Quora, Inc., and an AI model there answers instead. Your IP address and
+        country are not sent. Poe's answers are not in my log; Poe's privacy
+        policy covers what it keeps.
       </p>
       <p>
         My computer keeps a log of each exchange: your question, the earlier

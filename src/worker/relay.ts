@@ -116,6 +116,88 @@ export function deskEvent(
     : null;
 }
 
+/** Whether a line of Ollama's starts the answer, rules it out, or neither. */
+function answerState(line: string): "started" | "failed" | null {
+  let chunk: Chunk;
+  try {
+    chunk = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  if (chunk.error) return "failed";
+  if (chunk.message?.content?.trim()) return "started";
+  return chunk.done ? "failed" : null;
+}
+
+/**
+ * Holds the desk's stream until its answer text starts, then returns all of
+ * it. Null, with the desk's stream cancelled, when an error line, a reply with
+ * no text, the stream ending or breaking, `ms` passing or `signal` comes
+ * first. Reasoning isn't answer text.
+ */
+export async function untilAnswer(
+  body: ReadableStream<Uint8Array>,
+  ms: number,
+  signal: AbortSignal,
+): Promise<ReadableStream<Uint8Array> | null> {
+  const reader = body.getReader();
+  const seen: Uint8Array[] = [];
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let started = false;
+  // A pending read() then ends as `done`.
+  const stop = () => {
+    if (!started) reader.cancel().catch(() => {});
+  };
+  const timer = setTimeout(stop, ms);
+  signal.addEventListener("abort", stop);
+  try {
+    while (!signal.aborted) {
+      const { value, done } = await reader.read();
+      if (done) return null;
+      seen.push(value);
+      buffer += decoder.decode(value, { stream: true });
+      let nl: number;
+      while ((nl = buffer.indexOf("\n")) >= 0) {
+        const state = answerState(buffer.slice(0, nl));
+        buffer = buffer.slice(nl + 1);
+        if (state === "failed") return null;
+        if (state === "started") {
+          started = true;
+          return replay(seen, reader);
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+    signal.removeEventListener("abort", stop);
+    stop();
+  }
+}
+
+/** What was read, then the rest. Cancelling it cancels the desk. */
+function replay(
+  seen: Uint8Array[],
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(out) {
+      for (const bytes of seen) out.enqueue(bytes);
+    },
+    async pull(out) {
+      const { value, done } = await reader.read();
+      if (done) out.close();
+      else out.enqueue(value);
+    },
+    cancel(reason) {
+      return reader.cancel(reason);
+    },
+  });
+}
+
 export function relay(
   asked: readonly string[],
   {

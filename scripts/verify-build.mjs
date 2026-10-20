@@ -9,7 +9,12 @@ import { GRIDS, rasterize } from "../src/components/desk/desk.ts";
 import { DEFAULT_PALETTE, PALETTES, modesOf } from "../src/content/palettes.ts";
 import { SENTINEL, parse, splitter } from "../src/worker/follow-ups.ts";
 import { DESK_LINE, FALLBACK_PROMPT, poeLine } from "../src/worker/poe.ts";
-import { DESK_STATE_HEADER, deskEvent, events } from "../src/worker/relay.ts";
+import {
+  DESK_STATE_HEADER,
+  deskEvent,
+  events,
+  untilAnswer,
+} from "../src/worker/relay.ts";
 import {
   MAX_ASSISTANT_CHARS,
   MAX_TURNS,
@@ -328,6 +333,101 @@ check(
     );
   },
 );
+
+// A desk stream that sends `steps` on a clock, then closes or hangs.
+function fakeDesk(steps, { hang = false } = {}) {
+  const bytes = new TextEncoder();
+  const desk = { cancelled: false };
+  desk.stream = new ReadableStream({
+    async start(out) {
+      for (const step of steps) {
+        await new Promise((r) => setTimeout(r, step.after ?? 0));
+        if (desk.cancelled) return;
+        if (step.error) return out.error(new Error("cut"));
+        out.enqueue(bytes.encode(step.line));
+      }
+      if (!hang) out.close();
+    },
+    cancel() {
+      desk.cancelled = true;
+    },
+  });
+  return desk;
+}
+const ollama = (o) => JSON.stringify(o) + "\n";
+const thinking = ollama({ message: { content: "", thinking: "hm" } });
+const opening = ollama({ message: { content: "He builds" } });
+const closing =
+  ollama({ message: { content: " platforms." } }) +
+  ollama({ message: { content: "" }, done: true });
+async function held(steps, { hang, ms = 40, signal } = {}) {
+  const desk = fakeDesk(steps, { hang });
+  const got = await untilAnswer(
+    desk.stream,
+    ms,
+    signal ?? new AbortController().signal,
+  );
+  let text = null;
+  if (got) {
+    text = "";
+    for await (const b of got.pipeThrough(new TextDecoderStream())) text += b;
+  }
+  return { text, cancelled: desk.cancelled };
+}
+const quit = new AbortController();
+setTimeout(() => quit.abort(), 5);
+const holds = {
+  // Its text came before the deadline, the rest after: none of it is lost.
+  "answers after thinking": await held(
+    [
+      { line: thinking },
+      { after: 20, line: opening },
+      { after: 300, line: closing },
+    ],
+    { ms: 200 },
+  ).then((r) => r.text === thinking + opening + closing),
+  "stalls past the deadline": await held([{ line: thinking }], {
+    hang: true,
+  }).then((r) => r.text === null && r.cancelled),
+  "sends an error line": await held(
+    [{ line: thinking }, { line: ollama({ error: "model failed to load" }) }],
+    { hang: true },
+  ).then((r) => r.text === null && r.cancelled),
+  "finishes with no text": await held([
+    { line: thinking },
+    { line: ollama({ message: { content: " " }, done: true }) },
+  ]).then((r) => r.text === null),
+  "breaks before its text": await held([
+    { line: thinking },
+    { after: 5, error: true },
+  ]).then((r) => r.text === null),
+  "loses its visitor": await held([{ line: thinking }], {
+    hang: true,
+    ms: 10_000,
+    signal: quit.signal,
+  }).then((r) => r.text === null && r.cancelled),
+};
+
+check("the Worker holds the desk until its answer text, else asks Poe", () => {
+  const wrong = Object.keys(holds).filter((k) => !holds[k]);
+  assert(!wrong.length, `untilAnswer is wrong when the desk: ${wrong}`);
+  return `${Object.keys(holds).length} cases`;
+});
+
+check("the shell handles every event the Worker sends", () => {
+  const sent = new Set(
+    [...read("src", "worker", "index.ts").matchAll(/\{"type":"(\w+)"/g)].map(
+      (m) => m[1],
+    ),
+  );
+  const chat = read("src", "components", "terminal", "chat.ts");
+  const missed = [...sent].filter(
+    (t) => !chat.includes(`event.type === "${t}"`),
+  );
+  assert(sent.size >= 7, `found only ${[...sent]} in index.ts's comment`);
+  assert(!missed.length, `chat.ts ignores ${missed}`);
+  return [...sent].join(", ");
+});
 
 check("Poe's prompt doesn't say it runs on the desk", () => {
   assert(

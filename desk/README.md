@@ -24,15 +24,15 @@ visitor -> Worker (/api/chat) -> Workers VPC -> Cloudflare Tunnel
 
 Written by the proxy, so it can only contain what reaches the desk:
 
-| Field                              | From                                                             |
-| ---------------------------------- | ---------------------------------------------------------------- |
-| `ts`, `id`                         | the proxy                                                        |
-| `question`, `history`              | the conversation the browser sent (up to 8 turns)                |
-| `answer`, `reasoning`              | Ollama's stream: the reply, suggested questions and hidden notes |
-| `stats`, `firstTokenMs`, `totalMs` | Ollama's timings and the proxy's clock                           |
-| `outcome`                          | `ok`, `cancelled` (visitor hung up), `error`, `upstream_<code>`  |
-| `systemPrompt`                     | a 12-character hash: which prompt version answered               |
-| `country`                          | the one visitor fact the Worker forwards (Cloudflare's geo)      |
+| Field                              | From                                                                                                             |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `ts`, `id`                         | the proxy                                                                                                        |
+| `question`, `history`              | the conversation the browser sent (up to 8 turns)                                                                |
+| `answer`, `reasoning`              | Ollama's stream: the reply, suggested questions and hidden notes                                                 |
+| `stats`, `firstTokenMs`, `totalMs` | Ollama's timings and the proxy's clock                                                                           |
+| `outcome`                          | `ok`, `cancelled` (the visitor hung up, or the Worker gave up waiting and asked Poe), `error`, `upstream_<code>` |
+| `systemPrompt`                     | a 12-character hash: which prompt version answered                                                               |
+| `country`                          | the one visitor fact the Worker forwards (Cloudflare's geo)                                                      |
 
 Nothing else about the visitor is stored: no IP address, user agent, request
 id or session id. The desk never sees them, because the Worker forwards only the
