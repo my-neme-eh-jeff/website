@@ -114,10 +114,11 @@ the prompts differed. Most cases were asked 6 times: 2 wordings, 3 times each.
     "how" and "box" both fell to 1/6.
   - Both were reverted. Stripping a trailing lone "help" in the Worker is the
     other option, and it waits for Aman's go.
-- **Why "why is there a chatbot on his site" still fails.** It stayed at 0–1
-  in 3 under every prompt. The desk says it doesn't know, or mixes it up with the
-  support chatbot he built at work, so the facts probably need a line about
-  the shell itself.
+- **"Why is there a chatbot on his site?" still fails.** It stayed at 0–1 in 3
+  under every prompt, the identity rule included. The desk says it doesn't know,
+  or mixes it up with the support chatbot he built at work. It seems not to
+  connect "a chatbot on his site" with itself; nothing tested so far fixes
+  that.
 
 ## Other things the baseline showed
 

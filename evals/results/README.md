@@ -35,6 +35,7 @@ Each run is in `runs/<run id>/`. The id is the UTC time the run started.
 node evals/report.mjs evals/results/runs/<run>          # report.html and review.html in the run
 node evals/report.mjs --compare <before run> <after run> # compare.html in the second run
 node evals/report.mjs --board <run> <run> ...            # board.html and board.md in runs/
+pnpm run eval --publish <run>                            # copy a run from the box into runs/, cleaned as described below
 node evals/check-results.mjs                             # the checks below, before you commit a run
 ```
 

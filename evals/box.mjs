@@ -6,12 +6,13 @@
  *   pnpm run eval --target desk,fallback --reps 3
  *   pnpm run eval --resume <run>       after the box went down mid-run
  *   pnpm run eval --fetch <run>        only copy a run's results back
+ *   pnpm run eval --publish <run>      copy it into evals/results/runs/ to commit
  *   pnpm run eval --detach ...         start it and return
  *
  * The Poe key never leaves the box: the run there reads ~/.config/llm/env.
  */
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const HOST = process.env.EVAL_HOST ?? "box";
 const DIR = "portfolio-evals";
@@ -34,6 +35,7 @@ const take = (flag) => {
 const detach = args.includes("--detach");
 if (detach) args.splice(args.indexOf("--detach"), 1);
 const fetchOnly = take("--fetch");
+const publish = take("--publish");
 
 const q = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
 const ssh = (script, opts = {}) =>
@@ -64,6 +66,48 @@ function fetchRun(run) {
 
 if (fetchOnly) {
   fetchRun(fetchOnly);
+  process.exit(0);
+}
+
+/**
+ * A power cut leaves zero bytes in the box's files, and git would store them
+ * as binary; the log also loses its progress bars and becomes log.txt, since
+ * the repo ignores *.log.
+ */
+if (publish) {
+  // It goes into a remote shell command, so only run ids get through.
+  if (!/^\d{8}T\d{6}$/.test(publish)) {
+    console.error(`not a run id: ${publish}`);
+    process.exit(1);
+  }
+  const out = `evals/results/runs/${publish}`;
+  mkdirSync(out, { recursive: true });
+  const read = (path) =>
+    execFileSync("ssh", [HOST, "cat", path], { encoding: "utf8" }).replaceAll(
+      "\0",
+      "",
+    );
+  const ls = execFileSync("ssh", [HOST, "ls", `${RUNS}/${publish}`], {
+    encoding: "utf8",
+  });
+  for (const f of [
+    "meta.json",
+    "answers.jsonl",
+    "judgments.jsonl",
+    "calls.jsonl",
+  ])
+    if (ls.split("\n").includes(f))
+      writeFileSync(`${out}/${f}`, read(`${RUNS}/${publish}/${f}`));
+  writeFileSync(
+    `${out}/log.txt`,
+    read(`${RUNS}/${publish}.log`)
+      .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "")
+      .replace(/\r(?!\n)/g, "\n")
+      .replace(/\n{2,}/g, "\n"),
+  );
+  console.log(
+    `${out}/\nCheck it before committing: node evals/check-results.mjs`,
+  );
   process.exit(0);
 }
 
