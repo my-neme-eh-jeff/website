@@ -48,7 +48,7 @@
   ],
   // POE_API_KEY is a secret, set with `wrangler secret put` on the desk.
   "vars": {
-    "DESK_MODEL": "gpt-oss-16k:20b",
+    "DESK_MODEL": "gemma4:26b-a4b-it-qat",
     "POE_MODEL": "ds-v4.1-flash-1017",
   },
   "routes": [

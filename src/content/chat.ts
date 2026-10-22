@@ -25,13 +25,19 @@ export const MAX_USER_CHARS = 800;
 export const MAX_ASSISTANT_CHARS = 2_000;
 /** Per reply; Ollama 0.34.4 counts the model's reasoning in it (2026-10-16). */
 export const NUM_PREDICT = 700;
+/** The desk model's context, sent with every request; verify checks the fit. */
+export const NUM_CTX = 8_192;
 
-/** Everything the desk is sent besides the model and the messages. */
+/**
+ * Everything the desk is sent besides the model and the messages. Thinking
+ * is off: the desk model was picked with it off (evals/results/), and on
+ * gpt-oss-20b more of it made answers slower without making them better.
+ */
 export const DESK_REQUEST = {
   stream: true,
-  think: "low",
+  think: false,
   keep_alive: "30m",
-  options: { num_predict: NUM_PREDICT },
+  options: { num_predict: NUM_PREDICT, num_ctx: NUM_CTX },
 } as const;
 
 const best = bestWork && {

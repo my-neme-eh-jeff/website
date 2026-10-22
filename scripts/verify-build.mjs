@@ -29,6 +29,7 @@ import {
   MAX_ASSISTANT_CHARS,
   MAX_TURNS,
   MAX_USER_CHARS,
+  NUM_CTX,
   NUM_PREDICT,
   SYSTEM_PROMPT,
 } from "../src/content/chat.ts";
@@ -148,12 +149,11 @@ check("the best-work pick in context.ts names a project", () => {
   return bestWork.slug;
 });
 
-// `ollama show gpt-oss-16k:20b` on the desk: num_ctx 16384 (2026-10-16). The
-// prompt measured 4.1 characters a token there; 3.5 leaves room.
+// The prompt measured 4.1 characters a token on gpt-oss-16k:20b (2026-10-16);
+// 3.5 leaves room for other tokenizers.
 check(
   "the prompt and the longest conversation fit the desk model's context",
   () => {
-    const NUM_CTX = 16_384;
     const tokens = (chars) => Math.ceil(chars / 3.5);
     const history = (MAX_TURNS / 2) * (MAX_USER_CHARS + MAX_ASSISTANT_CHARS);
     const prompt = tokens(SYSTEM_PROMPT.length);
