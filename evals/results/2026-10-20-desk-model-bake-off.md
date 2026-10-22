@@ -158,8 +158,9 @@ and made up a link (`amannambisan.com/#projects`).
   weakness; Qwen passes those questions without it.
 - **Thinking off.** The candidates ran with `think: false`. Gemma 4 and
   Qwen3.6 can also think, at a cost in speed.
-- **8k context.** The candidates ran at `num_ctx` 8192; production uses 16k.
-  Qwen at 16k needs a memory check before it can be trusted on a 24 GB box.
+- **8k context.** The candidates ran at `num_ctx` 8192; production then used
+  16k. Since 2026-10-22 production runs at 8k too, which the longest
+  conversation fits.
 - **The judges aren't calibrated against Aman's own marks yet.** They're
   models from other makers. On the 2026-10-19 baseline, the first two judges
   gave opposite verdicts on 20% of the suggested questions.
