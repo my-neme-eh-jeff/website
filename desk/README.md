@@ -42,8 +42,9 @@ haven't been loaded into a Collector yet.
 
 An exchange is two spans. `POST /api/chat` is the proxy's: the status code,
 `desk.state` (`warm`, `cold`, `busy`) and the visitor's country
-(`geo.country.iso_code`). `chat <model>` is the call to Ollama, absent when the
-proxy answered `busy` or Ollama was down:
+(`geo.country.iso_code`). `chat <model>` is the call to Ollama. It's absent when
+the proxy answered `busy` or Ollama was down, and then the proxy's span holds
+the messages and the conversation id instead:
 
 | Attributes                                                                            | What they hold                                                                                                           |
 | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
@@ -59,9 +60,10 @@ proxy answered `busy` or Ollama was down:
 
 **Conversation ids are made on the desk.** The shell sends each earlier answer
 back as it showed it, which is the desk's answer up to the suggested
-questions. The proxy remembers answers for 6 hours and gives the question that
-follows one the same id. A restart starts new ids; the earlier turns in every
-trace still link them.
+questions. The proxy remembers its answers for 6 hours and gives a question the
+id of the latest earlier answer it finds there, so a turn Poe answered in
+between, which the desk never sees, doesn't split the conversation. A restart
+starts new ids; the earlier turns in every trace still link them.
 
 Nothing else about the visitor is stored: no IP address, user agent, request id
 or session id. The desk never sees them, because the Worker forwards only the

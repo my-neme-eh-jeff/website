@@ -404,6 +404,14 @@ async function runProxy() {
       { role: "assistant", content: "Hi" },
       { role: "user", content: "and?" },
     ]);
+    // Poe answered "and?", so the desk never saw that answer.
+    got.afterPoe = await ask([
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "Hi" },
+      { role: "user", content: "and?" },
+      { role: "assistant", content: "An answer from Poe." },
+      { role: "user", content: "more?" },
+    ]);
     loaded = new Map();
     got.cold = await ask();
     psStatus = 500;
@@ -414,7 +422,7 @@ async function runProxy() {
         .flatMap((f) => readFileSync(join(logs, f), "utf8").split("\n"))
         .filter(Boolean)
         .map((l) => JSON.parse(l));
-      if (got.traces.length >= 8) break;
+      if (got.traces.length >= 9) break;
       await wait(50);
     }
     got.expired = expired.filter((f) => existsSync(join(logs, f)));
@@ -474,7 +482,17 @@ check("the desk proxy says warm, cold or busy before Ollama answers", () => {
   );
   assert(
     JSON.stringify(deskOutcomes()) ===
-      JSON.stringify(["busy", "busy", "error", "ok", "ok", "ok", "ok", "ok"]),
+      JSON.stringify([
+        "busy",
+        "busy",
+        "error",
+        "ok",
+        "ok",
+        "ok",
+        "ok",
+        "ok",
+        "ok",
+      ]),
     `logged outcomes ${deskOutcomes()}`,
   );
   assert(
@@ -532,7 +550,7 @@ check("the desk proxy keeps each exchange as an OTLP/JSON GenAI trace", () => {
   }
   assert(!bad.length, `not OTLP/JSON: ${bad.slice(0, 3).join("; ")}`);
   const calls = modelCalls();
-  assert(calls.length === 5, `${calls.length} traces asked Ollama, not 5`);
+  assert(calls.length === 6, `${calls.length} traces asked Ollama, not 6`);
   for (const [http, model] of calls) {
     assert(
       model.traceId === http.traceId && model.parentSpanId === http.spanId,
@@ -574,6 +592,11 @@ check("turns of one conversation share a gen_ai.conversation.id", () => {
   assert(
     next && before && next.id === before.id,
     `the follow-up has ${next?.id}, the answer before it ${before?.id}`,
+  );
+  const afterPoe = asked.find((a) => a.turns === 6);
+  assert(
+    afterPoe?.id === before.id,
+    `after a turn Poe answered: ${afterPoe?.id}, not ${before.id}`,
   );
   const firsts = asked.filter((a) => a.turns === 2).map((a) => a.id);
   assert(

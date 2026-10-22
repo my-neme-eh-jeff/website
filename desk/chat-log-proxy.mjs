@@ -224,13 +224,15 @@ const linkKey = (country, question, answer) =>
     .update(`${country ?? ""}\n${question}\n${shown(answer)}`)
     .digest("hex");
 
+/** The id of the latest earlier answer the desk gave: Poe's never reach it. */
 function conversationOf(country, turns) {
-  const [q, a] = turns.slice(-3, -1);
-  const found =
-    q?.role === "user" &&
-    a?.role === "assistant" &&
-    links.get(linkKey(country, q.content, a.content));
-  return found && Date.now() - found.at < LINK_MS ? found.id : hex(16);
+  for (let i = turns.length - 2; i >= 1; i--) {
+    const [q, a] = [turns[i - 1], turns[i]];
+    if (q.role !== "user" || a.role !== "assistant") continue;
+    const found = links.get(linkKey(country, q.content, a.content));
+    if (found && Date.now() - found.at < LINK_MS) return found.id;
+  }
+  return hex(16);
 }
 
 function link(country, question, answer, id) {
@@ -279,6 +281,7 @@ function trace(x) {
       "desk.outcome": x.outcome,
       // Asked but never sent to Ollama, as when it was busy.
       "gen_ai.input.messages": x.called ? null : input,
+      "gen_ai.conversation.id": x.called ? null : x.conversation,
     }),
     status: x.status >= 500 || failed ? ERROR : {},
   };
@@ -415,6 +418,7 @@ async function relay(req, res) {
   });
 
   try {
+    x.conversation = conversationOf(x.country, turns);
     // Ollama sends no headers until the model is loaded, so these go first:
     // then a desk that never answers is down, not loading.
     x.state = await deskState(body.model);
@@ -431,7 +435,6 @@ async function relay(req, res) {
     });
     res.flushHeaders();
 
-    x.conversation = conversationOf(x.country, turns);
     x.called = nowNs();
     x.calledMs = performance.now();
     const upstream = await fetch(`${OLLAMA}/api/chat`, {
