@@ -8,6 +8,7 @@ import {
   readdirSync,
   mkdtempSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import http from "node:http";
 import { tmpdir } from "node:os";
@@ -297,10 +298,20 @@ async function runProxy() {
     await new Promise((r) => setTimeout(r, OLLAMA_DELAY_MS));
     res.writeHead(200, { "content-type": "application/x-ndjson" });
     res.end(
-      JSON.stringify({ message: { content: "Hi" }, done: false }) +
-        "\n" +
-        JSON.stringify({ message: { content: "" }, done: true }) +
-        "\n",
+      [
+        { message: { content: "", thinking: "Greet them." }, done: false },
+        { message: { content: "Hi" }, done: false },
+        { message: { content: `\n\n${SENTINEL}\nWhat is he building?` } },
+        {
+          message: { content: "" },
+          done: true,
+          done_reason: "stop",
+          prompt_eval_count: 12,
+          eval_count: 5,
+        },
+      ]
+        .map((c) => JSON.stringify({ model: "desk-model", ...c }) + "\n")
+        .join(""),
     );
   });
   const listening = (server) =>
@@ -313,6 +324,9 @@ async function runProxy() {
   await new Promise((r) => spare.close(r));
 
   const logs = mkdtempSync(join(tmpdir(), "desk-proxy-"));
+  // Past retention, in both formats: the proxy deletes them as it starts.
+  const expired = ["chats-2000-01-01.jsonl", "traces-2000-01-01.jsonl"];
+  for (const f of expired) writeFileSync(join(logs, f), "");
   const proxy = spawn(process.execPath, [p("desk", "chat-log-proxy.mjs")], {
     env: {
       ...process.env,
@@ -342,7 +356,7 @@ async function runProxy() {
       });
     });
 
-    const ask = async () => {
+    const ask = async (turns = [{ role: "user", content: "hi" }]) => {
       const before = chats;
       const started = performance.now();
       const res = await fetch(`http://127.0.0.1:${port}/api/chat`, {
@@ -350,7 +364,12 @@ async function runProxy() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           model: "desk-model",
-          messages: [{ role: "user", content: "hi" }],
+          stream: true,
+          options: { num_predict: 700 },
+          messages: [
+            { role: "system", content: "Rules.\nFacts:\nFacts." },
+            ...turns,
+          ],
         }),
       });
       const headersMs = performance.now() - started;
@@ -378,20 +397,27 @@ async function runProxy() {
       ["other-model", "u1"],
     ]);
     got.warm = await ask();
+    // The next question, with the answer as the shell keeps it: no
+    // suggested questions.
+    got.followUp = await ask([
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "Hi" },
+      { role: "user", content: "and?" },
+    ]);
     loaded = new Map();
     got.cold = await ask();
     psStatus = 500;
     got.down = await ask();
     // Each line is written after its response ends.
     for (let i = 0; i < 40; i++) {
-      got.outcomes = readdirSync(logs)
+      got.traces = readdirSync(logs)
         .flatMap((f) => readFileSync(join(logs, f), "utf8").split("\n"))
         .filter(Boolean)
-        .map((l) => JSON.parse(l).outcome)
-        .sort();
-      if (got.outcomes.length >= 7) break;
+        .map((l) => JSON.parse(l));
+      if (got.traces.length >= 8) break;
       await wait(50);
     }
+    got.expired = expired.filter((f) => existsSync(join(logs, f)));
     return got;
   } finally {
     proxy.kill();
@@ -408,6 +434,28 @@ const isBusy = (o) =>
   o.asked === 0 &&
   JSON.parse(o.body).error === "busy";
 const isCold = (o) => o.status === 200 && o.state === "cold" && o.asked === 1;
+const spansOf = (t) =>
+  t.resourceSpans.flatMap((r) => r.scopeSpans.flatMap((s) => s.spans));
+/** An OTLP/JSON AnyValue as plain JSON. */
+const plain = (v) =>
+  v.arrayValue
+    ? (v.arrayValue.values ?? []).map(plain)
+    : v.kvlistValue
+      ? Object.fromEntries(
+          (v.kvlistValue.values ?? []).map((a) => [a.key, plain(a.value)]),
+        )
+      : "intValue" in v
+        ? Number(v.intValue)
+        : (v.stringValue ?? v.doubleValue ?? v.boolValue);
+const attr = (span, key) => {
+  const a = span?.attributes.find((x) => x.key === key);
+  return a && plain(a.value);
+};
+const deskOutcomes = () =>
+  (desk.traces ?? []).map((t) => attr(spansOf(t)[0], "desk.outcome")).sort();
+/** The traces where Ollama was asked: [HTTP span, model span]. */
+const modelCalls = () =>
+  (desk.traces ?? []).map(spansOf).filter((s) => s.length === 2);
 
 check("the desk proxy says warm, cold or busy before Ollama answers", () => {
   assert(!desk.error, `desk/chat-log-proxy.mjs: ${desk.error}`);
@@ -425,9 +473,9 @@ check("the desk proxy says warm, cold or busy before Ollama answers", () => {
     `headers waited for Ollama: ${Math.round(slowest)}ms`,
   );
   assert(
-    JSON.stringify(desk.outcomes) ===
-      JSON.stringify(["busy", "busy", "error", "ok", "ok", "ok", "ok"]),
-    `logged outcomes ${desk.outcomes}`,
+    JSON.stringify(deskOutcomes()) ===
+      JSON.stringify(["busy", "busy", "error", "ok", "ok", "ok", "ok", "ok"]),
+    `logged outcomes ${deskOutcomes()}`,
   );
   assert(
     deskEvent("cold")?.cold === true &&
@@ -446,6 +494,97 @@ check("the desk proxy says busy only while another model is in use", () => {
   assert(isBusy(loadedSince), `loaded since start: ${shown(loadedSince)}`);
   assert(isCold(idle), `left loaded and idle: ${shown(idle)}`);
   assert(isCold(aged), `idle past IN_USE_MS: ${shown(aged)}`);
+});
+
+check("the desk proxy keeps each exchange as an OTLP/JSON GenAI trace", () => {
+  assert(!desk.error, `desk/chat-log-proxy.mjs: ${desk.error}`);
+  // proto3 JSON: hex ids, int64s as decimal strings, enums as numbers,
+  // attributes as {key, value: AnyValue}. OTel tools reject anything else.
+  const bad = [];
+  const type = {
+    stringValue: "string",
+    doubleValue: "number",
+    boolValue: "boolean",
+  };
+  const value = (v, at) => {
+    const [kind, ...more] = Object.keys(v ?? {});
+    const x = v?.[kind];
+    if (more.length) bad.push(`${at}: ${JSON.stringify(v)}`);
+    else if (kind === "arrayValue")
+      (x.values ?? []).forEach((y, i) => value(y, `${at}[${i}]`));
+    else if (kind === "kvlistValue")
+      (x.values ?? []).forEach((a) => value(a.value, `${at}.${a.key}`));
+    else if (kind === "intValue" ? !/^-?\d+$/.test(x) : typeof x !== type[kind])
+      bad.push(`${at}: ${JSON.stringify(v)}`);
+  };
+  for (const s of (desk.traces ?? []).flatMap(spansOf)) {
+    if (!/^[0-9a-f]{32}$/.test(s.traceId) || !/^[0-9a-f]{16}$/.test(s.spanId))
+      bad.push(`ids ${s.traceId} ${s.spanId}`);
+    const [start, end] = [s.startTimeUnixNano, s.endTimeUnixNano];
+    if (
+      !/^\d+$/.test(start) ||
+      !/^\d+$/.test(end) ||
+      BigInt(end) < BigInt(start)
+    )
+      bad.push(`times ${start} ${end}`);
+    if (![2, 3].includes(s.kind)) bad.push(`kind ${s.kind}`);
+    for (const a of s.attributes) value(a.value, `${s.name} ${a.key}`);
+  }
+  assert(!bad.length, `not OTLP/JSON: ${bad.slice(0, 3).join("; ")}`);
+  const calls = modelCalls();
+  assert(calls.length === 5, `${calls.length} traces asked Ollama, not 5`);
+  for (const [http, model] of calls) {
+    assert(
+      model.traceId === http.traceId && model.parentSpanId === http.spanId,
+      "the model's span isn't a child of the HTTP span",
+    );
+    const want = {
+      "gen_ai.operation.name": "chat",
+      "gen_ai.provider.name": "ollama",
+      "gen_ai.request.model": "desk-model",
+      "gen_ai.usage.output_tokens": 5,
+    };
+    for (const [k, v] of Object.entries(want))
+      assert(attr(model, k) === v, `${k} is ${attr(model, k)}, not ${v}`);
+    const [out] = attr(model, "gen_ai.output.messages");
+    assert(
+      out.role === "assistant" &&
+        out.parts.map((part) => part.type).join() === "reasoning,text",
+      `output parts ${JSON.stringify(out.parts)}`,
+    );
+    assert(
+      attr(model, "gen_ai.input.messages")[0].role === "system",
+      "the system prompt isn't the first of gen_ai.input.messages",
+    );
+  }
+  return `${desk.traces.length} traces`;
+});
+
+check("turns of one conversation share a gen_ai.conversation.id", () => {
+  assert(!desk.error, `desk/chat-log-proxy.mjs: ${desk.error}`);
+  const asked = modelCalls().map(([http, model]) => ({
+    state: attr(http, "desk.state"),
+    turns: attr(model, "gen_ai.input.messages").length,
+    id: attr(model, "gen_ai.conversation.id"),
+  }));
+  // Linked through the answer, so this also checks the proxy cuts it at
+  // follow-ups.ts's SENTINEL.
+  const next = asked.find((a) => a.turns === 4);
+  const before = asked.find((a) => a.turns === 2 && a.state === "warm");
+  assert(
+    next && before && next.id === before.id,
+    `the follow-up has ${next?.id}, the answer before it ${before?.id}`,
+  );
+  const firsts = asked.filter((a) => a.turns === 2).map((a) => a.id);
+  assert(
+    new Set(firsts).size === firsts.length,
+    `separate conversations share an id: ${firsts}`,
+  );
+});
+
+check("the desk proxy deletes logs past retention, in both formats", () => {
+  assert(!desk.error, `desk/chat-log-proxy.mjs: ${desk.error}`);
+  assert(!desk.expired.length, `still there: ${desk.expired}`);
 });
 
 check(

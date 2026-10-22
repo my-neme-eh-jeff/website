@@ -5,7 +5,8 @@
  *   chatlog -n 50        the last 50
  *   chatlog --today      everything since local midnight
  *   chatlog --full       include earlier turns and the model's reasoning
- *   chatlog --json       raw JSON lines, for jq
+ *   chatlog --json       the lines as stored, for jq: OTLP/JSON traces, or
+ *                        the proxy's own format before 2026-10-22
  */
 import { readdir, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -17,22 +18,72 @@ const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
 const n = Number(args[args.indexOf("-n") + 1]) || 20;
 
-const files = (await readdir(LOG_DIR).catch(() => []))
-  .filter((f) => /^chats-\d{4}-\d{2}-\d{2}\.jsonl$/.test(f))
-  .sort();
+const files = (await readdir(LOG_DIR).catch(() => [])).filter((f) =>
+  /^(?:chats|traces)-\d{4}-\d{2}-\d{2}\.jsonl$/.test(f),
+);
+
+/** An OTLP/JSON AnyValue as plain JSON. */
+const plain = (v) =>
+  v.arrayValue
+    ? (v.arrayValue.values ?? []).map(plain)
+    : v.kvlistValue
+      ? Object.fromEntries(
+          (v.kvlistValue.values ?? []).map((a) => [a.key, plain(a.value)]),
+        )
+      : "intValue" in v
+        ? Number(v.intValue)
+        : (v.stringValue ?? v.doubleValue ?? v.boolValue ?? null);
+
+const text = (message, type = "text") =>
+  (message?.parts ?? [])
+    .filter((p) => p.type === type)
+    .map((p) => p.content)
+    .join("");
+
+/** A trace, as the fields the proxy logged before traces. */
+function fromTrace(o) {
+  const spans = o.resourceSpans.flatMap((r) =>
+    r.scopeSpans.flatMap((s) => s.spans),
+  );
+  const a = Object.fromEntries(
+    spans.flatMap((s) => s.attributes.map((x) => [x.key, plain(x.value)])),
+  );
+  const [http] = spans;
+  const ms = (ns) => Number(BigInt(ns) / 1_000_000n);
+  const turns = (a["gen_ai.input.messages"] ?? [])
+    .filter((m) => m.role !== "system")
+    .map((m) => ({ role: m.role, content: text(m) }));
+  const [out] = a["gen_ai.output.messages"] ?? [];
+  return {
+    ts: new Date(ms(http.startTimeUnixNano)).toISOString(),
+    country: a["geo.country.iso_code"] ?? null,
+    question: turns.at(-1)?.content ?? "",
+    history: turns.slice(0, -1),
+    answer: text(out),
+    reasoning: text(out, "reasoning"),
+    outcome: a["desk.outcome"],
+    totalMs: ms(http.endTimeUnixNano) - ms(http.startTimeUnixNano),
+    stats: {
+      tokens: a["gen_ai.usage.output_tokens"] ?? 0,
+      genMs: (a["ollama.eval_duration"] ?? 0) * 1000,
+    },
+  };
+}
 
 let entries = [];
 for (const f of files) {
-  const text = await readFile(join(LOG_DIR, f), "utf8");
-  for (const line of text.split("\n")) {
+  const lines = (await readFile(join(LOG_DIR, f), "utf8")).split("\n");
+  for (const line of lines) {
     if (!line.trim()) continue;
     try {
-      entries.push(JSON.parse(line));
+      const o = JSON.parse(line);
+      entries.push({ ...(o.resourceSpans ? fromTrace(o) : o), line });
     } catch {
       // A line cut short by a crash.
     }
   }
 }
+entries.sort((x, y) => x.ts.localeCompare(y.ts));
 
 if (flag("--today")) {
   const midnight = new Date();
@@ -43,7 +94,7 @@ if (flag("--today")) {
 }
 
 if (flag("--json")) {
-  for (const e of entries) console.log(JSON.stringify(e));
+  for (const e of entries) console.log(e.line);
   process.exit(0);
 }
 

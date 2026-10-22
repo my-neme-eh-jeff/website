@@ -9,8 +9,9 @@ visitor -> Worker (/api/chat) -> Workers VPC -> Cloudflare Tunnel
 ```
 
 - `chat-log-proxy.mjs` forwards only `POST /api/chat`, streams the answer
-  through unchanged, and appends each exchange to
-  `~/.local/share/portfolio-chat/chats-YYYY-MM-DD.jsonl` (one file per UTC day).
+  through unchanged, and keeps each exchange as an OpenTelemetry trace in
+  `~/.local/share/portfolio-chat/traces-YYYY-MM-DD.jsonl` (one file per UTC
+  day; what a trace holds is below).
   Before forwarding it asks Ollama's `/api/ps` what is loaded and answers at
   once: `x-desk-model: warm` if the chat's model is, `cold` if not (the shell's
   "cold start" note). If another model is in use, such as an eval, a question
@@ -20,31 +21,62 @@ visitor -> Worker (/api/chat) -> Workers VPC -> Cloudflare Tunnel
   reads `/api/ps` every 10s to time those moves. A model left loaded but idle
   doesn't count; Ollama swaps it out for a cold start. If Ollama doesn't
   answer, the proxy returns 502.
-- **Retention is 30 days.** The proxy deletes a day file once that day began
-  more than 30 days ago, at startup and hourly. `/privacy/` promises this; change
+- **Retention is 30 days.** The proxy deletes a day file, `traces-*` or the
+  older `chats-*`, once that day began more than 30 days ago, at startup and
+  hourly. `/privacy/` promises this; change
   `RETENTION_DAYS` and that page together.
-- `chatlog.mjs` prints that log. Its options are in the comment at its top.
+- `chatlog.mjs` prints that log, in either format. Its options are in the
+  comment at its top.
 - `probe-ps.mjs` checks that Ollama still moves `expires_at` the way the busy
   check assumes. Run it on the desk after upgrading Ollama.
 - `portfolio-chat-proxy.service` keeps the proxy running as a user unit.
 
-## What one log line holds
+## What a trace holds
 
-Written by the proxy, so it can only contain what reaches the desk:
+Each line is one OTLP/JSON `ExportTraceServiceRequest`: the format the
+OpenTelemetry Collector's file exporter writes, so OTel tools can load the
+files. Names follow the GenAI semantic conventions as of 2026-10-22
+(github.com/open-telemetry/semantic-conventions-genai). `verify` checks the
+encoding, the required GenAI attributes and the conversation ids; the files
+haven't been loaded into a Collector yet.
 
-| Field                              | From                                                                                                                                                                         |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ts`, `id`                         | the proxy                                                                                                                                                                    |
-| `question`, `history`              | the conversation the browser sent (up to 8 turns)                                                                                                                            |
-| `answer`, `reasoning`              | Ollama's stream: the reply, suggested questions and hidden notes                                                                                                             |
-| `stats`, `firstTokenMs`, `totalMs` | Ollama's timings and the proxy's clock                                                                                                                                       |
-| `outcome`                          | `ok`, `cancelled` (the visitor hung up, or the Worker gave up waiting and asked Poe), `busy` (another model was in use, so the Worker asked Poe), `error`, `upstream_<code>` |
-| `systemPrompt`                     | a 12-character hash: which prompt version answered                                                                                                                           |
-| `country`                          | the one visitor fact the Worker forwards (Cloudflare's geo)                                                                                                                  |
+An exchange is two spans. `POST /api/chat` is the proxy's: the status code,
+`desk.state` (`warm`, `cold`, `busy`) and the visitor's country
+(`geo.country.iso_code`). `chat <model>` is the call to Ollama, absent when the
+proxy answered `busy` or Ollama was down:
 
-Nothing else about the visitor is stored: no IP address, user agent, request
-id or session id. The desk never sees them, because the Worker forwards only the
-country.
+| Attributes                                                                            | What they hold                                                                                                           |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `gen_ai.input.messages`                                                               | everything sent to the model: the system prompt, up to 8 earlier turns, the question                                     |
+| `gen_ai.output.messages`                                                              | the model's reasoning and its text, which ends with the suggested questions after `<<next>>`                             |
+| `gen_ai.request.*`, `ollama.request.*`                                                | the model asked for, token cap, thinking level, sampling, `keep_alive` and every Ollama option sent                      |
+| `gen_ai.response.model`, `ollama.model.digest`                                        | which weights answered                                                                                                   |
+| `gen_ai.prompt.version`, `desk.prompt.rules`, `desk.prompt.facts`                     | the prompt's hash, the one eval runs record in `meta.json`, and its rules' and facts' hashes                             |
+| `gen_ai.usage.*`, `gen_ai.response.finish_reasons`                                    | tokens in (with those read from cache), tokens out, and why it stopped                                                   |
+| `gen_ai.response.time_to_first_chunk`, `desk.time_to_first_text`, `ollama.*_duration` | timings, in seconds                                                                                                      |
+| `gen_ai.conversation.id`                                                              | the conversation it belongs to (below)                                                                                   |
+| `desk.outcome` (on both spans), `error.type`                                          | `ok`, `cancelled` (the visitor hung up, or the Worker gave up waiting and asked Poe), `busy`, `error`, `upstream_<code>` |
+
+**Conversation ids are made on the desk.** The shell sends each earlier answer
+back as it showed it, which is the desk's answer up to the suggested
+questions. The proxy remembers answers for 6 hours and gives the question that
+follows one the same id. A restart starts new ids; the earlier turns in every
+trace still link them.
+
+Nothing else about the visitor is stored: no IP address, user agent, request id
+or session id. The desk never sees them, because the Worker forwards only the
+country. Poe's answers aren't here either: `/privacy/` says they aren't logged.
+
+**For training on it later:** each `chat` span is an example, input messages to
+output messages, tagged with the prompt version and the model's digest. A
+conversation's next question says how the answer landed: one of its suggested
+questions, a rephrase, a cancel, or nothing more. The files last 30 days.
+
+**Sending traces elsewhere too.** With `OTEL_EXPORTER_OTLP_ENDPOINT` (or
+`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`) in the proxy's environment, each trace is
+also posted as OTLP/HTTP JSON to `<endpoint>/v1/traces`, with any
+`OTEL_EXPORTER_OTLP_HEADERS`. `OTEL_SERVICE_NAME` renames the service. The file
+is written either way.
 
 ## Install or update on the desk
 
