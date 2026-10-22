@@ -200,8 +200,10 @@ and publishing runs: [`results/README.md`](results/README.md).
   and hasn't been reviewed. A wrong `expect` or `points` marks every model
   wrong in the same way.
 - **One answer per wording can't separate close models.** In the bake-off,
-  96% (90–98%) and 91% (84–95%) overlapped. Rewordings of one question aren't
-  independent either, so the intervals understate the uncertainty.
+  96% (90–98%) and 91% (84–95%) overlapped. With three answers per wording in
+  the final round the two were still level, and `report.mjs --paired` puts an
+  interval on the gap. The board's intervals treat rewordings of one question
+  as independent, which they aren't, so they understate the uncertainty.
 - **"3 follow-ups" tests the site's parser as much as the model.** That's on
   purpose, since it's what visitors see, but a model can lose "all right" to a
   parser rule that could be relaxed.

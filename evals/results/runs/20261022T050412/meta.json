@@ -1,0 +1,46 @@
+{
+  "run": "20261022T050412",
+  "started": "2026-10-22T05:04:16.508Z",
+  "sha": "e48b2c1",
+  "node": "v24.21.0",
+  "args": {
+    "sha": "e48b2c1",
+    "run": "20261022T050412",
+    "target": "desk:gemma4:26b-a4b-it-qat,desk:qwen3.6:35b-a3b-q4_K_M",
+    "think": "false",
+    "extra": "{\"options\":{\"num_ctx\":8192,\"num_predict\":700}}",
+    "set": "all",
+    "reps": "3",
+    "judge": true,
+    "judge-reps": "3",
+    "budget-usd": "4",
+    "cases": "",
+    "kinds": "",
+    "resume": "",
+    "ollama": "http://127.0.0.1:11434",
+    "judge-only": false,
+    "floor-usd": "5"
+  },
+  "targets": {
+    "desk:gemma4:26b-a4b-it-qat": {
+      "model": "gemma4:26b-a4b-it-qat",
+      "maker": "google",
+      "prompt": {
+        "full": "328344d1a43e",
+        "rules": "0f2877b2b288",
+        "facts": "e293e6a059d8"
+      },
+      "onDesk": true
+    },
+    "desk:qwen3.6:35b-a3b-q4_K_M": {
+      "model": "qwen3.6:35b-a3b-q4_K_M",
+      "maker": "alibaba",
+      "prompt": {
+        "full": "328344d1a43e",
+        "rules": "0f2877b2b288",
+        "facts": "e293e6a059d8"
+      },
+      "onDesk": true
+    }
+  }
+}

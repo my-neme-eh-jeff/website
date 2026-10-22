@@ -16,6 +16,9 @@
  * every target of every run in one table, over the wordings judged in all of
  * them, each counted once, ranked by the share that are accurate.
  *
+ * With --paired <run>... it prints, for exactly two targets, how far apart
+ * their accurate shares are wording by wording, and each one's by set and kind.
+ *
  * box.mjs runs this after copying a run back.
  */
 import { createHash } from "node:crypto";
@@ -25,11 +28,13 @@ import { CASES } from "./cases.mjs";
 import { FORM, recheck } from "./checks.mjs";
 
 const argv = process.argv.slice(2);
-const mode = ["--compare", "--board"].includes(argv[0]) ? argv[0] : null;
+const mode = ["--compare", "--board", "--paired"].includes(argv[0])
+  ? argv[0]
+  : null;
 const dirs = mode ? argv.slice(1) : argv;
 if (!dirs.length || (mode === "--compare" && dirs.length !== 2)) {
   console.error(
-    "usage: node evals/report.mjs <run dir> [<run dir>...]\n       node evals/report.mjs --compare <before run dir> <after run dir>\n       node evals/report.mjs --board <run dir>...",
+    "usage: node evals/report.mjs <run dir> [<run dir>...]\n       node evals/report.mjs --compare <before run dir> <after run dir>\n       node evals/report.mjs --board <run dir>...\n       node evals/report.mjs --paired <run dir>...",
   );
   process.exit(1);
 }
@@ -531,6 +536,80 @@ function boardMarkdown(b) {
   ].join("\n");
 }
 
+/**
+ * Two targets wording by wording: the mean gap in accurate share, with a 95%
+ * interval from resampling whole questions, since a question's wordings
+ * aren't independent.
+ */
+function paired(runs) {
+  const entries = runs.flatMap((run) =>
+    [...new Set(run.answers.map((a) => a.target))].map((target) => ({
+      target,
+      answers: run.answers.filter((a) => a.target === target && graded(a)),
+    })),
+  );
+  if (entries.length !== 2) {
+    console.error(
+      `--paired needs two targets; these runs hold ${entries.length}`,
+    );
+    process.exit(1);
+  }
+  const wording = (a) => `${a.case}|${a.variant}`;
+  const [first, second] = entries.map(
+    (e) =>
+      new Map(
+        [...Map.groupBy(e.answers, wording)].map(([w, xs]) => [
+          w,
+          xs.filter(accurate).length / xs.length,
+        ]),
+      ),
+  );
+  const gaps = [...first.keys()]
+    .filter((w) => second.has(w))
+    .map((w) => ({
+      question: w.split("|")[0],
+      d: first.get(w) - second.get(w),
+    }));
+  const questions = Map.groupBy(gaps, (g) => g.question);
+  const ids = [...questions.keys()];
+  const mean = (gs) => gs.reduce((s, g) => s + g.d, 0) / gs.length;
+  // Seeded, so the interval reads the same every time.
+  let seed = 1;
+  const random = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+  const draws = Array.from({ length: 10_000 }, () =>
+    mean(
+      ids.flatMap(() => questions.get(ids[Math.floor(random() * ids.length)])),
+    ),
+  ).sort((x, y) => x - y);
+  const points = (x) => (x * 100).toFixed(1);
+  const count = (keep) => gaps.filter(keep).length;
+  const shareOf = (e, keep) => {
+    const by = Map.groupBy(e.answers.filter(keep), wording);
+    let k = 0;
+    for (const xs of by.values()) k += xs.filter(accurate).length / xs.length;
+    return by.size ? `${pct(k / by.size)} of ${by.size}` : "—";
+  };
+  const groups = [
+    ["dev", (a) => !a.holdout],
+    ["holdout", (a) => a.holdout],
+    ...[...new Set(CASES.map((c) => c.kind))].map((kind) => [
+      kind,
+      (a) => a.kind === kind,
+    ]),
+  ];
+  const row = (xs) => `| ${xs.join(" | ")} |`;
+  return [
+    `Accurate, ${entries[0].target} minus ${entries[1].target}, over ${gaps.length} wordings in ${ids.length} questions: ${points(mean(gaps))} points, 95% interval ${points(draws[250])} to ${points(draws[9749])}. Higher for the first on ${count((g) => g.d > 0)} wordings, for the second on ${count((g) => g.d < 0)}, level on ${count((g) => g.d === 0)}.`,
+    "",
+    row(["accurate", ...entries.map((e) => e.target)]),
+    row(["---", ...entries.map(() => "---")]),
+    ...groups.map(([label, keep]) =>
+      row([label, ...entries.map((e) => shareOf(e, keep))]),
+    ),
+    "",
+  ].join("\n");
+}
+
 function reviewPage(all) {
   const items = reviewOrder(all).map((a) => {
     const c = byCase.get(a.case);
@@ -639,6 +718,8 @@ if (mode === "--compare") {
   writeFileSync(`${out}.html`, boardPage(b));
   writeFileSync(`${out}.md`, boardMarkdown(b));
   console.log(`${out}.html\n${out}.md`);
+} else if (mode === "--paired") {
+  console.log(paired(runs));
 } else {
   writeFileSync(join(main.dir, "report.html"), reportPage(main));
   writeFileSync(

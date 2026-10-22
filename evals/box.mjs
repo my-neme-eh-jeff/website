@@ -83,10 +83,11 @@ if (publish) {
   const out = `evals/results/runs/${publish}`;
   mkdirSync(out, { recursive: true });
   const read = (path) =>
-    execFileSync("ssh", [HOST, "cat", path], { encoding: "utf8" }).replaceAll(
-      "\0",
-      "",
-    );
+    execFileSync("ssh", [HOST, "cat", path], {
+      encoding: "utf8",
+      // A 3-rep run of every wording holds more than the default 1 MB.
+      maxBuffer: 256 * 1024 * 1024,
+    }).replaceAll("\0", "");
   const ls = execFileSync("ssh", [HOST, "ls", `${RUNS}/${publish}`], {
     encoding: "utf8",
   });

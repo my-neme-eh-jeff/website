@@ -18,9 +18,12 @@ accurate local model, at 96%. Gemma 4 26B-A4B is close behind at 91%, with
 perfect formatting and the fastest answers. Both clearly beat gpt-oss-20b's
 82%. The dense Gemma 4 31B matched them (92%, and the best fully-right score,
 92%) but took about 40 seconds an answer. Giving gpt-oss more time to reason made it no better.
-Nothing has been switched in production. Each model answered each question
-once, so the gap between the top two isn't settled yet; see
-[What's not settled](#whats-not-settled).
+Each model answered each question once, so the gap between the top two
+wasn't settled here; see [What's not settled](#whats-not-settled).
+
+**Update, 2026-10-22:** [a final round](2026-10-22-desk-model-finalists.md)
+asked both every wording three times. They were level on accuracy, and Gemma 4
+26B-A4B won on answers fully right, speed and memory. It now runs on the desk.
 
 ## The results
 
@@ -166,11 +169,11 @@ and made up a link (`amannambisan.com/#projects`).
 
 ## What runs next
 
-- **Next, a finalist round for Qwen3.6-35B-A3B and Gemma 4 26B-A4B:** three
-  answers per question, dev and held-out wordings, thinking on and off, with
-  and without the identity rule, plus a memory check at 16k context.
-- **Not before Aman decides:** switching the site's model, the identity rule,
-  and a more tolerant follow-up parser are all changes visitors would see.
+- **Done on 2026-10-22:** [the final round](2026-10-22-desk-model-finalists.md),
+  three answers per wording, dev and holdout, with production's settings and
+  prompt. Thinking on and the identity rule were left out of it.
+- **Not before Aman decides:** the identity rule, and a more tolerant
+  follow-up parser, are changes visitors would see.
 
 ## How it was run
 

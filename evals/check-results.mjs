@@ -43,13 +43,12 @@ try {
     writeFileSync(file, source);
     const { CASES } = await import(pathToFileURL(file).href);
     for (const c of CASES)
-      for (const w of [].concat(c.ask))
-        for (const t of typeof w === "string"
-          ? [w]
-          : Array.isArray(w)
-            ? w
-            : [w.q])
+      for (const w of [].concat(c.ask)) {
+        // A string, an array of turns, or { q, holdout } holding either.
+        const q = typeof w === "string" || Array.isArray(w) ? w : w.q;
+        for (const t of typeof q === "string" ? [q] : q)
           known.add(typeof t === "string" ? t : t.content);
+      }
   }
 } finally {
   rmSync(tmp, { recursive: true, force: true });

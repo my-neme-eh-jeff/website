@@ -14,6 +14,9 @@ visitors. How the evals work, and why they're built that way, is in
 - [Choosing the desk model, 2026-10-20](2026-10-20-desk-model-bake-off.md):
   gpt-oss-20b at three reasoning levels, against the strongest open models
   that fit on the box.
+- [The final round, 2026-10-22](2026-10-22-desk-model-finalists.md): the
+  two best, Qwen3.6-35B-A3B and Gemma 4 26B-A4B, three times on every
+  wording. Gemma won and now runs on the desk.
 
 ## What a run holds
 
@@ -36,6 +39,7 @@ Each run is in `runs/<run id>/`. The id is the UTC time the run started.
 node evals/report.mjs evals/results/runs/<run>          # report.html and review.html in the run
 node evals/report.mjs --compare <before run> <after run> # compare.html in the second run
 node evals/report.mjs --board <run> <run> ...            # board.html and board.md in runs/
+node evals/report.mjs --paired <run> ...                  # two targets wording by wording, printed
 pnpm run eval --publish <run>                            # copy a run from the box into runs/, cleaned as described below
 node evals/check-results.mjs                             # the checks below, before you commit a run
 ```
@@ -61,7 +65,7 @@ The pages these write are gitignored.
 
 - **No visitor text.** Every visitor turn in these runs is a wording from
   `evals/cases.mjs`. `node evals/check-results.mjs` checks this against every
-  committed version of that file; on 2026-10-21 it read 3,206 turns, all
+  committed version of that file; on 2026-10-22 it read 4,334 turns, all
   clear. The visitor log stays on the box, and `/privacy/` promises it's
   deleted after 30 days.
 - **No secrets.** The runs hold no API key and no prompt text, only prompt
@@ -107,5 +111,6 @@ are in dollars.
 | `20261020T141300` | GLM-4.7-Flash (`glm-4.7-flash:q4_K_M`), think off; 10 answers blank                                                                                             | `95f81f3`       | 117     | 107    | 0.231  |
 | `20261020T155238` | Nemotron 3.5 Lightning (`nemotron-3.5-lightning:30b`), think off                                                                                                | `95f81f3`       | 117     | 117    | 0.278  |
 | `20261020T173111` | Gemma 4 31B (`gemma4:31b-it-qat`, dense), think off                                                                                                             | `95f81f3`       | 117     | 117    | 0.203  |
+| `20261022T050412` | The final round: Gemma 4 26B-A4B and Qwen3.6-35B-A3B, every dev and holdout wording ×3, think off, `num_predict` 700                                            | `e48b2c1`       | 1,104   | 1,104  | 2.210  |
 
-All 21 runs together: 3,156 answers, and $6.15 spent on judges.
+All 22 runs together: 4,260 answers, and $8.36 spent on judges.
