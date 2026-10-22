@@ -3,7 +3,8 @@
 This folder holds every run of the shell's evals, plus write-ups of what they
 showed. The code in `evals/` produced all of it, on the desk box that serves
 the site's chat. The questions were written for the evals; none came from
-visitors.
+visitors. How the evals work, and why they're built that way, is in
+[`../README.md`](../README.md).
 
 ## Write-ups
 
