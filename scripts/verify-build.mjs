@@ -35,7 +35,7 @@ import {
 } from "../src/content/chat.ts";
 import { bestWork } from "../src/content/context.ts";
 import { FIELD_ANIMATION, fieldScript } from "../src/content/field.ts";
-import { projects } from "../src/content/profile.ts";
+import { profile, projects } from "../src/content/profile.ts";
 import { staleTabScript } from "../src/content/stale-tab.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -1447,7 +1447,10 @@ check("og:video is referenced only if it exists and plays inline", () => {
     );
 
     const rel = url.replace(/^https?:\/\/[^/]+/, "").replace(/^\//, "");
-    assert(existsSync(p("dist", rel)), `${page}: og:video ${url} absent from dist.`);
+    assert(
+      existsSync(p("dist", rel)),
+      `${page}: og:video ${url} absent from dist.`,
+    );
     const buf = readFileSync(p("dist", rel));
     const boxes = mp4Boxes(buf);
     const at = (t) => boxes.findIndex((b) => b.type === t);
@@ -1489,6 +1492,51 @@ check("every page is under Messages' 1 MB limit for a previewed page", () => {
     assert(kb < 1024, `${page} is ${Math.round(kb)} kB (TN3156: 1 MB).`);
   }
 });
+
+check("every page's share tags are in its first 32 kB", () => {
+  // Slack reportedly reads only that much (blog.daveallie.com, 2024; not in
+  // Slack's docs). WhatsApp documents 300 kB of <head>.
+  let worst = 0;
+  for (const page of PAGES) {
+    const html = readFileSync(p("dist", page), "latin1");
+    const last = Math.max(
+      html.lastIndexOf('property="og:'),
+      html.lastIndexOf('name="twitter:'),
+    );
+    assert(last > 0, `${page} has no og: or twitter: tags.`);
+    assert(last < 32_768, `${page}'s share tags run to byte ${last}.`);
+    worst = Math.max(worst, last);
+  }
+  return `last at byte ${worst}`;
+});
+
+check(
+  "every page credits the X profile in sameAs and opts in to large previews",
+  () => {
+    const handles = profile.sameAs
+      .map((u) => u.match(/^https:\/\/(?:x|twitter)\.com\/(\w+)\/?$/)?.[1])
+      .filter(Boolean);
+    for (const page of PAGES) {
+      const html = read("dist", page);
+      const meta = (name) =>
+        html.match(
+          new RegExp(`<meta[^>]*name="${name}"[^>]*content="([^"]+)"`),
+        )?.[1];
+      for (const tag of ["twitter:site", "twitter:creator"]) {
+        const v = meta(tag);
+        assert(
+          handles.length ? v === `@${handles[0]}` : v === undefined,
+          `${page}: ${tag} is ${v}; profile.sameAs gives ${handles[0] ?? "no X profile"}.`,
+        );
+      }
+      assert(
+        meta("robots")?.includes("max-image-preview:large"),
+        `${page}: no robots max-image-preview:large, so Discover shows a thumbnail.`,
+      );
+    }
+    return handles[0] ? `@${handles[0]}` : "no X profile in sameAs";
+  },
+);
 
 // An image `?jsx` can't find renders nothing, silently.
 check("every post's cover and glance reach /blog/", () => {

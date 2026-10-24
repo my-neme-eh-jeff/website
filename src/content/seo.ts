@@ -14,6 +14,11 @@ export const ORIGIN = "https://amannambisan.com";
 export const ld = (obj: unknown) =>
   JSON.stringify(obj).replace(/</g, "\\u003c");
 
+/** From the X profile in sameAs, so the handle has one source. */
+export const xHandle = profile.sameAs
+  .map((u) => u.match(/^https:\/\/(?:x|twitter)\.com\/(\w{1,15})\/?$/)?.[1])
+  .find(Boolean);
+
 type SeoInput = {
   /** Route path with leading and trailing slash, e.g. "/blog/". */
   path: string;
@@ -48,6 +53,9 @@ export function seoMeta({
   const meta: Array<Record<string, string>> = [
     { name: "description", content: description },
     { name: "author", content: profile.name },
+    // Discover shows a large image only with this opt-in (Google robots
+    // meta doc, updated 2026-03-09, read 2026-10-24).
+    { name: "robots", content: "max-image-preview:large" },
 
     { property: "og:site_name", content: profile.name },
     { property: "og:type", content: ogType },
@@ -58,6 +66,12 @@ export function seoMeta({
 
     { name: "twitter:title", content: title },
     { name: "twitter:description", content: description },
+    ...(xHandle
+      ? [
+          { name: "twitter:site", content: `@${xHandle}` },
+          { name: "twitter:creator", content: `@${xHandle}` },
+        ]
+      : []),
   ];
 
   const src = image?.src ?? profile.ogImage;
@@ -212,6 +226,12 @@ export function postHead(slug: string) {
         ...(p.cover ? { image: p.cover } : {}),
       }),
       { property: "article:published_time", content: p.date },
+      // Slack shows these under the title (its 2015 unfurling post; Discord
+      // ignores them).
+      { name: "twitter:label1", content: "Written by" },
+      { name: "twitter:data1", content: profile.name },
+      { name: "twitter:label2", content: "Reading time" },
+      { name: "twitter:data2", content: `${p.minutes} min read` },
     ],
     scripts: [
       {
