@@ -139,6 +139,7 @@ Only what a filename doesn't say; `ls` for the rest.
     scripts/verify-build.mjs    post-build invariant checks (pnpm run verify)
     scripts/make-icons.mjs      favicon + touch icon (pnpm run icons); never hand-edit the output
     scripts/make-og.mjs         og:image (pnpm run og)
+    scripts/make-og-video.mjs   og:video, recorded from dist/ (pnpm run og.video)
     desk/                       runs on Aman's desk, not the site: the chat log proxy
     evals/                      the shell's test questions (cases.mjs), the runner that asks them, and
                                 the judges that grade the answers: how and why in its README

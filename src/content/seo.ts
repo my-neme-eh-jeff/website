@@ -22,6 +22,12 @@ type SeoInput = {
   ogType?: "profile" | "website" | "article";
   /** Overrides profile.ogImage. Must be a 1200x630 file under public/. */
   image?: { src: string; alt: string };
+  /**
+   * A 1200x630 MP4 under public/. Messages plays it in the preview (TN3156,
+   * rev. 2024-04-30, read 2026-10-24); the og:image stays for platforms that
+   * only show a still.
+   */
+  video?: string;
 };
 
 /**
@@ -35,6 +41,7 @@ export function seoMeta({
   description,
   ogType = "website",
   image,
+  video,
 }: SeoInput) {
   const url = `${ORIGIN}${path}`;
 
@@ -70,6 +77,17 @@ export function seoMeta({
     );
   } else {
     meta.push({ name: "twitter:card", content: "summary" });
+  }
+
+  if (video) {
+    const mp4 = `${ORIGIN}${video}`;
+    meta.push(
+      { property: "og:video", content: mp4 },
+      { property: "og:video:secure_url", content: mp4 },
+      { property: "og:video:type", content: "video/mp4" },
+      { property: "og:video:width", content: "1200" },
+      { property: "og:video:height", content: "630" },
+    );
   }
 
   return meta;

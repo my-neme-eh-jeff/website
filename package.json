@@ -29,7 +29,8 @@
     "audit.check": "node scripts/audit.mjs --check",
     "bench": "node evals/run.mjs --ollama http://127.0.0.1:21434",
     "eval": "node evals/box.mjs",
-    "og": "node scripts/make-og.mjs"
+    "og": "node scripts/make-og.mjs",
+    "og.video": "node scripts/make-og-video.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

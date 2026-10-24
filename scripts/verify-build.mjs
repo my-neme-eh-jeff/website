@@ -1405,6 +1405,91 @@ check("og:image is referenced only if it exists and is a real image", () => {
   return files.size ? [...files].join(", ") : "not emitted (allowed)";
 });
 
+/** Top-level MP4 boxes, in file order. */
+function mp4Boxes(buf) {
+  const boxes = [];
+  for (let i = 0; i + 8 <= buf.length;) {
+    let size = buf.readUInt32BE(i);
+    const type = buf.toString("latin1", i + 4, i + 8);
+    if (size === 1) size = Number(buf.readBigUInt64BE(i + 8));
+    if (size === 0) size = buf.length - i;
+    if (size < 8) break;
+    boxes.push({ type, start: i, end: i + size });
+    i += size;
+  }
+  return boxes;
+}
+
+check("og:video is referenced only if it exists and plays inline", () => {
+  // Messages downloads and autoplays a direct MP4, and caps a preview's
+  // assets at 10 MB in all (TN3156, rev. 2024-04-30, read 2026-10-24).
+  const seen = [];
+  for (const page of PAGES) {
+    const html = read("dist", page);
+    const meta = (prop) =>
+      [
+        ...html.matchAll(
+          new RegExp(`<meta[^>]*property="${prop}"[^>]*content="([^"]+)"`, "g"),
+        ),
+      ].map((m) => m[1]);
+    const urls = meta("og:video");
+    if (!urls.length) continue;
+    assert(urls.length === 1, `${page}: ${urls.length} og:video tags.`);
+    const [url] = urls;
+    assert(
+      meta("og:video:secure_url")[0] === url &&
+        meta("og:video:type")[0] === "video/mp4",
+      `${page}: og:video:secure_url and og:video:type must be ${url} and video/mp4.`,
+    );
+    assert(
+      meta("og:image").length === 1,
+      `${page}: og:video without an og:image leaves still-only platforms blank.`,
+    );
+
+    const rel = url.replace(/^https?:\/\/[^/]+/, "").replace(/^\//, "");
+    assert(existsSync(p("dist", rel)), `${page}: og:video ${url} absent from dist.`);
+    const buf = readFileSync(p("dist", rel));
+    const boxes = mp4Boxes(buf);
+    const at = (t) => boxes.findIndex((b) => b.type === t);
+    assert(at("ftyp") === 0, `${rel} is not an MP4.`);
+    assert(
+      at("moov") > 0 && at("moov") < at("mdat"),
+      `${rel}: moov comes after mdat, so a scraper must fetch the whole file ` +
+        `before it can play. Re-encode with -movflags +faststart.`,
+    );
+    const moovBox = boxes[at("moov")];
+    const moov = buf.subarray(moovBox.start, moovBox.end);
+    assert(moov.includes("avc1"), `${rel} is not H.264.`);
+
+    assert(moov.includes("tkhd"), `${rel} has no track header.`);
+    const tkhd = moov.indexOf("tkhd") - 4;
+    const off = tkhd + (moov[tkhd + 8] === 1 ? 96 : 84);
+    const w = moov.readUInt32BE(off) >>> 16;
+    const h = moov.readUInt32BE(off + 4) >>> 16;
+    assert(
+      `${w}x${h}` ===
+        `${meta("og:video:width")[0]}x${meta("og:video:height")[0]}`,
+      `${rel} is ${w}x${h}, not what ${page}'s og:video:width/height say.`,
+    );
+
+    const mb = buf.length / 1e6;
+    assert(mb < 4, `${rel} is ${mb.toFixed(1)} MB; keep it under 4 of the 10.`);
+    seen.push(`${page} → ${rel} ${w}x${h} ${mb.toFixed(2)} MB`);
+  }
+  assert(
+    seen.some((s) => s.startsWith("index.html ")),
+    "index.html has no og:video; src/routes/index.tsx passes one.",
+  );
+  return seen.join(", ");
+});
+
+check("every page is under Messages' 1 MB limit for a previewed page", () => {
+  for (const page of PAGES) {
+    const kb = readFileSync(p("dist", page)).length / 1024;
+    assert(kb < 1024, `${page} is ${Math.round(kb)} kB (TN3156: 1 MB).`);
+  }
+});
+
 // An image `?jsx` can't find renders nothing, silently.
 check("every post's cover and glance reach /blog/", () => {
   const entries = read("src", "content", "profile.ts")

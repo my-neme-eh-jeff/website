@@ -21,6 +21,7 @@ export const head: DocumentHead = {
     title,
     description: profile.tagline,
     ogType: "profile",
+    video: "/og/home.mp4",
   }),
   scripts: [
     {
