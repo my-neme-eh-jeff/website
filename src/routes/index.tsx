@@ -20,7 +20,7 @@ export const head: DocumentHead = {
     path: "/",
     title,
     description: profile.tagline,
-    ogType: "profile",
+    ogType: "video.other",
     video: "/og/home.mp4",
   }),
   scripts: [

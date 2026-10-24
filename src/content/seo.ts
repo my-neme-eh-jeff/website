@@ -24,7 +24,8 @@ type SeoInput = {
   path: string;
   title: string;
   description: string;
-  ogType?: "profile" | "website" | "article";
+  /** A page with a video must be video.*, or Discord won't play it. */
+  ogType?: "profile" | "website" | "article" | "video.other";
   /** Overrides profile.ogImage. Must be a 1200x630 file under public/. */
   image?: { src: string; alt: string };
   /**
@@ -214,13 +215,14 @@ export const blogGraph = () => ({
 export function postHead(slug: string) {
   const p = posts.find((x) => x.slug === slug);
   if (!p) throw new Error(`No post "${slug}" in profile.ts posts`);
-  const title = `${p.title} — ${profile.name}`;
   return {
-    title,
+    title: `${p.title} — ${profile.name}`,
     meta: [
+      // No name in the share title: Messages and Facebook both say leave it
+      // to og:site_name (TN3156; Facebook's webmasters guide, read 2026-10-24).
       ...seoMeta({
         path: `/blog/${p.slug}/`,
-        title,
+        title: p.title,
         description: p.summary,
         ogType: "article",
         ...(p.cover ? { image: p.cover } : {}),

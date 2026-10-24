@@ -1441,6 +1441,12 @@ check("og:video is referenced only if it exists and plays inline", () => {
         meta("og:video:type")[0] === "video/mp4",
       `${page}: og:video:secure_url and og:video:type must be ${url} and video/mp4.`,
     );
+    // docs.discord.com/developers/link-previews, read 2026-10-24.
+    assert(
+      /^video(\.|$)/.test(meta("og:type")[0] ?? ""),
+      `${page}: og:type is ${meta("og:type")[0]}; Discord plays og:video only ` +
+        `for video or video.*.`,
+    );
     assert(
       meta("og:image").length === 1,
       `${page}: og:video without an og:image leaves still-only platforms blank.`,
