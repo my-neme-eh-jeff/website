@@ -81,6 +81,8 @@ function shoot(url, out) {
       // Otherwise the display profile converts the screenshot and shifts the
       // low-amplitude noise being measured.
       "--force-color-profile=srgb",
+      // 0 is dark, 1 light (Chrome 156, 2026-10-25).
+      "--blink-settings=preferredColorScheme=0",
       `--window-size=${W},${H}`,
       "--virtual-time-budget=4000",
       `--screenshot=${out}`,
@@ -141,8 +143,9 @@ async function groundUnderText(sharp, png) {
 }
 
 /**
- * Dark-mode text colours. Headless Chrome follows the OS appearance, so on a
- * machine in light mode the contrast columns use the wrong pair.
+ * Dark-mode text colours, so every shot renders in dark mode: headless
+ * Chrome otherwise follows the OS appearance, and on a Mac in light mode the
+ * contrast columns compared the light ground with the dark pair.
  */
 const darkOf = PALETTES.find((x) => x.id === DEFAULT_PALETTE).dark;
 const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -225,7 +228,7 @@ async function main() {
       `  haze       ${haze >= 0 ? "+" : ""}${haze.toFixed(2)} luma levels (should be near 0)`,
     );
 
-    // A reading, not a gate: it depends on the machine's light/dark setting.
+    // A reading, not a gate: the dark ground, on this machine's GPU and fonts.
     if (visible < 2) {
       console.log(
         "\n  Below 2 — that is invisible. See the note on grain-page in src/global.css.",
