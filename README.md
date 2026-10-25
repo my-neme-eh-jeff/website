@@ -47,10 +47,10 @@ The 7-day release-age cooldown is still enforced by hand. pnpm gained a
 only in **10.34.0**; this repo develops on 10.12.1, and Cloudflare's build image
 ships 10.11.1. Worth revisiting on a pnpm upgrade.
 
-Qwik is pinned to **`2.0.0-rc.0`** (published 2026-10-02), adopted 2 days
-after release by explicit owner decision — an exception to the 7-day cooldown,
-not the rule. `wrangler 4.147.0` came in the same way, as the only release
-carrying the patched undici.
+Qwik is pinned to **`2.0.0-rc.3`** and `wrangler` to **`4.150.0`**, both
+published 2026-10-13 and adopted the next day in cc34369: an exception to the
+7-day cooldown, not the rule. `pnpm view @qwik.dev/core time` re-checks the
+dates.
 
 ## Architecture
 
@@ -119,10 +119,11 @@ publish — deploys stay with Workers Builds watching `main`.
 against real build output, and prints each one it checks. Add invariants there
 rather than to a doc.
 
-It also _warns_, without failing, that the homepage's `description` and
-`og:description` currently contain `TODO` text. That is real — it is what a
-search result and a shared link display today — but it is a known pending
-content state, and a CI job that is red from day one gets ignored.
+It also _warns_, without failing, if the homepage's `description` or
+`og:description` contains `TODO` text, which is what a search result and a
+shared link would display. It warns rather than fails because it began as a
+known pending content state, and a CI job that is red from day one gets
+ignored.
 
 ### Why `www` is a Redirect Rule, not code
 
