@@ -1,12 +1,6 @@
 import { component$, useSignal, $ } from "@qwik.dev/core";
 
 /**
- * A mailto: link does nothing without a mail handler (most Macs whose owner
- * reads mail in a browser), so the address can be copied too.
- * The button keeps one name and a status region says it copied: a focused
- * button being renamed is not reliably announced.
- */
-/**
  * Where the Clipboard API is refused (insecure origins, some webviews), the
  * older copy command may still work. Selecting moves focus, so it goes back.
  */
@@ -30,6 +24,13 @@ function copyByCommand(text: string): boolean {
   return ok;
 }
 
+/**
+ * A mailto: link does nothing without a mail handler (most Macs whose owner
+ * reads mail in a browser), so the address can be copied too.
+ * The button keeps one name and a status region says it copied: a focused
+ * button being renamed is not reliably announced.
+ * Where neither way copies, the link shows the address, to copy by hand.
+ */
 export const CopyEmail = component$<{ email: string }>(({ email }) => {
   const copied = useSignal(false);
   const refused = useSignal(false);
@@ -66,7 +67,7 @@ export const CopyEmail = component$<{ email: string }>(({ email }) => {
           <rect x="1.5" y="3.5" width="13" height="9" rx="1.5" />
           <path d="M2 4.5l6 4.5 6-4.5" />
         </svg>
-        Email
+        {refused.value ? email : "Email"}
       </a>
       <button
         type="button"
