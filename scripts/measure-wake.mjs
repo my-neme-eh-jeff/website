@@ -119,7 +119,8 @@ try {
   const browser = await pp.launch({
     executablePath: CHROME,
     headless: true,
-    args: ["--no-first-run"],
+    // In CI, without the sandbox, the way audit.mjs launches Chrome there.
+    args: ["--no-first-run", ...(process.env.CI ? ["--no-sandbox"] : [])],
   });
   try {
     console.log(`${BASE}: q:container after load, then after scrolling\n`);

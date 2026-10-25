@@ -60,6 +60,12 @@ jobs:
       - name: Eval results hold no visitor text
         run: node evals/check-results.mjs
 
+      # verify reads the listeners; this scrolls every page in Chrome (~35 s).
+      - name: Scrolling leaves every page asleep
+        run: node scripts/measure-wake.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+
       # `--local`: gate this build, not whatever is deployed.
       - name: Lighthouse budget
         run: node scripts/audit.mjs --check --local
