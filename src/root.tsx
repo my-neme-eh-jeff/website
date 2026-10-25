@@ -66,7 +66,8 @@ export default component$(() => {
 
         <DocumentHeadTags />
 
-        <link rel="canonical" href={url.href} />
+        {/* Not url.href: land on /?a#b, open a post, press Back, and it was the canonical (2026-10-25). */}
+        <link rel="canonical" href={url.origin + url.pathname} />
         <script dangerouslySetInnerHTML={analyticsLoader} />
       </head>
       <body>
