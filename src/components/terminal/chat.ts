@@ -61,9 +61,15 @@ export async function sendChat(turns: Turn[], on: Handlers): Promise<Outcome> {
         error?: string;
       } | null;
       // A 404 means no Worker answered: `pnpm dev`, or a deploy without one.
+      // A 429 without our JSON is Cloudflare's rate limiting rule on /api/*,
+      // which answers before the Worker runs.
       return {
         ok: false,
-        code: res.status === 404 ? "offline" : (body?.error ?? "offline"),
+        code:
+          res.status === 404
+            ? "offline"
+            : (body?.error ??
+              (res.status === 429 ? "rate_limited" : "offline")),
       };
     }
 
