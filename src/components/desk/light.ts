@@ -481,7 +481,7 @@ function page() {
   if (down) post({ type: "online", on: false });
   let busy = shell.hasAttribute("data-busy");
   let up = shell.style.getPropertyValue("--desk-up");
-  const mo = new MutationObserver(() => {
+  const mo = new MutationObserver((records) => {
     const now = shell.hasAttribute("data-busy");
     if (now !== busy) post({ type: "state", think: now, flash: busy && !now });
     busy = now;
@@ -494,7 +494,13 @@ function page() {
       up = u;
       layout();
     }
-    watchChat();
+    // A word in flight moves every frame; that says nothing new about the chat.
+    const flight = records.every(
+      (r) =>
+        r.type === "attributes" &&
+        (r.target as Element).classList.contains("desk-fly"),
+    );
+    if (!flight) watchChat();
     state();
   });
   mo.observe(shell, {
@@ -802,6 +808,10 @@ const float COS_WIDE = ${Math.cos((52 * Math.PI) / 180)};
 const float DEPTH = 34.0 / 64.0;
 const float BAYER[16] = float[16](0.03125, 0.53125, 0.15625, 0.65625, 0.78125, 0.28125, 0.90625, 0.40625, 0.21875, 0.71875, 0.09375, 0.59375, 0.96875, 0.46875, 0.84375, 0.34375);
 const float FAN[4] = float[4](92.0, 15.0, 13.0, 60.0);
+// The frame's line: its widest at rest, and what the comet and the lamp add.
+const float LINE_W = 1.3;
+const float LIT_W = 0.25;
+const float CAUGHT_W = 0.35;
 
 float hash21(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -998,7 +1008,8 @@ void main() {
 
     float n = vnoise(vec3(cell.x * 0.09, cell.y * 0.18, uTime * 0.35));
     float scan = (mod(uTime * 0.07, 1.6) - 0.3) * uGrid.x;
-    float band = exp(-pow((cell.x - scan) * 0.5, 2.0) / 30.0);
+    float bx = (cell.x - scan) * 0.5;
+    float band = exp(-(bx * bx) / 30.0);
 
     vec3 gc = uFg;
     float a = 1.0;
@@ -1171,28 +1182,33 @@ void main() {
     col = vec4(uWarm, 1.0) * ba + col * (1.0 - ba);
   }
 
-  // So does the shell's frame: warmer there, and whole.
-  float caught = clamp(reach * 2.4, 0.0, 1.0) * keep;
-  float s = perim(p, size);
-  float along = s * 2.0 * (size.x + size.y) / uDpr;
+  // So does the shell's frame: warmer there, and whole. With no comet or
+  // flash there is no halo, and the line can't reach past its widest.
+  if (uThink > 0.0 || uFlash > 0.0
+      || abs(frame) < (LINE_W + LIT_W + CAUGHT_W) * uDpr + 0.6) {
+    float caught = clamp(reach * 2.4, 0.0, 1.0) * keep;
+    float s = perim(p, size);
+    float along = s * 2.0 * (size.x + size.y) / uDpr;
 
-  float ds = fract(s - uHead + 0.5) - 0.5;
-  float comet = 0.5 * exp(-pow(ds / 0.012, 2.0));
-  comet += ds < 0.0 ? 0.25 * exp(ds / 0.1) : 0.0;
-  comet *= uThink;
-  float lit = clamp(comet + 0.5 * uFlash, 0.0, 1.0);
+    float ds = fract(s - uHead + 0.5) - 0.5;
+    float dq = ds / 0.012;
+    float comet = 0.5 * exp(-(dq * dq));
+    comet += ds < 0.0 ? 0.25 * exp(ds / 0.1) : 0.0;
+    comet *= uThink;
+    float lit = clamp(comet + 0.5 * uFlash, 0.0, 1.0);
 
-  float wn = vnoise(vec3(along * 0.02, 0.0, uTime * 0.18));
-  float halfW = (mix(0.3, 1.3, wn * wn) + lit * 0.25 + caught * 0.35) * uDpr;
-  float brk = mix(smoothstep(0.12, 0.2, vnoise(vec3(along * 0.045, 5.0, uTime * 0.12))), 1.0, max(lit, caught));
-  float line = (1.0 - smoothstep(halfW - 0.6, halfW + 0.6, abs(frame))) * brk;
+    float wn = vnoise(vec3(along * 0.02, 0.0, uTime * 0.18));
+    float halfW = (mix(0.3, LINE_W, wn * wn) + lit * LIT_W + caught * CAUGHT_W) * uDpr;
+    float brk = mix(smoothstep(0.12, 0.2, vnoise(vec3(along * 0.045, 5.0, uTime * 0.12))), 1.0, max(lit, caught));
+    float line = (1.0 - smoothstep(halfW - 0.6, halfW + 0.6, abs(frame))) * brk;
 
-  float halo = exp(-abs(frame) / (14.0 * uDpr)) * (comet + uFlash) * 0.15;
-  float hA = clamp(halo * (uDark > 0.5 ? 0.55 : 0.3), 0.0, 1.0);
-  col = vec4(uAccent, 1.0) * hA + col * (1.0 - hA);
+    float halo = exp(-abs(frame) / (14.0 * uDpr)) * (comet + uFlash) * 0.15;
+    float hA = clamp(halo * (uDark > 0.5 ? 0.55 : 0.3), 0.0, 1.0);
+    col = vec4(uAccent, 1.0) * hA + col * (1.0 - hA);
 
-  float fa = line * clamp((uDark > 0.5 ? 0.5 : 0.4) + lit + 0.5 * caught, 0.0, 1.0);
-  col = vec4(mix(mix(uMuted, uWarm, caught), uAccent, lit), 1.0) * fa + col * (1.0 - fa);
+    float fa = line * clamp((uDark > 0.5 ? 0.5 : 0.4) + lit + 0.5 * caught, 0.0, 1.0);
+    col = vec4(mix(mix(uMuted, uWarm, caught), uAccent, lit), 1.0) * fa + col * (1.0 - fa);
+  }
 
   outColor = col;
 }`;
@@ -2079,10 +2095,12 @@ function worker() {
       if (first || m.snap) art.splice(0, 4, ...m.art);
       const w = Math.max(1, Math.round(m.w * m.dpr));
       const h = Math.max(1, Math.round(m.h * m.dpr));
-      // The frames in flight were drawn at the old size.
-      if (w !== canvas!.width || h !== canvas!.height) quiet(performance.now());
-      canvas!.width = w;
-      canvas!.height = h;
+      if (w !== canvas!.width || h !== canvas!.height) {
+        // The frames in flight were drawn at the old size.
+        quiet(performance.now());
+        canvas!.width = w;
+        canvas!.height = h;
+      }
       if (builtFor !== m.size) {
         builtFor = m.size;
         build(m.size);
@@ -2116,7 +2134,6 @@ function worker() {
       ledFlick = 1;
     }
     active = true;
-    if (!running) draw(performance.now());
   };
 }
 
