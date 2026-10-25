@@ -120,7 +120,11 @@ function page() {
   const coarse = matchMedia("(pointer: coarse)").matches;
 
   const w = new Worker(import.meta.url, { type: "module" });
-  const post = (m: Msg, t: Transferable[] = []) => w.postMessage(m, t);
+  // Timers and the font load can fire after stop(); they check this first.
+  let stopped = false;
+  const post = (m: Msg, t: Transferable[] = []) => {
+    if (!stopped) w.postMessage(m, t);
+  };
   post({ type: "init", canvas: off, coarse, calm }, [off]);
 
   const sw = shell.querySelector<HTMLButtonElement>(".lamp-switch");
@@ -128,6 +132,7 @@ function page() {
   let switchAt: Switch | null = null;
 
   const stop = () => {
+    stopped = true;
     io.disconnect();
     mo.disconnect();
     ro.disconnect();
@@ -213,6 +218,7 @@ function page() {
   let atlasKey = "";
   let atlasTimer = 0;
   const layout = () => {
+    if (stopped) return;
     const pre = visible();
     if (!pre) return;
     const size = pre.dataset["deskGrid"] as Size;
@@ -258,6 +264,7 @@ function page() {
         atlasKey = key;
         const fontPx = parseFloat(getComputedStyle(pre).fontSize) * dpr;
         const bitmap = await atlas(fontPx, cellW, cellH);
+        if (stopped) return bitmap.close();
         post({ type: "atlas", bitmap, cellW, cellH }, [bitmap]);
       },
       atlasKey ? 160 : 0,
@@ -408,6 +415,7 @@ function page() {
     if (flyers.size) flyFrame = requestAnimationFrame(step);
   };
   const fly = (gen: number, from: number, to: number) => {
+    if (stopped) return;
     const pre = lastAnswer();
     const words = [
       ...(pre?.textContent?.slice(from, to) ?? "").matchAll(/\S+/g),
