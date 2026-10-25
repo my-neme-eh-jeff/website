@@ -84,7 +84,10 @@ const server = spawn(
 const work = mkdtempSync(join(tmpdir(), "og-video-"));
 const pp = (
   await import(
-    fromStore("puppeteer-core@", "puppeteer-core/lib/puppeteer/puppeteer-core.js")
+    fromStore(
+      "puppeteer-core@",
+      "puppeteer-core/lib/puppeteer/puppeteer-core.js",
+    )
   )
 ).default;
 
