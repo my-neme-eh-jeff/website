@@ -1,6 +1,7 @@
 import { component$ } from "@qwik.dev/core";
 import type { DocumentHead } from "@qwik.dev/router";
 import { AnalyticsChoice } from "~/components/analytics-choice";
+import { MAX_TURNS } from "~/content/chat";
 import { profile } from "~/content/profile";
 import { ld, privacyGraph, seoMeta } from "~/content/seo";
 
@@ -44,8 +45,9 @@ export default component$(() => {
       <ul class="list-disc space-y-2 pl-5">
         <li>
           If you use the shell on the home page, what you type is kept in that
-          browser tab so the up arrow can recall it. It never leaves your
-          browser and is cleared when you close the shell or the tab.
+          browser tab so the up arrow can recall it. That copy never leaves your
+          browser and is cleared when you close the shell or the tab. Questions
+          you ask the chat are sent as described below.
         </li>
         <li>
           If you mute the shell, that choice is saved in your browser until you
@@ -64,10 +66,10 @@ export default component$(() => {
       <p>
         Questions typed into the shell are answered by an AI model running on my
         own computer. It answers from my CV and can be wrong. When you ask one,
-        your question and up to eight earlier turns of the conversation pass
-        through Cloudflare to that computer. Cloudflare uses your IP address
-        only to limit how many questions one network can send per minute; my
-        computer never receives it.
+        your question and up to {MAX_TURNS - 1} earlier messages of the
+        conversation pass through Cloudflare to that computer. Cloudflare uses
+        your IP address only to limit how many questions one network can send
+        per minute; my computer never receives it.
       </p>
       <p>
         If my computer is off, busy, unreachable or too slow to start an answer,
