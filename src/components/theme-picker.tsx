@@ -62,7 +62,7 @@ export const ThemePicker = component$(() => {
       <button
         type="button"
         popovertarget="theme-picker"
-        class="theme-button hover:text-text inline-flex min-h-6 cursor-pointer items-center gap-2"
+        class="theme-button hover:text-text hit inline-flex min-h-6 cursor-pointer items-center gap-2"
         onClick$={sync$(() => window.siteTheme?.set())}
       >
         <span class="swatch swatch-current" aria-hidden="true" />

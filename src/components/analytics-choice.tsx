@@ -61,7 +61,7 @@ export const AnalyticsChoice = component$(() => {
           onClick$={toggle}
         >
           {state.value === "on"
-            ? "Turn analytics off on this device"
+            ? "Turn analytics off"
             : "Turn analytics back on"}
         </button>
       )}

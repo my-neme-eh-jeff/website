@@ -1153,7 +1153,7 @@ export const Terminal = component$(() => {
           id="term-mode"
           onClick$={toggleMode}
           title="Light or dark. Remembered on this device."
-          class="hover:bg-text/10 text-muted ml-auto grid size-6 shrink-0 place-items-center rounded-full transition duration-150 active:scale-90"
+          class="hover:bg-text/10 text-muted hit ml-auto grid size-6 shrink-0 place-items-center rounded-full transition duration-150 active:scale-90"
         >
           {/* All four, and the theme script's attributes hide three. */}
           <span class="if-two-modes if-dark sr-only">Switch to light mode</span>
@@ -1171,7 +1171,7 @@ export const Terminal = component$(() => {
           id={MUTE_BTN_ID}
           onClick$={toggleMute}
           title="Sound on or off. Remembered on this device."
-          class="hover:bg-text/10 text-muted grid size-6 shrink-0 place-items-center rounded-full transition duration-150 active:scale-90"
+          class="hover:bg-text/10 text-muted hit grid size-6 shrink-0 place-items-center rounded-full transition duration-150 active:scale-90"
         >
           {/* Both, and `data-muted` on <html> hides one: see MUTED_KEY. */}
           <span class="if-sound sr-only">Mute shell sounds</span>

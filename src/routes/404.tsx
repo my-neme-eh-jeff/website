@@ -7,9 +7,9 @@ export default component$(() => {
   return (
     <div>
       <h1>404</h1>
-      <p class="text-muted">That page doesn't exist.</p>
+      <p class="text-muted">That page doesn’t exist.</p>
       <p>
-        <Link href="/">Back home →</Link>
+        <Link href="/">Back home</Link>
       </p>
     </div>
   );

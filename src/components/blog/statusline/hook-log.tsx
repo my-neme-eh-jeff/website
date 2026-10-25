@@ -85,7 +85,7 @@ export const HookLog = component$(() => {
               Git status, shared by every tab
             </th>
             <th scope="col" class="py-2 font-normal">
-              The hook's log for this session
+              The hook’s log for this session
             </th>
           </tr>
         </thead>

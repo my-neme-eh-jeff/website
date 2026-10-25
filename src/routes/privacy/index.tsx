@@ -75,14 +75,14 @@ export default component$(() => {
         If my computer is off, busy, unreachable or too slow to start an answer,
         your question and the earlier turns go to Poe, a service run by Quora,
         Inc., and an AI model there answers instead. Your IP address and country
-        are not sent. Poe's answers are not in my log; Poe's privacy policy
+        are not sent. Poe’s answers are not in my log; Poe’s privacy policy
         covers what it keeps.
       </p>
       <p>
         My computer keeps a log of each exchange: your question, the earlier
-        turns, the answer and the model's working notes, the time and your
+        turns, the answer and the model’s working notes, the time and your
         country. I read it to see what people ask and to improve the answers.
-        Each log is deleted after 30 days. Please don't type anything sensitive.
+        Each log is deleted after 30 days. Please don’t type anything sensitive.
         The chat is optional; the rest of the site works without it.
       </p>
 
@@ -91,14 +91,14 @@ export default component$(() => {
         I process this to run, protect and improve a working demo of my own
         work. Cloudflare, Inc. hosts the site, carries the chat traffic and runs
         the analytics, and Quora, Inc. answers the chat through Poe when my
-        computer can't, on my behalf. Nothing is sold, shared for advertising or
+        computer can’t, on my behalf. Nothing is sold, shared for advertising or
         used to profile you.
       </p>
 
       <h2 class="pt-6">Your rights</h2>
       <p>
         You can ask me to show, correct or delete chat records about you. Tell
-        me roughly when you chatted and what you asked, because I don't know who
+        me roughly when you chatted and what you asked, because I don’t know who
         you are. You can also complain to your data protection authority.
       </p>
 

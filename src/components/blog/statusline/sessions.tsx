@@ -121,11 +121,15 @@ export const Sessions = component$(() => {
 
       <div class="grid grid-cols-1 gap-4">
         <div>
-          <p class="eyebrow mb-1.5">Session A</p>
+          <p class="text-muted mb-1.5 text-[0.8125rem] font-medium">
+            Session A
+          </p>
           <Statusline state={a} label="Session A's status line" />
         </div>
         <div>
-          <p class="eyebrow mb-1.5">Session B{live ? "" : " · closed"}</p>
+          <p class="text-muted mb-1.5 text-[0.8125rem] font-medium">
+            Session B{live ? "" : " · closed"}
+          </p>
           {live ? (
             <Statusline state={b} label="Session B's status line" />
           ) : (
