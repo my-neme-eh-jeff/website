@@ -160,7 +160,7 @@ the judges in each see different things:
 Judges run at temperature 0 and give a one-line reason with every verdict, and
 the Claude judges have Poe's web search turned off. Judging stops at the run's
 budget (`--budget-usd`, $1 by default) and when the Poe balance falls under
-`--floor-usd` ($5). Only the first answer to each wording is judged unless
+`--floor-usd` ($5) or can't be read (`--floor-usd 0` skips the check). Only the first answer to each wording is judged unless
 `--judge-reps` says more. In October 2026 an answer cost about a quarter of a
 cent to judge, and the first 21 runs cost $6.15.
 

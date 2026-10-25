@@ -99,7 +99,11 @@ export async function chat(
   }
 }
 
-/** The provider's remaining balance in USD, or null if it has no such endpoint. */
+/**
+ * The provider's remaining balance in USD, or null if it has no such endpoint.
+ * Throws when it has one but the figure can't be read, so a floor can't pass
+ * on a failed check.
+ */
 export async function balanceUsd(provider) {
   const b = PROVIDERS[provider]?.balance;
   if (!b) return null;
@@ -107,6 +111,8 @@ export async function balanceUsd(provider) {
   const res = await fetch(b.url, {
     headers: key ? { authorization: `Bearer ${key}` } : {},
   });
-  if (!res.ok) return null;
-  return Number((await res.json())[b.usd]);
+  if (!res.ok) throw new Error(`balance check answered HTTP ${res.status}`);
+  const usd = Number((await res.json())[b.usd]);
+  if (!Number.isFinite(usd)) throw new Error(`balance has no ${b.usd}`);
+  return usd;
 }
