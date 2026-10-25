@@ -18,6 +18,11 @@ visitors. How the evals work, and why they're built that way, is in
   two best, Qwen3.6-35B-A3B and Gemma 4 26B-A4B, three times on every
   wording. Gemma won and now runs on the desk.
 
+The shell's model tells visitors how it was picked, from
+[`src/content/evals.ts`](../../src/content/evals.ts). When a round changes
+the desk model, update that file from the round's write-up; verify fails
+until it matches.
+
 ## What a run holds
 
 Each run is in `runs/<run id>/`. The id is the UTC time the run started.
