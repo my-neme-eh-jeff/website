@@ -42,16 +42,14 @@ const STATE_HEADER = "x-desk-model";
 const SENTINEL = "<<next>>";
 
 /**
- * Traces also go to an OTLP/HTTP endpoint, as JSON, when one is set the
- * standard way. The file is written either way.
+ * Traces also go to an OTLP/HTTP endpoint, as JSON, when DESK_OTLP_TRACES_URL
+ * is set. Not the standard OTEL_EXPORTER_OTLP_* names: a collector set up on
+ * the box for another tool would then be sent visitors' whole conversations,
+ * and /privacy/ names no such receiver. The file is written either way.
  */
-const OTLP_URL =
-  process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
-  (process.env.OTEL_EXPORTER_OTLP_ENDPOINT
-    ? `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT.replace(/\/$/, "")}/v1/traces`
-    : null);
+const OTLP_URL = process.env.DESK_OTLP_TRACES_URL || null;
 const OTLP_HEADERS = Object.fromEntries(
-  (process.env.OTEL_EXPORTER_OTLP_HEADERS ?? "")
+  (process.env.DESK_OTLP_HEADERS ?? "")
     .split(",")
     .filter((kv) => kv.indexOf("=") > 0)
     .map((kv) => [kv.slice(0, kv.indexOf("=")), kv.slice(kv.indexOf("=") + 1)])

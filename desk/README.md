@@ -74,11 +74,14 @@ output messages, tagged with the prompt version and the model's digest. A
 conversation's next question says how the answer landed: one of its suggested
 questions, a rephrase, a cancel, or nothing more. The files last 30 days.
 
-**Sending traces elsewhere too.** With `OTEL_EXPORTER_OTLP_ENDPOINT` (or
-`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`) in the proxy's environment, each trace is
-also posted as OTLP/HTTP JSON to `<endpoint>/v1/traces`, with any
-`OTEL_EXPORTER_OTLP_HEADERS`. `OTEL_SERVICE_NAME` renames the service. The file
-is written either way.
+**Sending traces elsewhere too.** With `DESK_OTLP_TRACES_URL` in the proxy's
+environment, each trace is also posted as OTLP/HTTP JSON to that URL (the full
+`…/v1/traces` path), with any `DESK_OTLP_HEADERS` (`key=value,key=value`).
+`OTEL_SERVICE_NAME` renames the service. The file is written either way. The
+standard `OTEL_EXPORTER_OTLP_*` names are ignored on purpose, so a collector
+set up for another tool on the box never receives visitors' conversations.
+Each trace holds the whole conversation, so name the receiver in `/privacy/`
+before setting this.
 
 ## Install or update on the desk
 
