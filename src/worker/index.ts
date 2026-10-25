@@ -43,7 +43,39 @@ interface Env {
 
 type Turn = { role: "user" | "assistant"; content: string };
 
-const MAX_BODY_BYTES = 16_000;
+// The longest conversation the terminal sends, in bytes: turns at their caps,
+// half of them answers, 3 UTF-8 bytes per UTF-16 unit (Hindi, CJK), plus the
+// JSON around them. A 16 KB cap refused a long Hindi chat (2026-10-25).
+const MAX_BODY_BYTES =
+  3 * (MAX_TURNS / 2) * (MAX_USER_CHARS + MAX_ASSISTANT_CHARS) + 1_000;
+
+/** The body as text, or null once it passes `max` bytes, read no further. */
+async function readCapped(
+  request: Request,
+  max: number,
+): Promise<string | null> {
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) {
+    bytes.set(c, at);
+    at += c.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
 
 /**
  * For response headers only. The desk's proxy sends them before Ollama loads
@@ -160,8 +192,9 @@ async function chat(request: Request, env: Env): Promise<Response> {
   if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) {
     return json({ error: "too_large" }, 413);
   }
-  const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) return json({ error: "too_large" }, 413);
+  // Content-Length can be absent, so count what actually arrives.
+  const raw = await readCapped(request, MAX_BODY_BYTES);
+  if (raw === null) return json({ error: "too_large" }, 413);
 
   let turns: Turn[] | null = null;
   try {
