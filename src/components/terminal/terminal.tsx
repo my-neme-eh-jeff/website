@@ -429,6 +429,8 @@ export const Terminal = component$(() => {
     landed: readonly string[];
     /** One of those, clicked before the rest were written: asked next. */
     queued: string;
+    /** Counts clears, so an answer cut off by one writes nothing after it. */
+    cleared: number;
   }>({
     phase: "idle",
     turns: [],
@@ -436,6 +438,7 @@ export const Terminal = component$(() => {
     asks: SEED_QUESTIONS,
     landed: [],
     queued: "",
+    cleared: 0,
   });
 
   const pick = useStore<PickState>({
@@ -472,7 +475,9 @@ export const Terminal = component$(() => {
   });
 
   const converseInner = $(async (text: string) => {
+    const epoch = convo.cleared;
     const say = (more: Line[]) => {
+      if (convo.cleared !== epoch) return;
       lines.items = [...lines.items, ...more];
       stickToBottom(renderGroups(lines.items).length);
     };
@@ -521,6 +526,7 @@ export const Terminal = component$(() => {
           fromDesk = false;
         },
         token: (t) => {
+          if (convo.cleared !== epoch) return;
           got = (got + t).trimStart();
           if (!got) return;
           // gpt-oss uses asterisks for emphasis and bullets even when told not to.
@@ -535,6 +541,7 @@ export const Terminal = component$(() => {
           answer = lines.items[lines.items.length - 1]!;
         },
         answered: () => {
+          if (convo.cleared !== epoch) return;
           settle();
           clearBusy();
           if (got) markAnswered();
@@ -542,6 +549,7 @@ export const Terminal = component$(() => {
           convo.phase = "suggesting";
         },
         next: (q) => {
+          if (convo.cleared !== epoch) return;
           convo.landed = [...convo.landed, q];
         },
       });
@@ -553,6 +561,7 @@ export const Terminal = component$(() => {
 
     if (outcome.ok && got) markDesk(fromDesk || !!outcome.stats);
     else if (!outcome.ok && outcome.code === "offline") markDesk(false);
+    if (convo.cleared !== epoch) return;
     if (outcome.ok) {
       if (got) markAnswered();
       convo.turns = [
@@ -657,6 +666,18 @@ export const Terminal = component$(() => {
     await feedback(keep ? "enter" : "key");
   });
 
+  const clearScreen = $(async () => {
+    abortChat();
+    convo.queued = "";
+    convo.cleared++;
+    lines.items = [];
+    convo.turns = [];
+    convo.asks = SEED_QUESTIONS;
+    convo.landed = [];
+    holdChipRow(false);
+    await feedback("enter");
+  });
+
   const runLine = $(async (raw: string, from: From = "input") => {
     let handedOff = false;
     try {
@@ -679,12 +700,7 @@ export const Terminal = component$(() => {
         return;
       }
       if (result === null) {
-        lines.items = [];
-        convo.turns = [];
-        convo.asks = SEED_QUESTIONS;
-        convo.landed = [];
-        holdChipRow(false);
-        await feedback("enter");
+        await clearScreen();
         return;
       }
 
@@ -756,12 +772,7 @@ export const Terminal = component$(() => {
     if (e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
       const k = e.key.toLowerCase();
       if (k === "l") {
-        lines.items = [];
-        convo.turns = [];
-        convo.asks = SEED_QUESTIONS;
-        convo.landed = [];
-        holdChipRow(false);
-        await feedback("enter");
+        await clearScreen();
         return;
       }
       if (k === "c") {
