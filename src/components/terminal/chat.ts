@@ -124,6 +124,11 @@ export async function sendChat(turns: Turn[], on: Handlers): Promise<Outcome> {
       }
     }
 
+    // Closed with neither: the desk or Poe was cut off, and the Worker passed
+    // on what had come.
+    if (!done && !answered) {
+      return { ok: false, code: firstTokenMs >= 0 ? "stalled" : "empty" };
+    }
     return {
       ok: true,
       model: done?.model ?? "",
