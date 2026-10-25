@@ -214,7 +214,13 @@ function deskOrPoe(
         let picked = answer?.pipeThrough(relay(asked)) ?? null;
         if (!picked && !gone.signal.aborted) {
           console.log(`desk: no answer text after ${Date.now() - since}ms`);
-          picked = await askPoe(env, turns, asked, { type: "fallback" });
+          picked = await askPoe(
+            env,
+            turns,
+            asked,
+            { type: "fallback" },
+            gone.signal,
+          );
         }
         // The visitor hung up while this waited.
         if (gone.signal.aborted) {
@@ -249,6 +255,7 @@ async function askPoe(
   turns: Turn[],
   asked: string[],
   first: object | null = null,
+  hangUp?: AbortSignal,
 ): Promise<ReadableStream<Uint8Array> | null> {
   const key = env.POE_API_KEY;
   if (!key) return null;
@@ -258,8 +265,11 @@ async function askPoe(
     return null;
   }
 
-  const res = await withTimeout("poe", POE_HEADERS_TIMEOUT_MS, (signal) =>
-    callPoe(key, env.POE_MODEL, turns, signal),
+  const res = await withTimeout(
+    "poe",
+    POE_HEADERS_TIMEOUT_MS,
+    (signal) => callPoe(key, env.POE_MODEL, turns, signal),
+    hangUp,
   );
   if (!res) return null;
   return res.body
@@ -269,15 +279,20 @@ async function askPoe(
 
 /**
  * An ok response with a body, or null, logged with why: the status, or the
- * error's name, never its message. The timeout covers headers only.
+ * error's name, never its message. The timeout, and `hangUp`, cover headers
+ * only.
  */
 async function withTimeout(
   label: string,
   ms: number,
   call: (signal: AbortSignal) => Promise<Response>,
+  hangUp?: AbortSignal,
 ): Promise<(Response & { body: ReadableStream<Uint8Array> }) | null> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
+  const stop = () => controller.abort();
+  const timer = setTimeout(stop, ms);
+  hangUp?.addEventListener("abort", stop);
+  if (hangUp?.aborted) stop();
   let res: Response;
   try {
     res = await call(controller.signal);
@@ -286,6 +301,7 @@ async function withTimeout(
     return null;
   } finally {
     clearTimeout(timer);
+    hangUp?.removeEventListener("abort", stop);
   }
   if (res.ok && res.body) {
     return res as Response & { body: ReadableStream<Uint8Array> };
