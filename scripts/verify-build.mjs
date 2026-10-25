@@ -1378,7 +1378,7 @@ check("og:image is referenced only if it exists and is a real image", () => {
     assert(
       buf.length < 400_000,
       `${rel} is ${kb} kB. Social scrapers fetch this before rendering; keep ` +
-        `it under ~400 kB (JPEG, not PNG, for a gradient).`,
+        `it under ~400 kB (JPEG, not PNG, for the grain).`,
     );
 
     // Platforms crop from 1200x630.

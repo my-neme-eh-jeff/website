@@ -1,10 +1,11 @@
 /**
  * Social card. Run: `pnpm run og`
  *
- * Renders public/og/home.jpg at 1200x630, the size platforms crop from. JPEG,
- * because a smooth gradient is PNG's worst case and scrapers fetch the card
- * before they render it. Commit the file before setting `ogImage`: a missing
- * og:image renders an empty card.
+ * Renders public/og/home.jpg at 1200x630, the size platforms crop from: an
+ * Acme window in the Acme palette, with the home page's desk. JPEG, because
+ * grain is PNG's worst case and scrapers fetch the card before they render it.
+ * Commit the file before setting `ogImage`: a missing og:image renders an
+ * empty card.
  */
 
 import { execFileSync } from "node:child_process";
@@ -17,6 +18,8 @@ import {
 } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { GRIDS, rasterize, segments } from "../src/components/desk/desk.ts";
+import { PALETTES } from "../src/content/palettes.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = join(ROOT, "public", "og");
@@ -56,6 +59,15 @@ const city = pick("city");
 const esc = (s) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+const acme = PALETTES.find((p) => p.id === "acme")?.light;
+if (!acme) throw new Error("No light Acme palette in palettes.ts");
+
+const grid = GRIDS.narrow;
+const desk = segments(rasterize(grid.cols, grid.rows))
+  .map((s) => s.text)
+  .join("")
+  .replace(/^(\s*\n)+/, "");
+
 const fontDir = join(ROOT, "public", "fonts");
 const sans = "hanken-grotesk-v12-latin.woff2";
 const mono = "fira-mono-v16-400-latin.woff2";
@@ -78,14 +90,9 @@ const html = `<!doctype html><meta charset="utf-8">
   html, body { width: 1200px; height: 630px; }
   body {
     position: relative; overflow: hidden;
-    background-color: #12110d;
-    background-image:
-      radial-gradient(70rem 55rem at 8% 12%, color-mix(in oklab, #ff8a3d 30%, transparent), transparent 66%),
-      radial-gradient(55rem 48rem at 26% 68%, color-mix(in oklab, #d0341f 24%, transparent), transparent 64%),
-      radial-gradient(50rem 44rem at 4% 96%, color-mix(in oklab, oklch(52% 0.19 318) 22%, transparent), transparent 62%),
-      radial-gradient(44rem 40rem at 34% 4%, color-mix(in oklab, oklch(72% 0.15 78) 16%, transparent), transparent 60%);
+    background: ${acme.bg};
     font-family: "HG", sans-serif;
-    color: #f2f0e9;
+    color: ${acme.text};
   }
   /*
    * Grain, and it must stay in step with grain-page in src/global.css.
@@ -107,15 +114,32 @@ const html = `<!doctype html><meta charset="utf-8">
     position: absolute; inset: 0; mix-blend-mode: overlay; opacity: 0.38;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='2' intercept='-0.5'/%3E%3CfeFuncG type='linear' slope='2' intercept='-0.5'/%3E%3CfeFuncB type='linear' slope='2' intercept='-0.5'/%3E%3CfeFuncA type='discrete' tableValues='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-  /* Content sits right, matching the page's own composition. */
+  /* An Acme window: the tag line of commands on top, the scroll bar left. */
+  .tag {
+    position: absolute; left: 0; right: 0; top: 0; height: 64px;
+    display: flex; align-items: center; gap: 18px; padding: 0 28px;
+    background: ${acme.surface}; border-bottom: 2px solid #99994c;
+    font-family: "FM", monospace; font-size: 21px;
+  }
+  .box { width: 18px; height: 18px; background: ${acme.accent}; border: 2px solid ${acme.text}; }
+  .cmds { color: ${acme.muted}; }
+  .scroll { position: absolute; left: 0; top: 66px; bottom: 0; width: 22px; background: #99994c; opacity: 0.55; }
+  .thumb {
+    position: absolute; left: 0; top: 66px; height: 210px; width: 22px;
+    background: ${acme.bg}; border-right: 2px solid #99994c;
+  }
+  .desk {
+    position: absolute; left: 56px; top: calc(64px + (100% - 64px) / 2);
+    transform: translateY(-50%); font-family: "FM", monospace;
+    font-size: 7.8px; line-height: 1.22; color: ${acme.text}; opacity: 0.85;
+  }
   .wrap {
-    position: relative; height: 100%;
+    position: absolute; left: 490px; right: 60px; top: 64px; bottom: 0;
     display: flex; flex-direction: column; justify-content: center;
-    padding: 0 76px 0 460px;
   }
   .eyebrow {
     font-family: "FM", monospace; font-size: 18px; letter-spacing: 0.12em;
-    text-transform: uppercase; color: rgb(242 240 233 / 0.62); margin-bottom: 20px;
+    text-transform: uppercase; color: ${acme.muted}; margin-bottom: 20px;
   }
   h1 {
     font-size: 82px; line-height: 1.02; letter-spacing: -0.03em;
@@ -123,21 +147,21 @@ const html = `<!doctype html><meta charset="utf-8">
   }
   p {
     margin-top: 26px; font-size: 27px; line-height: 1.38;
-    color: rgb(242 240 233 / 0.74); max-width: 30ch; text-wrap: pretty;
-  }
-  .domain {
-    position: absolute; right: 76px; bottom: 48px;
-    font-family: "FM", monospace; font-size: 19px;
-    color: rgb(242 240 233 / 0.5);
+    max-width: 30ch; text-wrap: pretty;
   }
 </style>
 <div class="grain"></div>
+<div class="tag">
+  <span class="box"></span><span>/amannambisan.com/</span>
+  <span class="cmds">Del Snarf Get | Look</span>
+</div>
+<div class="scroll"></div><div class="thumb"></div>
+<pre class="desk">${esc(desk)}</pre>
 <div class="wrap">
   <div class="eyebrow">${esc(jobTitle)} · ${esc(city)}</div>
   <h1>${esc(name)}</h1>
   <p>${esc(tagline).replace(/(^|\s)(\w) /g, "$1$2&nbsp;")}</p>
 </div>
-<div class="domain">amannambisan.com</div>
 `;
 
 mkdirSync(OUT_DIR, { recursive: true });
