@@ -1014,17 +1014,24 @@ check("q-manifest.json stays out of the upload, and nothing fetches it", () => {
 
 // Dependency hygiene
 
-check("no caret ranges on dependencies", () => {
+check("dependencies pinned to exact versions", () => {
   const pkg = JSON.parse(read("package.json"));
-  const ranges = { ...pkg.dependencies, ...pkg.devDependencies };
-  const loose = Object.entries(ranges).filter(([, v]) => /[\^~]/.test(v));
+  const ranges = {
+    ...pkg.dependencies,
+    ...pkg.devDependencies,
+    ...pkg.pnpm?.overrides,
+  };
+  // An override's key is a range on purpose; its value is what gets installed.
+  const exact = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/;
+  const loose = Object.entries(ranges).filter(([, v]) => !exact.test(v));
   assert(
     loose.length === 0,
-    `Loose ranges: ${loose.map(([k, v]) => `${k}@${v}`).join(", ")}. ` +
+    `Not exact: ${loose.map(([k, v]) => `${k}@${v}`).join(", ")}. ` +
       "On a prerelease, ^2.0.0-beta.38 resolves >=2.0.0-beta.38 <3.0.0, so a " +
-      "plain a plain install silently upgrades the beta. Pin exact.",
+      "plain install silently upgrades the beta; latest, * and >= move too. " +
+      "Pin exact.",
   );
-  return `${Object.keys(ranges).length} deps, all exact`;
+  return `${Object.keys(ranges).length} deps and overrides, all exact`;
 });
 
 // SEO output
