@@ -99,6 +99,9 @@ function chatError(code: string): Line[] {
       },
     ];
   }
+  if (code === "stalled") {
+    return [{ kind: "err", text: "The answer stopped partway. Try again." }];
+  }
   return [{ kind: "err", text: "The model could not answer that. Try again." }];
 }
 

@@ -26,6 +26,9 @@ export type Handlers = {
 // Module scope: an AbortController can't be serialised into a Qwik store.
 let inflight: AbortController | null = null;
 
+/** Silence after the first token that counts as a hung answer. */
+const STALL_MS = 30_000;
+
 /** Stop the answer being generated, if there is one. */
 export function abortChat(): boolean {
   if (!inflight) return false;
@@ -42,6 +45,8 @@ export async function sendChat(turns: Turn[], on: Handlers): Promise<Outcome> {
   let firstTokenMs = -1;
   let answered = false;
   const landed: string[] = [];
+  let stalled = false;
+  let stall: ReturnType<typeof setTimeout> | undefined;
 
   try {
     const res = await fetch("/api/chat", {
@@ -104,6 +109,13 @@ export async function sendChat(turns: Turn[], on: Handlers): Promise<Outcome> {
         }
         // Any other type is from a Worker newer than this page: skipped.
       }
+      if (firstTokenMs >= 0) {
+        clearTimeout(stall);
+        stall = setTimeout(() => {
+          stalled = true;
+          controller.abort();
+        }, STALL_MS);
+      }
     }
 
     return {
@@ -120,6 +132,7 @@ export async function sendChat(turns: Turn[], on: Handlers): Promise<Outcome> {
     if (answered) {
       return { ok: true, model: "", stats: null, firstTokenMs, next: landed };
     }
+    if (stalled) return { ok: false, code: "stalled" };
     return {
       ok: false,
       code:
@@ -128,6 +141,7 @@ export async function sendChat(turns: Turn[], on: Handlers): Promise<Outcome> {
           : "offline",
     };
   } finally {
+    clearTimeout(stall);
     if (inflight === controller) inflight = null;
   }
 }
