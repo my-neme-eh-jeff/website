@@ -20,7 +20,11 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      # Full history: the eval results check accepts a wording from any
+      # committed version of evals/cases.mjs (7 MB, 2026-10-25).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       # Before setup-node, whose `cache: pnpm` needs the pnpm binary to find
       # the store.
@@ -52,6 +56,9 @@ jobs:
 
       - name: Verify build invariants
         run: node scripts/verify-build.mjs
+
+      - name: Eval results hold no visitor text
+        run: node evals/check-results.mjs
 
       # `--local`: gate this build, not whatever is deployed.
       - name: Lighthouse budget

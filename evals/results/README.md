@@ -41,7 +41,7 @@ node evals/report.mjs --compare <before run> <after run> # compare.html in the s
 node evals/report.mjs --board <run> <run> ...            # board.html and board.md in runs/
 node evals/report.mjs --paired <run> ...                  # two targets wording by wording, printed
 pnpm run eval --publish <run>                            # copy a run from the box into runs/, cleaned as described below
-node evals/check-results.mjs                             # the checks below, before you commit a run
+node evals/check-results.mjs                             # the checks below, before you commit a run (CI runs them too)
 ```
 
 The pages these write are gitignored.
