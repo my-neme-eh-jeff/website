@@ -6,17 +6,45 @@ import { component$, useSignal, $ } from "@qwik.dev/core";
  * The button keeps one name and a status region says it copied: a focused
  * button being renamed is not reliably announced.
  */
+/**
+ * Where the Clipboard API is refused (insecure origins, some webviews), the
+ * older copy command may still work. Selecting moves focus, so it goes back.
+ */
+function copyByCommand(text: string): boolean {
+  const back = document.activeElement as HTMLElement | null;
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  document.body.append(area);
+  area.select();
+  let ok: boolean;
+  try {
+    ok = document.execCommand("copy");
+  } catch {
+    ok = false;
+  }
+  area.remove();
+  back?.focus();
+  return ok;
+}
+
 export const CopyEmail = component$<{ email: string }>(({ email }) => {
   const copied = useSignal(false);
+  const refused = useSignal(false);
 
   const copy = $(async () => {
-    try {
-      await navigator.clipboard.writeText(email);
-      copied.value = true;
-      setTimeout(() => (copied.value = false), 2000);
-    } catch {
-      // Refused on insecure origins and in some webviews; not an error.
-    }
+    // Inside then(): without a Clipboard API, the call throws, not rejects.
+    const ok = await Promise.resolve()
+      .then(() => navigator.clipboard.writeText(email))
+      .then(
+        () => true,
+        () => copyByCommand(email),
+      );
+    copied.value = ok;
+    refused.value = !ok;
+    if (ok) setTimeout(() => (copied.value = false), 2000);
   });
 
   return (
@@ -75,7 +103,11 @@ export const CopyEmail = component$<{ email: string }>(({ email }) => {
         )}
       </button>
       <span role="status" class="sr-only">
-        {copied.value ? "Email address copied" : ""}
+        {copied.value
+          ? "Email address copied"
+          : refused.value
+            ? `This browser wouldn't copy. The address is ${email}`
+            : ""}
       </span>
     </span>
   );
