@@ -26,6 +26,7 @@ import {
   roles,
 } from "../src/content/profile.ts";
 import {
+  CHAT_LOG_DAYS,
   DESK_MODEL,
   EVALS_URL,
   POE_MODEL,
@@ -998,9 +999,21 @@ export const CASES = [
       "Do you store what I type?",
       { q: "What happens to my messages here?", holdout: true },
     ],
-    points: [`what the chat keeps, and for how long: ${PRIVACY_URL}`],
-    draft: `The privacy page says what the chat keeps and for how long: ${PRIVACY_URL}`,
-    must: [["links the privacy page", has(PRIVACY_URL)]],
+    points: [
+      `the computer on his desk logs each exchange and deletes it after ${CHAT_LOG_DAYS} days`,
+      `details: ${PRIVACY_URL}`,
+    ],
+    cover: 1,
+    draft: `The computer on his desk logs each exchange it answers and deletes the log after ${CHAT_LOG_DAYS} days. Details: ${PRIVACY_URL}`,
+    must: [
+      [
+        "doesn't deny the log",
+        (t) =>
+          !/\b(do not|don't|does not|doesn't|never|not) (store|keep|save|log|record)/i.test(
+            t,
+          ),
+      ],
+    ],
   },
   {
     id: "offtopic-code",

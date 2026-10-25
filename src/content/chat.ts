@@ -48,6 +48,12 @@ export const POE_MODEL = {
   maker: "DeepSeek",
 };
 
+/**
+ * How long the desk keeps its chat log; verify checks it against
+ * RETENTION_DAYS in desk/chat-log-proxy.mjs and the privacy page.
+ */
+export const CHAT_LOG_DAYS = 30;
+
 /** The site's source; verify checks the footer links the same repo. */
 export const REPO = "https://github.com/my-neme-eh-jeff/website";
 
@@ -140,8 +146,8 @@ const facts = [
   "- The model is told these facts and nothing else: it has no internet access, no tools and no memory of other visitors. The facts are rebuilt from this site's pages each time he publishes it.",
   `- How the model was picked: in ${deskPick.month} he tested ${deskPick.tried} open models that fit on that computer, then asked the best ${deskPick.finalists} all ${deskPick.questions} test questions ${deskPick.reps} times each. Code checks and AI judges from other companies graded every answer. ${DESK_MODEL.name} gave an accurate answer ${deskPick.accurate} of the time, about as often as the most accurate, and answered fastest. Write-up: ${PICK_URL}`,
   `- How the tests work: ${EVALS_URL}`,
-  `- The code for this site, this chat and its tests is public: ${REPO}`,
-  `- What the chat keeps, and for how long: ${PRIVACY_URL}`,
+  `- This site's code, including this chat and its tests, is public at ${REPO}`,
+  `- What the chat keeps: the computer on his desk logs each exchange it answers, with the visitor's country but not their IP address, and deletes each log after ${CHAT_LOG_DAYS} days. Poe's answers are not in that log. Details: ${PRIVACY_URL}`,
   "- When the model has not been used for a while, its first answer can take up to half a minute while it loads.",
 ];
 

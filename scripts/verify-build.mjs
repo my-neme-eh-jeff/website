@@ -26,6 +26,7 @@ import {
   untilAnswer,
 } from "../src/worker/relay.ts";
 import {
+  CHAT_LOG_DAYS,
   DESK_LINE,
   DESK_MODEL,
   MAX_ASSISTANT_CHARS,
@@ -828,6 +829,25 @@ check("the chat's account of its evals matches evals/results", () => {
   );
   return `${deskPick.tried} models, ${deskPick.accurate} accurate`;
 });
+
+check(
+  "the chat, the desk proxy and /privacy/ agree how long chats are kept",
+  () => {
+    assert(
+      read("desk", "chat-log-proxy.mjs").includes(
+        `const RETENTION_DAYS = ${CHAT_LOG_DAYS};`,
+      ),
+      `RETENTION_DAYS in desk/chat-log-proxy.mjs isn't CHAT_LOG_DAYS (${CHAT_LOG_DAYS})`,
+    );
+    assert(
+      read("src", "routes", "privacy", "index.tsx").includes(
+        `deleted after ${CHAT_LOG_DAYS} days`,
+      ),
+      `/privacy/ doesn't say logs are deleted after ${CHAT_LOG_DAYS} days`,
+    );
+    return `${CHAT_LOG_DAYS} days`;
+  },
+);
 
 check("the footer links the repo the chat names", () => {
   assert(
