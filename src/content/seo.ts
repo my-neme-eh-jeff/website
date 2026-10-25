@@ -2,7 +2,7 @@
  * Meta tags and JSON-LD, built only from profile.ts: Google's structured-data
  * policy forbids describing content the page doesn't show.
  */
-import { profile, posts, type Post } from "./profile.ts";
+import { profile, posts, education, type Post } from "./profile.ts";
 
 /** Also `origin` in adapters/ssg/vite.config.ts. Change both together. */
 export const ORIGIN = "https://amannambisan.com";
@@ -135,6 +135,7 @@ const personNode = () => ({
         },
       }
     : {}),
+  alumniOf: { "@type": "CollegeOrUniversity", name: education.school },
   ...(profile.sameAs.length ? { sameAs: [...profile.sameAs] } : {}),
 });
 
@@ -157,6 +158,9 @@ export const homeGraph = () => ({
       isPartOf: { "@id": `${ORIGIN}/#website` },
       // Google requires mainEntity on a ProfilePage.
       mainEntity: { "@id": `${ORIGIN}/#person` },
+      // The home route's first commit:
+      //   git log --diff-filter=A --format=%cs -- src/routes/index.tsx
+      dateCreated: "2026-08-22",
       inLanguage: "en",
     },
     personNode(),
@@ -186,8 +190,15 @@ const postingNode = (p: Post) => ({
   mainEntityOfPage: postUrl(p),
   headline: p.title,
   datePublished: p.date,
+  dateModified: p.updated ?? p.date,
   description: p.summary,
-  author: { "@id": `${ORIGIN}/#person` },
+  // Named here as well as by @id, for parsers that don't follow references.
+  author: {
+    "@type": "Person",
+    "@id": `${ORIGIN}/#person`,
+    name: profile.name,
+    url: `${ORIGIN}/`,
+  },
   inLanguage: "en",
 });
 

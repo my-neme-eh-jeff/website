@@ -207,7 +207,7 @@ export const head: DocumentHead = {
   meta: seoMeta({
     path: "/blog/",
     title: `Blog — ${profile.name}`,
-    description: `Technical writing by ${profile.name}.`,
+    description: `Technical writing by ${profile.name} on building AI agents, the developer tooling around them and the platforms they run on: what worked, what broke and why.`,
   }),
   scripts: [
     {

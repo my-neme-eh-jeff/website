@@ -353,6 +353,8 @@ export type Post = {
   title: string;
   /** ISO date, also the datePublished. */
   date: string;
+  /** ISO date of the last edit worth a reader's notice: the dateModified. */
+  updated?: string;
   /** Becomes the meta description, so 120–160 characters. */
   summary: string;
   repo?: string;
