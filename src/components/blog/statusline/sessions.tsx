@@ -2,7 +2,7 @@ import { component$, useSignal } from "@qwik.dev/core";
 import { Choice } from "../controls";
 import type { Repo, State } from "./model";
 import { quiet } from "./scenarios";
-import { Statusline } from "./terminal";
+import { Statusline, Terminal } from "./terminal";
 
 const OPTIONS = [
   { value: "same", label: "the same checkout" },
@@ -126,7 +126,15 @@ export const Sessions = component$(() => {
         </div>
         <div>
           <p class="eyebrow mb-1.5">Session B{live ? "" : " · closed"}</p>
-          <Statusline state={b} label="Session B's status line" />
+          {live ? (
+            <Statusline state={b} label="Session B's status line" />
+          ) : (
+            <Terminal
+              lines={[]}
+              label="Session B's status line"
+              empty="(tab closed — nothing draws here)"
+            />
+          )}
         </div>
       </div>
     </div>
