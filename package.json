@@ -53,6 +53,13 @@
     "wrangler": "4.150.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": []
+    "onlyBuiltDependencies": [],
+    "overrides": {
+      "launch-editor@<2.14.2": "2.14.2",
+      "shell-quote@<1.11.0": "1.12.0",
+      "source-map-js@<1.2.2": "1.2.2",
+      "postcss-selector-parser@>=7.0.0 <7.1.6": "7.1.6",
+      "undici@>=7.0.0 <7.30.1": "7.30.1"
+    }
   }
 }
