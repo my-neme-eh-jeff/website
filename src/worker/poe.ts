@@ -1,18 +1,17 @@
-import { NUM_PREDICT, SYSTEM_PROMPT } from "../content/chat.ts";
+import {
+  DESK_LINE,
+  FALLBACK_LINE,
+  NUM_PREDICT,
+  SYSTEM_PROMPT,
+} from "../content/chat.ts";
 
 /** Answers when the desk can't. OpenAI-compatible; billed to Aman's Poe points. */
 const POE_URL = "https://api.poe.com/v1/chat/completions";
 
 type Turn = { role: "user" | "assistant"; content: string };
 
-export const DESK_LINE =
-  "- If asked how you work, or about the desktop, box or computer on his desk: that is you, a language model running on its GPU at his home, reached through a Cloudflare tunnel.";
-
 /** Poe's model isn't on the desk, so it mustn't say it is. */
-export const FALLBACK_PROMPT = SYSTEM_PROMPT.replace(
-  DESK_LINE,
-  "- If asked how you work: you are a language model answering from a fixed set of facts about him.",
-);
+export const FALLBACK_PROMPT = SYSTEM_PROMPT.replace(DESK_LINE, FALLBACK_LINE);
 
 export function callPoe(
   key: string,

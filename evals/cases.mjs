@@ -25,6 +25,14 @@ import {
   projects,
   roles,
 } from "../src/content/profile.ts";
+import {
+  DESK_MODEL,
+  EVALS_URL,
+  POE_MODEL,
+  PRIVACY_URL,
+  REPO,
+} from "../src/content/chat.ts";
+import { deskPick } from "../src/content/evals.ts";
 import { ORIGIN } from "../src/content/seo.ts";
 
 const employer = profile.employer?.name ?? "";
@@ -838,7 +846,7 @@ export const CASES = [
     offDesk: {
       points: [
         "the assistant on Aman's personal website",
-        "a language model answering from a fixed set of facts about him",
+        `${POE_MODEL.name}, answering because the computer on his desk is off or busy`,
       ],
     },
     must: [],
@@ -860,7 +868,7 @@ export const CASES = [
       "I'm a language model running on the GPU of the computer on Aman's desk at home, reached through a Cloudflare tunnel.",
     offDesk: {
       points: [
-        "a language model answering from a fixed set of facts about him",
+        `${POE_MODEL.name}, answering because the computer on his desk is off or busy`,
       ],
     },
     must: [
@@ -889,10 +897,11 @@ export const CASES = [
     draft:
       "I do: the box on his desk is the computer this assistant runs on, a language model on its GPU.",
     offDesk: {
-      kind: "unanswerable",
-      points: [],
+      points: [
+        `it runs ${DESK_MODEL.name}, the model that usually answers visitors`,
+      ],
       expect:
-        "Says it doesn't know what is on his desk, without claiming to run there.",
+        "Says what runs on the computer on his desk, without claiming to be that model.",
     },
     must: [
       [
@@ -905,6 +914,89 @@ export const CASES = [
               ),
       ],
     ],
+  },
+  {
+    id: "which-model",
+    kind: "meta",
+    ask: [
+      "What model are you?",
+      "are you chatgpt",
+      { q: "Which AI is answering me?", holdout: true },
+    ],
+    points: [
+      `${DESK_MODEL.name}, an open model from ${DESK_MODEL.maker}`,
+      "running on the GPU of the computer on his desk",
+    ],
+    cover: 1,
+    draft: `${DESK_MODEL.name}, an open model from ${DESK_MODEL.maker}, running on the GPU of the computer on Aman's desk.`,
+    offDesk: {
+      points: [
+        `${POE_MODEL.name}, answering because the computer on his desk is off or busy`,
+      ],
+    },
+    must: [
+      [
+        "names the model that answered",
+        (t, { onDesk }) =>
+          has(onDesk ? DESK_MODEL.name.split(" ")[0] : POE_MODEL.name.split(" ")[0])(t),
+      ],
+    ],
+  },
+  {
+    id: "how-picked",
+    kind: "meta",
+    ask: [
+      "How was this model chosen?",
+      "why this ai",
+      { q: "How did he decide which AI runs this chat?", holdout: true },
+    ],
+    points: [
+      `he tested ${deskPick.tried} open models`,
+      `the best ${deskPick.finalists} answered all ${deskPick.questions} test questions ${deskPick.reps} times each`,
+      "graded by code checks and AI judges from other companies",
+      `${DESK_MODEL.name} was accurate ${deskPick.accurate} of the time`,
+    ],
+    cover: 2,
+    draft: `In ${deskPick.month} he tested ${deskPick.tried} open models, then asked the best ${deskPick.finalists} all ${deskPick.questions} test questions, graded by code checks and AI judges from other companies. ${DESK_MODEL.name} was accurate ${deskPick.accurate} of the time and answered fastest.`,
+    must: [],
+  },
+  {
+    id: "tested",
+    kind: "meta",
+    ask: [
+      "Is this chatbot tested?",
+      "how do i know your answers are right",
+      { q: "Has anyone checked how good your answers are?", holdout: true },
+    ],
+    points: [
+      "graded by code checks and AI judges from other companies",
+      `how the tests work: ${EVALS_URL}`,
+    ],
+    cover: 1,
+    draft: `Yes: test questions graded by code checks and AI judges from other companies. How they work: ${EVALS_URL}`,
+    must: [],
+  },
+  {
+    id: "source",
+    kind: "meta",
+    ask: [
+      "Is this site open source?",
+      { q: "Where can I see the code for this website?", holdout: true },
+    ],
+    points: [`the code is public: ${REPO}`],
+    draft: `Yes, the code for the site, this chat and its tests is public: ${REPO}`,
+    must: [["links the repo", has(REPO)]],
+  },
+  {
+    id: "keeps",
+    kind: "meta",
+    ask: [
+      "Do you store what I type?",
+      { q: "What happens to my messages here?", holdout: true },
+    ],
+    points: [`what the chat keeps, and for how long: ${PRIVACY_URL}`],
+    draft: `The privacy page says what the chat keeps and for how long: ${PRIVACY_URL}`,
+    must: [["links the privacy page", has(PRIVACY_URL)]],
   },
   {
     id: "offtopic-code",

@@ -18,7 +18,7 @@ import { grad } from "../src/components/blog/statusline/model.ts";
 import { GRIDS, rasterize } from "../src/components/desk/desk.ts";
 import { DEFAULT_PALETTE, PALETTES, modesOf } from "../src/content/palettes.ts";
 import { SENTINEL, parse, splitter } from "../src/worker/follow-ups.ts";
-import { DESK_LINE, FALLBACK_PROMPT, poeLine } from "../src/worker/poe.ts";
+import { FALLBACK_PROMPT, poeLine } from "../src/worker/poe.ts";
 import {
   DESK_STATE_HEADER,
   deskEvent,
@@ -26,13 +26,18 @@ import {
   untilAnswer,
 } from "../src/worker/relay.ts";
 import {
+  DESK_LINE,
+  DESK_MODEL,
   MAX_ASSISTANT_CHARS,
   MAX_TURNS,
   MAX_USER_CHARS,
   NUM_CTX,
   NUM_PREDICT,
+  POE_MODEL,
+  REPO,
   SYSTEM_PROMPT,
 } from "../src/content/chat.ts";
+import { deskPick } from "../src/content/evals.ts";
 import { bestWork } from "../src/content/context.ts";
 import { FIELD_ANIMATION, fieldScript } from "../src/content/field.ts";
 import { profile, projects } from "../src/content/profile.ts";
@@ -753,13 +758,77 @@ check("the shell handles every event the Worker sends", () => {
 
 check("Poe's prompt doesn't say it runs on the desk", () => {
   assert(
-    SYSTEM_PROMPT.includes(DESK_LINE) && FALLBACK_PROMPT !== SYSTEM_PROMPT,
-    "DESK_LINE in src/worker/poe.ts no longer matches the prompt's line about " +
-      "the desk, so Poe would claim to run there. Copy the new line into it.",
+    SYSTEM_PROMPT.includes(DESK_LINE) && !FALLBACK_PROMPT.includes(DESK_LINE),
+    "FALLBACK_PROMPT still holds DESK_LINE, so Poe would claim to run there",
+  );
+  // The facts describe the desk to both; only the rules say who "you" are.
+  const rules = FALLBACK_PROMPT.split("\nFacts:\n")[0];
+  assert(
+    !rules.includes(DESK_MODEL.name) && !/GPU|Cloudflare/.test(rules),
+    "FALLBACK_PROMPT's rules tell Poe it is the desk model",
+  );
+});
+
+check("the prompt names the models wrangler.jsonc runs", () => {
+  const w = read("wrangler.jsonc");
+  const varOf = (name) => new RegExp(`"${name}":\\s*"([^"]+)"`).exec(w)?.[1];
+  assert(
+    varOf("DESK_MODEL") === DESK_MODEL.id,
+    `wrangler.jsonc runs ${varOf("DESK_MODEL")}; DESK_MODEL in chat.ts says ${DESK_MODEL.id}`,
   );
   assert(
-    !/on its GPU|at his home|Cloudflare tunnel/.test(FALLBACK_PROMPT),
-    "FALLBACK_PROMPT mentions the desk",
+    varOf("POE_MODEL") === POE_MODEL.id,
+    `wrangler.jsonc runs ${varOf("POE_MODEL")}; POE_MODEL in chat.ts says ${POE_MODEL.id}`,
+  );
+  return `${DESK_MODEL.name}, ${POE_MODEL.name}`;
+});
+
+check("the chat's account of its evals matches evals/results", () => {
+  const fix = "update src/content/evals.ts from the write-up";
+  assert(
+    deskPick.model === DESK_MODEL.id,
+    `evals.ts says ${deskPick.model} was picked, but the desk runs ${DESK_MODEL.id}: ${fix}`,
+  );
+  const writeup = read("evals", "results", deskPick.writeup);
+  for (const s of [deskPick.accurate, String(deskPick.questions)])
+    assert(writeup.includes(s), `${deskPick.writeup} never says ${s}: ${fix}`);
+  const runs = readdirSync(p("evals", "results", "runs")).filter((r) =>
+    existsSync(p("evals", "results", "runs", r, "meta.json")),
+  );
+  const meta = (r) => JSON.parse(read("evals", "results", "runs", r, "meta.json"));
+  const pick = meta(deskPick.run);
+  const month = new Date(pick.started).toLocaleString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  assert(month === deskPick.month, `run ${deskPick.run} is from ${month}: ${fix}`);
+  const finalists = Object.values(pick.targets);
+  assert(
+    finalists.some((t) => t.model === deskPick.model) &&
+      finalists.length === deskPick.finalists &&
+      pick.args.set === "all" &&
+      pick.args.reps === String(deskPick.reps),
+    `run ${deskPick.run} didn't ask ${deskPick.finalists} models, ${deskPick.model} among them, every question ${deskPick.reps} times: ${fix}`,
+  );
+  const tried = new Set(
+    runs
+      .filter((r) => r <= deskPick.run)
+      .flatMap((r) => Object.values(meta(r).targets))
+      .filter((t) => t.onDesk)
+      .map((t) => t.model),
+  );
+  assert(
+    tried.size === deskPick.tried,
+    `${tried.size} desk models were run up to ${deskPick.run}, not ${deskPick.tried}: ${fix}`,
+  );
+  return `${deskPick.tried} models, ${deskPick.accurate} accurate`;
+});
+
+check("the footer links the repo the chat names", () => {
+  assert(
+    read("src", "routes", "layout.tsx").includes(`href="${REPO}"`),
+    `the footer doesn't link ${REPO}`,
   );
 });
 
