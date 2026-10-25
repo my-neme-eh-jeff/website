@@ -81,6 +81,7 @@ const PAGES = [
         d.isDirectory() && existsSync(join(DIST, "blog", d.name, "index.html")),
     )
     .map((d) => `/blog/${d.name}/`),
+  "/about/",
   "/privacy/",
   "/404.html",
 ];

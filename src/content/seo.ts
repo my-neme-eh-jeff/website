@@ -167,6 +167,22 @@ export const homeGraph = () => ({
   ],
 });
 
+export const aboutGraph = () => ({
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "AboutPage",
+      "@id": `${ORIGIN}/about/#webpage`,
+      url: `${ORIGIN}/about/`,
+      name: `About — ${profile.name}`,
+      isPartOf: { "@id": `${ORIGIN}/#website` },
+      mainEntity: { "@id": `${ORIGIN}/#person` },
+      inLanguage: "en",
+    },
+    personNode(),
+  ],
+});
+
 export const privacyGraph = () => ({
   "@context": "https://schema.org",
   "@graph": [

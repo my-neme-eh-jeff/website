@@ -28,6 +28,13 @@ read it before building anything, because these ideas keep resurfacing.
   October 2024. Emitting it does nothing.
 - **`BreadcrumbList` on a flat site.** Nothing to describe.
 - **AI-visibility SaaS dashboards.** No verified methodology found.
+- **Text hidden from people, or facts only in JSON-LD, to reach AI assistants.**
+  A March 2026 test (Writesonic, 62 markers, 6 assistants each told to visit
+  one page) found JSON-LD and the meta description reached 0 of 6; visible
+  text 6 of 6, the title 5 of 6. CSS-hidden text did reach them, but Google's
+  spam policy names it. ChatGPT, Claude and Gemini ran no JavaScript, so the
+  shell's commands and chat are invisible to them (also Vercel/MERJ, 2024).
+  Read 2026-10-26: <https://writesonic.com/blog/ai-crawler-study-what-llms-see-on-your-website>
 
 ## Retrieval vs training crawlers — the distinction everything conflates
 
@@ -101,3 +108,9 @@ blob. Optimise for quotability, not for ranking.
 A mismatch between the GitHub handle and the domain/display name weakens entity
 resolution, because nothing textually connects them. Cheapest fix that breaks
 nothing: set the GitHub display name and website field to match the site exactly.
+
+The home page is the shell, and its HTML holds little text beyond the name and
+the motd; the decision (2026-10-26) is to keep it that way. The CV the shell
+prints is served as plain HTML at `/about/`, linked only from the footer and
+listed in the sitemap.
+`grep -c 'href="/about/"' dist/index.html; grep -c /about/ dist/sitemap.xml`

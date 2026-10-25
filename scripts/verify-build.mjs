@@ -79,6 +79,7 @@ const assert = (cond, msg) => {
 const PAGES = [
   "index.html",
   "blog/index.html",
+  "about/index.html",
   "privacy/index.html",
   ...(existsSync(p("dist", "blog"))
     ? readdirSync(p("dist", "blog"), { withFileTypes: true })
@@ -2296,7 +2297,7 @@ check("no full-viewport layer carries a view-transition-name", () => {
 
 // If the column wiring breaks, posts still render, in the wide column.
 check(
-  "posts use the reading column, home the stage, the rest the wide one",
+  "posts and about use the reading column, home the stage, the rest the wide one",
   () => {
     for (const page of PAGES) {
       const html = read("dist", page);
@@ -2311,7 +2312,8 @@ check(
       const want =
         page === "index.html"
           ? "stage"
-          : page.startsWith("blog/") && page !== "blog/index.html"
+          : page === "about/index.html" ||
+              (page.startsWith("blog/") && page !== "blog/index.html")
             ? "reading"
             : "wide";
       assert(got === want, `${page}: ${got} column, expected ${want}`);

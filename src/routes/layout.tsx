@@ -321,6 +321,7 @@ export default component$(() => {
             </span>
             <div class="ml-auto flex flex-wrap items-center gap-4">
               <ThemePicker />
+              <Link href="/about/">About</Link>
               <Link href="/privacy/">Privacy</Link>
               <a href="https://github.com/my-neme-eh-jeff/website">
                 Source
