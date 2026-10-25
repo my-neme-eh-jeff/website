@@ -24,8 +24,8 @@ instead. Prefer those: they fail when they go wrong, and prose doesn't.
 - **Tool directives**: `eslint-disable`, `@ts-expect-error`, `prettier-ignore`,
   `/// <reference>`, JSDoc `@type`, and the comment inside an empty `catch`
   (`no-empty` in `js.configs.recommended` rejects an empty block).
-- **Config rationale that README's file map routes readers to**: `wrangler.jsonc`,
-  `public/_headers`, `public/robots.txt`, the field notes in `profile.ts`.
+- **Config rationale**: `wrangler.jsonc`, `public/_headers`,
+  `public/robots.txt`, the field notes in `profile.ts`.
   Still short: one reason per setting.
 - **Credits and licences.**
 

@@ -7,7 +7,8 @@ Styling is Tailwind v4. `dist/` is uploaded as-is; the only server code is
 one Worker (`src/worker/`) that answers `/api/*` and nothing else: asset
 requests are free, and every Worker invocation counts against 100k/day.
 
-Commands, deploy flow and a file map: `README.md`. Topic-specific rules go in
+`README.md` is for visitors: what's built, the eval results, and the
+commands. No file maps or internals there. Topic-specific rules go in
 `.claude/skills/`, not here.
 
 ## The anti-rot rule
@@ -27,8 +28,8 @@ lines, nearly all long explanations, claims about other files, or history.
 
 - **Keep** a constraint from something we can't change (browser, Qwik,
   Cloudflare, WCAG) in one line, two if the second is a new fact, dated per the
-  anti-rot rule. Also tool directives, and the config rationale README's file
-  map points at.
+  anti-rot rule. Also tool directives, and the config rationale in
+  `wrangler.jsonc`, `public/_headers` and `public/robots.txt`.
 - **Check or delete** any claim about another file, a layout, or "must match
   X": make it a shared constant or a `verify` check, then drop the prose.
 - **Delete** what the code already says, history, banners, and measurements
