@@ -237,10 +237,13 @@ function conversationOf(country, turns) {
 
 function link(country, question, answer, id) {
   const at = Date.now();
-  links.set(linkKey(country, question, answer), { id, at });
-  for (const [key, v] of links) {
+  const key = linkKey(country, question, answer);
+  // Re-inserted, so the Map stays oldest-first and the sweep can stop early.
+  links.delete(key);
+  links.set(key, { id, at });
+  for (const [old, v] of links) {
     if (at - v.at < LINK_MS) break;
-    links.delete(key);
+    links.delete(old);
   }
 }
 
