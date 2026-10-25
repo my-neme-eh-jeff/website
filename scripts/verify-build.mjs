@@ -795,14 +795,18 @@ check("the chat's account of its evals matches evals/results", () => {
   const runs = readdirSync(p("evals", "results", "runs")).filter((r) =>
     existsSync(p("evals", "results", "runs", r, "meta.json")),
   );
-  const meta = (r) => JSON.parse(read("evals", "results", "runs", r, "meta.json"));
+  const meta = (r) =>
+    JSON.parse(read("evals", "results", "runs", r, "meta.json"));
   const pick = meta(deskPick.run);
   const month = new Date(pick.started).toLocaleString("en-US", {
     month: "long",
     year: "numeric",
     timeZone: "UTC",
   });
-  assert(month === deskPick.month, `run ${deskPick.run} is from ${month}: ${fix}`);
+  assert(
+    month === deskPick.month,
+    `run ${deskPick.run} is from ${month}: ${fix}`,
+  );
   const finalists = Object.values(pick.targets);
   assert(
     finalists.some((t) => t.model === deskPick.model) &&

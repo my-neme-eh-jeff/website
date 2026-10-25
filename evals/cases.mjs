@@ -938,7 +938,11 @@ export const CASES = [
       [
         "names the model that answered",
         (t, { onDesk }) =>
-          has(onDesk ? DESK_MODEL.name.split(" ")[0] : POE_MODEL.name.split(" ")[0])(t),
+          has(
+            onDesk
+              ? DESK_MODEL.name.split(" ")[0]
+              : POE_MODEL.name.split(" ")[0],
+          )(t),
       ],
     ],
   },
