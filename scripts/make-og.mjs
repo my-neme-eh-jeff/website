@@ -123,7 +123,7 @@ const html = `<!doctype html><meta charset="utf-8">
   }
   p {
     margin-top: 26px; font-size: 27px; line-height: 1.38;
-    color: rgb(242 240 233 / 0.74); max-width: 30ch;
+    color: rgb(242 240 233 / 0.74); max-width: 30ch; text-wrap: pretty;
   }
   .domain {
     position: absolute; right: 76px; bottom: 48px;
@@ -135,7 +135,7 @@ const html = `<!doctype html><meta charset="utf-8">
 <div class="wrap">
   <div class="eyebrow">${esc(jobTitle)} · ${esc(city)}</div>
   <h1>${esc(name)}</h1>
-  <p>${esc(tagline)}</p>
+  <p>${esc(tagline).replace(/(^|\s)(\w) /g, "$1$2&nbsp;")}</p>
 </div>
 <div class="domain">amannambisan.com</div>
 `;
