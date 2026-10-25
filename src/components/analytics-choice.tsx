@@ -20,7 +20,12 @@ export const AnalyticsChoice = component$(() => {
     "qvisible",
     $(() => {
       const n = navigator as Navigator & { globalPrivacyControl?: boolean };
-      if (n.globalPrivacyControl === true || n.doNotTrack === "1") {
+      const w = window as Window & { doNotTrack?: string };
+      if (
+        n.globalPrivacyControl === true ||
+        n.doNotTrack === "1" ||
+        w.doNotTrack === "1"
+      ) {
         state.value = "signal";
         return;
       }
