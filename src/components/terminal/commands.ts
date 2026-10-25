@@ -181,9 +181,8 @@ const RESOURCES: Resource[] = [
         roles.map((r) => [r.title, r.company, r.period, r.location]),
       ),
     describe: (key) => {
-      const i = Number.parseInt(key, 10);
-      const r = Number.isFinite(i)
-        ? roles[i]
+      const r = /^\d+$/.test(key)
+        ? roles[Number(key)]
         : roles.find((x) => x.title.toLowerCase().includes(key.toLowerCase()));
       if (!r) {
         return [
