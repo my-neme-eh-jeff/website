@@ -1,7 +1,8 @@
 /**
  * What the lamp shows inside the box. Read from the box on 2026-10-17 with
- * lscpu, nvidia-smi, lsblk and udevadm's DMI memory fields (three of four
- * DIMM slots filled). No software can read a PSU, so it stays unnamed.
+ * lscpu, nvidia-smi and udevadm's DMI memory fields (three of four DIMM slots
+ * filled). The board and SSD are left unnamed on purpose; no software can
+ * read a PSU.
  */
 import { KIND, VIEW, type Desk } from "./ascii.ts";
 
@@ -12,20 +13,19 @@ const SPECS = {
   cpuShort: "5600X",
   ram: "24GB DDR4",
   ramShort: "24GB",
-  ssd: "WD SN550 500GB",
-  board: "B550M DS3H",
+  ssd: "SSD",
   psu: "PSU",
 };
 
 /** Sized to the box's inside: 40x11 cells on the wide grid, 24x6 on the narrow. ~ is the load meter. */
 export const ART = {
   wide: [
-    `${" ".repeat(30)}${SPECS.board}`,
+    `${" ".repeat(7)}${SPECS.cpu}${" ".repeat(20)}`,
     " .-.     .---------.    |||     .-.     ",
     "( + )    |  ( + )  |    |||    ( + )    ",
     " '-'     '---------'    |||     '-'     ",
-    ` .-.    ${SPECS.cpu}   ${SPECS.ram.padEnd(16)}`,
-    `( + )   [ ${SPECS.ssd} ]${" ".repeat(14)}`,
+    ` .-.${" ".repeat(20)}${SPECS.ram.padEnd(16)}`,
+    `( + )   [::: ${SPECS.ssd} :::]${" ".repeat(19)}`,
     " '-'  .--------------------------------.",
     `      | ${SPECS.gpu.padEnd(8)}  ~~~~~~  ( + )  ( + ) |`,
     `      '${SPECS.vram.padStart(30, "-")}--'`,
@@ -93,7 +93,6 @@ export function xray(desk: Desk, inside: [number, number, number, number]) {
     [SPECS.ram, TEXT],
     [SPECS.ramShort, TEXT],
     [SPECS.ssd, MUTED],
-    [SPECS.board, MUTED],
     [SPECS.psu, MUTED],
   ];
   let meter = 0;
