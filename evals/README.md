@@ -82,7 +82,8 @@ visitors are sent to the cloud fallback; while it tests the site's own model,
 they wait between test questions. The desk is asked "Hi" before the first
 timed answer, so that answer isn't a cold start. A failed request is retried
 after 5 and 15 seconds; three failures in a row stop the run, and
-`--resume <run>` continues it.
+`--resume <run>` continues it. A resume on a different model, prompt,
+`--think` or `--extra` stops instead, so a run never mixes two setups.
 
 **One answer, end to end.** From the baseline run, `20261019T084715`. He has
 never worked at Google:

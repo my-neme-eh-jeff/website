@@ -22,6 +22,7 @@
  *   --judge-reps 1             grade only the first N answers per wording
  *   --budget-usd 1             stop judging once this much is spent
  *   --floor-usd 5              never take a provider's balance below this
+ *                              (0 skips the balance check)
  *
  * It calls Ollama directly, not the log proxy, so test answers stay out of
  * the visitor log /privacy/ describes. Each answer, with `raw`, everything
@@ -123,17 +124,42 @@ const metaFile = join(dir, "meta.json");
 const meta = existsSync(metaFile)
   ? JSON.parse(readFileSync(metaFile, "utf8"))
   : { run, started: new Date().toISOString(), sha: arg.sha || null };
-meta.node = process.version;
-meta.args = arg;
+// What shaped the answers besides the prompt. Runs from before 2026-10-25
+// kept these only in meta.args, which each resume overwrote.
+const settings = {
+  think: arg.think ?? null,
+  extra: JSON.stringify(JSON.parse(arg.extra)),
+};
+const saved = (name) =>
+  meta.targets?.[name]?.settings ??
+  (meta.args && {
+    think: meta.args.think ?? null,
+    extra: JSON.stringify(JSON.parse(meta.args.extra ?? "{}")),
+  });
+const refuse = (why) => {
+  console.error(
+    `${why} in run ${run}: answers and grades must come from the same setup. Check out the commit that made them, or start a new run.`,
+  );
+  process.exit(1);
+};
 meta.targets ??= {};
 for (const t of targets) {
   const now = promptHashes(t.prompt).full;
   const then = meta.targets[t.name]?.prompt?.full;
   if (then && then !== now) {
-    console.error(
-      `${t.name}'s prompt is ${now} here but ${then} in run ${run}: answers and grades must come from the same prompt. Check out the commit that made them, or start a new run.`,
-    );
-    process.exit(1);
+    refuse(`${t.name}'s prompt is ${now} here but ${then}`);
+  }
+  // "desk" and "fallback" name whatever wrangler.jsonc points at today.
+  const was = meta.targets[t.name]?.model;
+  if (was && was !== t.model) refuse(`${t.name} is ${t.model} here but ${was}`);
+  const before = meta.targets[t.name] && saved(t.name);
+  if (
+    !arg["judge-only"] &&
+    before &&
+    JSON.stringify(before) !== JSON.stringify(settings)
+  ) {
+    const as = (s) => `--think ${s.think ?? "(unset)"} --extra ${s.extra}`;
+    refuse(`${t.name} runs with ${as(settings)} here but ${as(before)}`);
   }
   meta.targets[t.name] ??= {
     model: t.model,
@@ -141,7 +167,10 @@ for (const t of targets) {
     prompt: promptHashes(t.prompt),
   };
   meta.targets[t.name].onDesk ??= t.onDesk;
+  meta.targets[t.name].settings ??= settings;
 }
+meta.node = process.version;
+meta.args = arg;
 if (targets.some((t) => t.name === "desk")) {
   meta.ollama ??= await fetch(`${arg.ollama}/api/version`)
     .then((r) => r.json())
@@ -245,9 +274,15 @@ if (arg.judge || arg["judge-only"]) {
   const floor = Number(arg["floor-usd"]);
   const providers = new Set([...panels.values()].flat().map((j) => j.provider));
   const lowest = async () => {
+    if (floor <= 0) return null;
     for (const p of providers) {
-      const usd = await balanceUsd(p);
-      if (usd != null && usd < floor) return `${p} has $${usd} left`;
+      const usd = await balanceUsd(p).catch((e) => e);
+      if (usd instanceof Error) {
+        return `can't read ${p}'s balance (${usd.message}); --floor-usd 0 judges without the check`;
+      }
+      if (usd != null && usd < floor) {
+        return `${p} has $${usd} left, below --floor-usd ${floor}`;
+      }
     }
     return null;
   };
@@ -263,7 +298,7 @@ if (arg.judge || arg["judge-only"]) {
   );
   const low = await lowest();
   if (low) {
-    console.error(`Not judging: ${low}, below --floor-usd ${floor}.`);
+    console.error(`Not judging: ${low}.`);
     process.exit(1);
   }
 
