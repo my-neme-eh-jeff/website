@@ -36,8 +36,8 @@ const INTRO: Line = {
 const PROMPT = "~ $";
 
 const SEED_QUESTIONS: readonly string[] = [
-  "What is he working on?",
-  "What's his stack?",
+  "Who is Aman?",
+  "What has he built?",
   "How does this chat work?",
 ];
 

@@ -56,6 +56,41 @@ const speaksAsHim =
 
 export const CASES = [
   {
+    id: "who",
+    kind: "answerable",
+    ask: [
+      "Who is Aman?",
+      "who is this guy",
+      { q: "Tell me about Aman", holdout: true },
+    ],
+    points: [
+      `${profile.jobTitle} at ${employer}, based in ${profile.city}`,
+      "builds AI agents, and the platform and infrastructure they run on",
+      "outside work, builds machine-learning systems such as a GPU-aware autoscaler and a training loop that promotes its own models",
+    ],
+    cover: 2,
+    draft: `He's a ${profile.jobTitle} at ${employer} in ${profile.city}. He builds AI agents that do engineering work, and the platform they run on. Outside work he builds machine-learning systems, like a training loop that ships each better model by itself.`,
+    must: [["names his employer", has(employer)]],
+  },
+  {
+    id: "built",
+    kind: "answerable",
+    ask: [
+      "What has he built?",
+      "what stuff has he made",
+      { q: "Show me something he built", holdout: true },
+    ],
+    points: [
+      "an AI agent that runs long infrastructure migrations, halving the engineering time a migration costs",
+      "an agent that catches cloud-cost spikes early and works out their cause",
+      "side projects: a GPU-aware autoscaler for LLM inference, an autonomous ML deployment system, a ride-dispatch backend in Go",
+    ],
+    cover: 2,
+    draft:
+      "At work, an AI agent that carries long infrastructure migrations across customers' maintenance windows, halving the engineering time each costs, and one that catches cloud-cost spikes and finds their cause. On his own: an autoscaler that adds GPUs before users feel a spike, and a loop that trains and ships better models by itself.",
+    must: [],
+  },
+  {
     id: "now",
     kind: "answerable",
     ask: [
@@ -65,11 +100,11 @@ export const CASES = [
     ],
     points: [
       `${profile.jobTitle} at ${employer}`,
-      "internal platform and infrastructure: Kubernetes, Terraform, Crossplane, Temporal",
-      "lately most of his time goes to agentic tooling, like MCP servers and upgrade agents",
+      "builds AI agents that do engineering work, and the systems they run on",
+      "such as an agent for long infrastructure migrations across customers in different time zones, or one that catches cloud-cost spikes and works out why",
     ],
     cover: 2,
-    draft: `He's a ${profile.jobTitle} at ${employer}, on internal platform and infrastructure: Kubernetes, Terraform, Crossplane and Temporal. Lately most of his time goes to agentic tooling, like MCP servers and upgrade agents.`,
+    draft: `He's a ${profile.jobTitle} at ${employer}, building AI agents that do engineering work: one carries long infrastructure migrations across customers in different time zones, another catches cloud-cost spikes and works out why.`,
     must: [["names his employer", has(employer)]],
   },
   {
@@ -223,12 +258,12 @@ export const CASES = [
       { q: "What's his experience with MCP servers?", holdout: true },
     ],
     points: [
-      "lately most of his time goes to agentic tooling, including MCP servers",
+      "builds the plumbing that lets a model touch production safely, like MCP servers",
       "MCP is among his applied AI skills",
     ],
     cover: 1,
     draft:
-      "Yes. Lately most of his time at Atlan goes to agentic tooling, MCP servers included.",
+      "Yes. Part of his agent work at Atlan is the plumbing that lets a model touch production safely, MCP servers included.",
     must: [["mentions MCP", has("mcp")]],
   },
   {

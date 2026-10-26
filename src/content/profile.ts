@@ -22,7 +22,7 @@ export const profile = {
   /** The first line the shell prints. */
   motd: "I build infrastructure and agents.",
 
-  bio: "I work on internal platform and infrastructure at Atlan — Kubernetes, Terraform, Crossplane, Temporal — making provisioning reliable enough that nobody has to think about it. Lately most of my time goes to agentic tooling: MCP servers, upgrade agents, and the plumbing that lets a model touch production safely. Outside work I build MLOps systems, like a GPU-aware autoscaler for vLLM and a training loop that promotes its own models.",
+  bio: "I build AI agents that do real engineering work, and the systems they run on. At Atlan, that means an agent that carries long infrastructure changes across customers in different time zones, one that catches cloud bills going wrong and works out why, and a support chatbot that now closes most tickets on its own. Much of the work is the plumbing that lets a model touch production safely, like MCP servers. I came to agents from platform engineering, where I took creating infrastructure on demand from working half the time to every time. Outside work I build machine-learning systems, like a loop where an AI keeps proposing improvements to a model and each better version ships by itself.",
 
   /**
    * Word for word the title on LinkedIn and GitHub: a different title on each
@@ -162,6 +162,8 @@ export type Project = {
   title: string;
   /** One line. */
   summary: string;
+  /** What it does for a visitor who isn't an engineer, without tool names. Only the chat reads it. */
+  plain: string;
   detail: string[];
   stack: string[];
   repo?: string;
@@ -189,6 +191,8 @@ export const projects: Project[] = [
     slug: "gpu-autoscaler",
     title: "GPU-Aware Autoscaler for LLM Inference",
     summary: "Scales vLLM pods on KV cache pressure, not CPU.",
+    plain:
+      "Adds GPU servers for an AI model as soon as its memory starts filling up, so replies stay fast through a traffic spike. Scaling on CPU, the usual signal, reacts only after users are already waiting.",
     detail: [
       "A Kubernetes autoscaler that scales vLLM inference pods on KV cache pressure and request queue depth rather than CPU, because on a GPU server CPU is not the bottleneck and rises only after users are already waiting.",
       "Traffic spikes fill the cache, the autoscaler reads that as a leading indicator, KEDA adds a replica and the cluster autoscaler provisions an L4 — so time-to-first-token stays flat through the spike.",
@@ -218,6 +222,8 @@ export const projects: Project[] = [
     slug: "ml-deploy",
     title: "Autonomous ML Deployment System",
     summary: "An LLM proposes model changes; winners ship themselves.",
+    plain:
+      "A loop that improves a machine-learning model on its own: Claude suggests a change, the system trains it, and the new model ships only if it beats the current one. Accuracy went from about 70% to 80% over 20 rounds with no human involved.",
     detail: [
       "An autonomous research loop inspired by Karpathy's Autoresearch. Drop in a binary-classification CSV, declare its schema, and a closed loop takes over: Claude proposes a change, the system trains it on Kubernetes, and only candidates that beat the current champion get promoted. Accuracy went from roughly 70% to 80% across 20 iterations.",
       "DVC versions the data, Kubeflow Pipelines runs training, MLflow holds the champion/challenger registry, and a FastAPI service is rolled forward via GitOps whenever a new champion is promoted. No human in the loop.",
@@ -250,6 +256,8 @@ export const projects: Project[] = [
     slug: "ride-booking",
     title: "Go Modular Monolith for Ride Dispatch",
     summary: "Matches on S2 cells; a Redis lock prevents double-booking.",
+    plain:
+      "The backend of a ride-hailing app: it finds nearby drivers for a rider and makes sure a rider can't be booked twice.",
     detail: [
       "A Go modular monolith split by domain — booking, matching, pricing — communicating over Kafka, with asynchronous booking processing and real-time ride tracking.",
       "Redis provides a distributed lock so a rider cannot be double-booked, and Google's S2 library handles spatial indexing for proximity search in the driver-matching service.",
