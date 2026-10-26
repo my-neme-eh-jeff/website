@@ -20,6 +20,7 @@ import {
 } from "./desk";
 import { AIM, decay, Rig } from "./lamp";
 import { caretPoint } from "../terminal/caret";
+import { REST_MS, TOUCH_EVENTS } from "../../content/rest.ts";
 import { xray } from "./xray";
 
 type Size = keyof typeof GRIDS;
@@ -53,6 +54,7 @@ type Msg =
     }
   | { type: "state"; think?: boolean; flash?: boolean; clear?: boolean }
   | { type: "run"; on: boolean }
+  | { type: "rest"; on: boolean }
   | { type: "aim"; at: Pt | null }
   | { type: "lamp"; on: boolean }
   | { type: "hover"; on: boolean }
@@ -78,6 +80,12 @@ const DOWN_S = 0.95;
 const TOKEN_MS = 120;
 /** The most light a shadow thrown from clear of the wall takes: it thins the pool, never blacks it out. */
 const STAND_SHADE = 0.6;
+/** The frame's line, in CSS px: its widest at rest, and what the comet and the lamp add. */
+const LINE_W = 1.3;
+const LIT_W = 0.25;
+const CAUGHT_W = 0.35;
+/** The frame's corner radius, in CSS px. */
+const RADIUS = 16;
 
 declare global {
   interface Window {
@@ -138,6 +146,9 @@ function page() {
     ro.disconnect();
     document.removeEventListener("visibilitychange", onVisibility);
     document.removeEventListener("themechange", colors);
+    for (const t of TOUCH_EVENTS)
+      removeEventListener(t, touch, { capture: true });
+    clearTimeout(restTimer);
     shell.removeEventListener("pointermove", onMove);
     shell.removeEventListener("pointerleave", onLeave);
     field?.removeEventListener("input", follow);
@@ -686,9 +697,32 @@ function page() {
   io.observe(shell);
   const onVisibility = () => {
     shown = !document.hidden;
+    if (shown) touch();
     run();
   };
   document.addEventListener("visibilitychange", onVisibility);
+
+  let touched = performance.now();
+  let resting = false;
+  let restTimer = 0;
+  const settle = () => {
+    const left = touched + REST_MS - performance.now();
+    if (left > 0) restTimer = window.setTimeout(settle, left);
+    else {
+      resting = true;
+      post({ type: "rest", on: true });
+    }
+  };
+  const touch = () => {
+    touched = performance.now();
+    if (!resting) return;
+    resting = false;
+    post({ type: "rest", on: false });
+    restTimer = window.setTimeout(settle, REST_MS);
+  };
+  for (const t of TOUCH_EVENTS)
+    addEventListener(t, touch, { capture: true, passive: true });
+  restTimer = window.setTimeout(settle, REST_MS);
 
   document.addEventListener("themechange", colors);
   const ro = new ResizeObserver(() => layout());
@@ -816,10 +850,9 @@ const float COS_WIDE = ${Math.cos((52 * Math.PI) / 180)};
 const float DEPTH = 34.0 / 64.0;
 const float BAYER[16] = float[16](0.03125, 0.53125, 0.15625, 0.65625, 0.78125, 0.28125, 0.90625, 0.40625, 0.21875, 0.71875, 0.09375, 0.59375, 0.96875, 0.46875, 0.84375, 0.34375);
 const float FAN[4] = float[4](92.0, 15.0, 13.0, 60.0);
-// The frame's line: its widest at rest, and what the comet and the lamp add.
-const float LINE_W = 1.3;
-const float LIT_W = 0.25;
-const float CAUGHT_W = 0.35;
+const float LINE_W = ${LINE_W};
+const float LIT_W = ${LIT_W};
+const float CAUGHT_W = ${CAUGHT_W};
 
 float hash21(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -1271,6 +1304,15 @@ function worker() {
   const art = [0, 0, 0, 0];
 
   let running = false;
+  let pending = false;
+  /** Nothing moved and nothing will until a message: no frames are asked for. */
+  let asleep = false;
+  let sleptAt = 0;
+  /** Time spent asleep, which the clocks leave out, so a wake carries on where it stopped. */
+  let slept = 0;
+  let resting = false;
+  /** The idle lamp's sway, which holds while resting. Set on the first frame. */
+  let drift: number | null = null;
   let drawn = false;
   let clearTarget = 0;
   let clear = 0;
@@ -1818,7 +1860,8 @@ function worker() {
       return null;
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
-    const time = (now - t0) / 1000;
+    const time = (now - t0 - slept) / 1000;
+    drift = drift === null ? time : resting ? drift : drift + dt;
     calmMix = calm ? Math.min(1, calmMix + dt / 0.6) : 0;
     clear =
       clearTarget > clear
@@ -1854,7 +1897,7 @@ function worker() {
     const set3 = (n: string, v: Rgb) => gl!.uniform3f(U.get(n) ?? null, ...v);
     gl.viewport(0, 0, canvas.width, canvas.height);
     set2("uRes", [canvas.width, canvas.height]);
-    set1("uRadius", 16 * dpr);
+    set1("uRadius", RADIUS * dpr);
     set1("uDpr", dpr);
     set1("uTime", clock);
     set1("uClear", clear);
@@ -1875,8 +1918,8 @@ function worker() {
       const src: Pt = on
         ? aim!
         : [
-            AIM[0] + 22 * Math.sin(time * 0.37),
-            AIM[1] - 6 + 12 * Math.sin(time * 0.53),
+            AIM[0] + 22 * Math.sin(drift * 0.37),
+            AIM[1] - 6 + 12 * Math.sin(drift * 0.53),
           ];
       // Let go, it eases back from where the pointer last was: 0.25 s, and 0.12 s to pick it up.
       if (target && on !== aimed) {
@@ -1990,7 +2033,28 @@ function worker() {
     }
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if (gone && think < 1e-3 && flash < 1e-3) {
+      // With no comet or flash, the frame draws nothing further in than its widest line past the corner.
+      const W = canvas.width;
+      const H = canvas.height;
+      const b = Math.min(
+        Math.ceil((LINE_W + LIT_W + CAUGHT_W + RADIUS + 1) * dpr + 1),
+        Math.floor(W / 2),
+        Math.floor(H / 2),
+      );
+      gl.enable(gl.SCISSOR_TEST);
+      for (const [x, y, w, h] of [
+        [0, 0, W, b],
+        [0, H - b, W, b],
+        [0, b, b, H - 2 * b],
+        [W - b, b, b, H - 2 * b],
+      ] as const) {
+        if (w <= 0 || h <= 0) continue;
+        gl.scissor(x, y, w, h);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
+      gl.disable(gl.SCISSOR_TEST);
+    } else gl.drawArrays(gl.TRIANGLES, 0, 3);
     const f =
       drawn &&
       fences.length < 16 &&
@@ -2055,6 +2119,7 @@ function worker() {
   /** Full rate while something moves; the idle drift and breath hold up at 30 fps. */
   let active = true;
   function loop(now: number) {
+    pending = false;
     if (!running) return;
     watch(now);
     prevRaf = now;
@@ -2067,16 +2132,31 @@ function worker() {
       clear !== clearTarget;
     // Calm, with the desk broken: the outline holds still until the comet runs again.
     const still = calm && clearTarget === 1 && clear >= 1 && !easing;
+    if (still || (resting && !easing)) {
+      asleep = true;
+      sleptAt = now;
+      return;
+    }
     // The GPU gets at most 70% of the time, so near its limit a device draws
     // less often instead of falling behind.
     const pace = canvas ? (perPx * canvas.width * canvas.height) / 0.7 - 2 : 0;
     const gap = Math.max(easing && !calm ? 0 : 29, pace);
-    if (!still && now - last >= gap) active = draw(now);
+    if (now - last >= gap) active = draw(now);
+    kick();
+  }
+  function kick() {
+    if (!running || pending) return;
+    pending = true;
     frame(loop);
   }
 
   scope.onmessage = (e: MessageEvent<Msg>) => {
     const m = e.data;
+    if (asleep) {
+      asleep = false;
+      last = performance.now();
+      slept += last - sleptAt;
+    }
     if (m.type === "init") {
       coarse = m.coarse;
       calm = m.calm;
@@ -2122,11 +2202,9 @@ function worker() {
       const was = running;
       running = m.on;
       quiet(performance.now());
-      if (running && !was) {
-        last = performance.now();
-        frame(loop);
-      }
-    } else if (m.type === "aim") {
+      if (running && !was) last = performance.now();
+    } else if (m.type === "rest") resting = m.on;
+    else if (m.type === "aim") {
       aim = m.at;
       if (m.at) lastAim = m.at;
     } else if (m.type === "lamp") lampOn = m.on;
@@ -2135,13 +2213,14 @@ function worker() {
     else if (m.type === "send" && G)
       pulses.push({ s: G.Lc + 8, v: -G.Lc / 1.25, k: 1, tail: 26 });
     else if (m.type === "token" && G) {
-      const time = (performance.now() - t0) / 1000;
+      const time = (performance.now() - t0 - slept) / 1000;
       pulses.push({ s: -6, v: G.Lc / DOWN_S, k: 0.62, tail: 9 });
       spikes.push(time);
       tokenAt = time;
       ledFlick = 1;
     }
     active = true;
+    kick();
   };
 }
 

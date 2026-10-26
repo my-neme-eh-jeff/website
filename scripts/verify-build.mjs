@@ -40,7 +40,11 @@ import {
 } from "../src/content/chat.ts";
 import { deskPick } from "../src/content/evals.ts";
 import { bestWork } from "../src/content/context.ts";
-import { FIELD_ANIMATION, fieldScript } from "../src/content/field.ts";
+import {
+  FIELD_ANIMATION,
+  INK_AGAIN,
+  motionScript,
+} from "../src/content/motion.ts";
 import { profile, projects } from "../src/content/profile.ts";
 import { staleTabScript } from "../src/content/stale-tab.ts";
 
@@ -2184,7 +2188,7 @@ check("field's static fallback matches the 0% keyframe", () => {
 });
 
 check(
-  "every page steps the field's drift instead of repainting each frame",
+  "every page steps the field's drift and the circle's redraw instead of restyling each frame",
   () => {
     const css = readdirSync(p("dist", "assets"))
       .filter((f) => f.endsWith(".css"))
@@ -2192,8 +2196,14 @@ check(
       .join("\n");
     assert(
       css.includes(`@keyframes ${FIELD_ANIMATION}{`),
-      `no @keyframes ${FIELD_ANIMATION} in the built CSS, so fieldScript ` +
-        `(src/content/field.ts) steps nothing. Rename FIELD_ANIMATION with it.`,
+      `no @keyframes ${FIELD_ANIMATION} in the built CSS, so motionScript ` +
+        `(src/content/motion.ts) steps nothing. Rename FIELD_ANIMATION with it.`,
+    );
+    assert(
+      css.includes(`@keyframes ${INK_AGAIN}{`),
+      `no @keyframes ${INK_AGAIN} in the built CSS, so motionScript ` +
+        `(src/content/motion.ts) leaves the circle's redraw restyling every ` +
+        `frame of its loop. Rename INK_AGAIN with it.`,
     );
     const runs = [...css.matchAll(/\.field\{animation:([^;}]*)/g)].map(
       (m) => m[1],
@@ -2205,7 +2215,10 @@ check(
     );
     for (const page of [...PAGES, "404.html"]) {
       const head = read("dist", page).match(/<head[\s\S]*?<\/head>/)?.[0] ?? "";
-      assert(head.includes(fieldScript), `${page}: no field script in <head>`);
+      assert(
+        head.includes(motionScript),
+        `${page}: no motion script in <head>`,
+      );
     }
     return `${PAGES.length + 1} pages`;
   },
