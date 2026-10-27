@@ -19,8 +19,8 @@ those are listed below.
 **Neither change has been judged.** These numbers are code checks only:
 layout, known links, and each case's own checks. The judges cost Poe points,
 which the site's fallback also spends, and the balance was $5.70 against a $5
-floor when this was written. The fallback model, DeepSeek V4.1 Flash on Poe,
-was not run on either new prompt.
+floor when this was written. The fallback, DeepSeek V4.1 Flash on Poe, was
+run on the second prompt on 2026-10-27; see the end.
 
 ## 983f270: what the shell knows about itself
 
@@ -182,11 +182,38 @@ What plain words cost, in failed code checks, `983f270` against `7364006`:
 - **Fixed:** atlan-work going over 120 words, 2 → 0. The `which-model`,
   `companies` and `box` checks went 1 → 0 each.
 
+## The fallback on `7364006`
+
+When the desk is off or busy, DeepSeek V4.1 Flash on Poe answers instead, with
+the same prompt except for one line about what it is. Its run on `7364006`,
+`20261027T061521`, asked every wording once and passed **193 of 203** code
+checks. Seven of the ten failures were fewer than three suggested questions;
+two were answers over 120 words. `20261027T061245` asked eight cases about the
+starters and the shell itself three times, and every answer passed. The 72
+answers cost $0.08 in Poe points, and the 203 cost $0.21.
+
+Asked "How does this chat work?", it says that Gemma normally answers from the
+desk, and that it is answering now:
+
+> … DeepSeek V4.1 Flash on Poe answers instead, which is the case now. The
+> model is given only the facts on this site, with no internet, tools or
+> memory of other visitors. …
+
+The `how` check used to fail any fallback answer that mentioned the GPU. It
+dates from before `983f270`, when the fallback was told nothing about the
+desk. Five right answers like the one above failed it. Now, off the desk, an
+answer passes if it says Poe or DeepSeek is answering, or if it doesn't claim
+to run on the desk. The fallback answers of `20261019T084715` still pass.
+
+The fallback also suggests better next questions than the desk. Its 203
+answers offered 126 different sets. The desk's 609 offered 37, and 479 of them
+were the same three: what he is working on now, his side projects and where
+he worked before.
+
 ## Not done yet
 
 - **Judging** both shipped prompts, with `--judge-only` on `20261025T130133`
-  and `20261026T084215`.
-- **The fallback** on the new prompt.
+  and `20261026T084215`. The fallback runs aren't judged either.
 - **The `argocd` loss.** Dropping "and name only the tools the question needs"
   from the rule is the likely fix, but it is untried.
 - **The suggested questions.** After every answer they are still the first

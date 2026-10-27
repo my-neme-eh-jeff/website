@@ -1,0 +1,39 @@
+{
+  "run": "20261027T061521",
+  "started": "2026-10-27T06:15:22.544Z",
+  "sha": "90e0b60-dirty",
+  "targets": {
+    "fallback": {
+      "model": "ds-v4.1-flash-1017",
+      "maker": "deepseek",
+      "prompt": {
+        "full": "fb4081a6d5ac",
+        "rules": "8775c928f36f",
+        "facts": "573d30c9f681"
+      },
+      "onDesk": false,
+      "settings": {
+        "think": null,
+        "extra": "{}"
+      }
+    }
+  },
+  "node": "v24.21.0",
+  "args": {
+    "sha": "90e0b60-dirty",
+    "run": "20261027T061521",
+    "target": "fallback",
+    "set": "all",
+    "reps": "1",
+    "cases": "",
+    "kinds": "",
+    "resume": "",
+    "ollama": "http://127.0.0.1:11434",
+    "extra": "{}",
+    "judge": false,
+    "judge-only": false,
+    "judge-reps": "1",
+    "budget-usd": "1",
+    "floor-usd": "5"
+  }
+}

@@ -135,5 +135,7 @@ are in dollars.
 | `20261026T081607` | Arm B: a plain-words rule                                                                                                                                       | `983f270-dirty` | 54      | 0      | —      |
 | `20261026T082110` | Arm C: the rule, a plain bio and links for "how does this chat work"                                                                                            | `983f270-dirty` | 54      | 0      | —      |
 | `20261026T084215` | **`7364006` as shipped** (`a230fd13c128`), every wording ×3; the box lost power at 535 answers and the run was resumed                                          | `7364006`       | 609     | 0      | —      |
+| `20261027T061245` | The fallback (ds-v4.1-flash-1017) on `7364006`: the starters and the shell's own cases, every wording ×3                                                        | `90e0b60`       | 72      | 0      | —      |
+| `20261027T061521` | The fallback on `7364006`, every wording ×1                                                                                                                     | `90e0b60-dirty` | 203     | 0      | —      |
 
-All 37 runs together: 6,963 answers, and $8.36 spent on judges.
+All 39 runs together: 7,238 answers, and $8.36 spent on judges.

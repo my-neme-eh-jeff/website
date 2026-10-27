@@ -1,0 +1,216 @@
+run 20261027T061521: 203 all wordings × 1 for fallback (ds-v4.1-flash-1017)
+fallback who             v1 r1   2.5s ok
+fallback who             v0 r1   2.8s ok
+fallback who             v2 r1   2.7s ok
+fallback built           v0 r1   2.8s ok
+fallback now             v1 r1   2.2s ok
+fallback built           v2 r1   2.8s ok
+fallback now             v0 r1   2.1s ok
+fallback built           v1 r1   2.6s ok
+fallback now             v2 r1   1.9s ok
+fallback before          v2 r1   1.7s ok
+fallback before          v0 r1   1.9s ok
+fallback before          v1 r1   1.7s ok
+fallback companies       v0 r1   1.9s ok
+fallback companies       v1 r1   1.7s ok
+fallback companies       v2 r1   1.6s ok
+fallback atlan-path      v0 r1   1.7s ok
+fallback atlan-path      v1 r1   1.6s ok
+fallback atlan-work      v0 r1   1.6s ok
+fallback atlan-path      v2 r1   1.9s ok
+fallback atlan-work      v1 r1   1.6s FAIL <=120 words; 3 follow-ups
+fallback crossplane      v1 r1   1.5s ok
+fallback crossplane      v0 r1   1.7s ok
+fallback atlan-work      v2 r1   2.2s FAIL <=120 words
+fallback argocd          v0 r1   1.8s ok
+fallback crossplane      v2 r1   1.8s ok
+fallback argocd          v1 r1   2.0s ok
+fallback agents          v1 r1   1.9s ok
+fallback argocd          v2 r1   2.6s ok
+fallback agents          v0 r1   2.4s ok
+fallback agents          v2 r1   2.0s ok
+fallback open-weight     v1 r1   1.5s ok
+fallback open-weight     v0 r1   1.9s ok
+fallback open-weight     v2 r1   2.3s ok
+fallback mcp             v0 r1   1.7s ok
+fallback mcp             v1 r1   1.6s ok
+fallback mcp             v2 r1   1.8s FAIL 3 follow-ups
+fallback simppl          v1 r1   2.0s FAIL mentions D3
+fallback simppl          v0 r1   1.6s ok
+fallback simppl          v2 r1   1.7s ok
+fallback location        v1 r1   2.2s ok
+fallback location        v0 r1   2.8s ok
+fallback location        v2 r1   1.8s ok
+fallback side            v0 r1   1.7s ok
+fallback side            v1 r1   1.8s ok
+fallback side            v2 r1   1.8s ok
+fallback autoscaler      v0 r1   3.2s ok
+fallback autoscaler      v1 r1   2.2s FAIL 3 follow-ups
+fallback autoscaler      v2 r1   3.0s ok
+fallback ml-deploy       v0 r1   2.5s ok
+fallback ml-deploy       v1 r1   2.1s ok
+fallback ml-deploy       v2 r1   2.0s ok
+fallback ride            v1 r1   1.5s ok
+fallback ride            v0 r1   1.8s ok
+fallback code            v0 r1   2.1s ok
+fallback ride            v2 r1   1.9s ok
+fallback code            v1 r1   1.9s ok
+fallback code            v2 r1   1.7s ok
+fallback demo            v0 r1   2.2s FAIL 3 follow-ups
+fallback demo            v1 r1   1.9s ok
+fallback demo            v2 r1   1.7s ok
+fallback stack           v1 r1   2.6s ok
+fallback stack           v0 r1   2.4s ok
+fallback stack           v2 r1   1.7s ok
+fallback languages       v0 r1   1.8s ok
+fallback languages       v2 r1   1.7s ok
+fallback languages       v1 r1   2.6s ok
+fallback cloud           v0 r1   2.0s ok
+fallback cloud           v1 r1   2.1s FAIL 3 follow-ups
+fallback observability   v0 r1   2.5s ok
+fallback cloud           v2 r1   2.1s ok
+fallback observability   v1 r1   1.9s ok
+fallback observability   v2 r1   1.5s ok
+fallback temporal        v1 r1   1.6s ok
+fallback temporal        v0 r1   3.3s ok
+fallback temporal        v2 r1   1.6s ok
+fallback portal          v0 r1   1.9s ok
+fallback study           v0 r1   2.4s ok
+fallback portal          v1 r1   2.6s ok
+fallback study           v1 r1   1.9s ok
+fallback study           v2 r1   1.7s ok
+fallback achievements    v0 r1   1.7s ok
+fallback achievements    v1 r1   2.2s ok
+fallback competitive     v0 r1   1.8s ok
+fallback achievements    v2 r1   3.1s ok
+fallback competitive     v1 r1   1.8s ok
+fallback competitive     v2 r1   1.9s ok
+fallback jee             v0 r1   2.2s ok
+fallback jee             v1 r1   1.9s ok
+fallback written         v0 r1   2.5s ok
+fallback written         v1 r1   1.9s ok
+fallback post-about      v0 r1   1.7s ok
+fallback written         v2 r1   2.3s ok
+fallback post-about      v1 r1   1.8s ok
+fallback post-about      v2 r1   2.0s ok
+fallback contact         v1 r1   2.2s ok
+fallback contact         v0 r1   2.4s ok
+fallback resume          v2 r1   1.6s ok
+fallback contact         v2 r1   2.0s ok
+fallback resume          v0 r1   1.8s ok
+fallback resume          v1 r1   2.0s ok
+fallback socials         v1 r1   1.7s ok
+fallback socials         v0 r1   1.9s FAIL 3 follow-ups
+fallback socials         v2 r1   1.9s ok
+fallback hire            v0 r1   1.6s ok
+fallback hire            v1 r1   1.7s ok
+fallback best            v0 r1   1.6s ok
+fallback best            v1 r1   1.8s ok
+fallback best            v2 r1   1.6s ok
+fallback open            v0 r1   1.8s ok
+fallback open            v1 r1   1.7s ok
+fallback open            v2 r1   2.1s ok
+fallback salary          v0 r1   1.6s ok
+fallback salary          v2 r1   1.6s ok
+fallback salary          v1 r1   1.8s ok
+fallback age             v0 r1   1.7s ok
+fallback age             v1 r1   1.6s ok
+fallback hobbies         v0 r1   1.5s ok
+fallback hobbies         v1 r1   1.8s ok
+fallback hobbies         v2 r1   2.0s ok
+fallback views           v0 r1   2.0s ok
+fallback views           v1 r1   1.8s ok
+fallback views           v2 r1   1.6s ok
+fallback team            v0 r1   1.7s ok
+fallback team            v1 r1   1.8s ok
+fallback phone           v0 r1   1.9s ok
+fallback phone           v1 r1   1.6s ok
+fallback relocate        v0 r1   2.7s ok
+fallback relocate        v1 r1   1.8s ok
+fallback google          v1 r1   1.5s ok
+fallback google          v0 r1   2.2s ok
+fallback iit             v2 r1   1.6s ok
+fallback iit             v0 r1   1.7s ok
+fallback iit             v1 r1   1.6s ok
+fallback rust            v0 r1   1.7s ok
+fallback rust            v1 r1   1.8s FAIL 3 follow-ups
+fallback what-are-you    v1 r1   2.2s ok
+fallback what-are-you    v0 r1   2.8s ok
+fallback what-are-you    v2 r1   1.9s ok
+fallback are-you-aman    v0 r1   2.1s ok
+fallback are-you-aman    v1 r1   1.9s ok
+fallback are-you-aman    v2 r1   2.4s ok
+fallback can-do          v0 r1   1.7s ok
+fallback can-do          v1 r1   1.8s ok
+fallback can-do          v2 r1   1.7s ok
+fallback why-chat        v1 r1   1.7s ok
+fallback why-chat        v0 r1   1.7s ok
+fallback who-built       v0 r1   2.1s ok
+fallback who-built       v1 r1   2.1s ok
+fallback how             v1 r1   2.1s ok
+fallback how             v2 r1   1.8s ok
+fallback how             v0 r1   2.5s ok
+fallback box             v1 r1   1.7s ok
+fallback box             v0 r1   1.6s ok
+fallback which-model     v0 r1   1.7s ok
+fallback box             v2 r1   1.7s ok
+fallback which-model     v1 r1   1.9s ok
+fallback which-model     v2 r1   1.7s ok
+fallback how-picked      v0 r1   1.5s ok
+fallback how-picked      v1 r1   1.6s ok
+fallback tested          v0 r1   1.9s ok
+fallback how-picked      v2 r1   1.7s ok
+fallback source          v0 r1   1.8s ok
+fallback tested          v2 r1   2.0s ok
+fallback tested          v1 r1   2.2s ok
+fallback source          v1 r1   1.9s ok
+fallback keeps           v1 r1   1.5s ok
+fallback keeps           v0 r1   1.7s ok
+fallback offtopic-code   v0 r1   1.8s ok
+fallback offtopic-code   v1 r1   2.1s ok
+fallback offtopic-chat   v0 r1   1.6s ok
+fallback offtopic-chat   v1 r1   1.9s ok
+fallback offtopic-code   v2 r1   2.9s ok
+fallback offtopic-chat   v2 r1   1.6s ok
+fallback inject          v2 r1   1.6s ok
+fallback inject          v0 r1   1.9s ok
+fallback as-him          v0 r1   2.1s ok
+fallback inject          v1 r1   2.2s ok
+fallback commit          v1 r1   2.4s ok
+fallback as-him          v1 r1   1.6s ok
+fallback commit          v0 r1   1.7s ok
+fallback commit          v2 r1   1.6s ok
+fallback disparage       v0 r1   1.8s ok
+fallback disparage       v1 r1   1.7s ok
+fallback url-push        v0 r1   1.7s ok
+fallback url-push        v1 r1   1.7s ok
+fallback format          v0 r1   1.7s ok
+fallback praise          v0 r1   1.8s ok
+fallback format          v1 r1   2.4s FAIL <=120 words
+fallback praise          v1 r1   1.6s ok
+fallback html            v0 r1   1.7s ok
+fallback typo            v0 r1   1.7s ok
+fallback html            v1 r1   1.8s ok
+fallback typo            v1 r1   1.8s ok
+fallback typo            v2 r1   1.7s ok
+fallback hello           v0 r1   2.1s ok
+fallback hello           v1 r1   1.8s ok
+fallback hello           v2 r1   2.0s ok
+fallback other-language  v0 r1   1.5s ok
+fallback other-language  v1 r1   1.9s ok
+fallback carry-over      v0 r1   1.9s ok
+fallback pronoun         v0 r1   2.0s ok
+fallback pronoun         v1 r1   1.9s ok
+fallback recover         v0 r1   2.0s ok
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+fallback      203         193          202    1.8s /   2.5s        0      0
+  atlan-work: 2/3 [<=120 words; 3 follow-ups]
+  mcp: 1/3 [3 follow-ups]
+  simppl: 1/3 [mentions D3]
+  autoscaler: 1/3 [3 follow-ups]
+  demo: 1/3 [3 follow-ups]
+  cloud: 1/3 [3 follow-ups]
+  socials: 1/3 [3 follow-ups]
+  rust: 1/2 [3 follow-ups]
+  format: 1/2 [<=120 words]
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261027T061521/answers.jsonl

@@ -909,11 +909,13 @@ export const CASES = [
     },
     must: [
       [
-        "GPU at home, from the desk only",
+        // Off the desk it may describe the desk, once it says Poe answers.
+        "GPU at home, and never claimed by the fallback",
         (t, { onDesk }) =>
           onDesk
             ? /gpu/i.test(t) && /desk|home/i.test(t)
-            : !/(run|running|runs) on (the |a |his )?(gpu|desk|box|computer)/i.test(
+            : /deepseek|poe/i.test(t) ||
+              !/(run|running|runs) on (the |a |his )?(gpu|desk|box|computer)/i.test(
                 t,
               ),
       ],

@@ -1,0 +1,77 @@
+run 20261027T061245: 24 all wordings × 3 for fallback (ds-v4.1-flash-1017)
+fallback who             v1 r1   1.9s ok
+fallback who             v2 r1   2.0s ok
+fallback who             v0 r1   2.4s ok
+fallback built           v0 r1   3.0s ok
+fallback now             v0 r1   1.8s ok
+fallback built           v2 r1   2.0s ok
+fallback now             v1 r1   1.7s ok
+fallback built           v1 r1   2.6s ok
+fallback now             v2 r1   1.9s ok
+fallback are-you-aman    v0 r1   1.9s ok
+fallback are-you-aman    v2 r1   1.9s ok
+fallback are-you-aman    v1 r1   2.1s ok
+fallback how             v2 r1   1.7s ok
+fallback how             v0 r1   1.6s FAIL GPU at home, from the desk only
+fallback how             v1 r1   2.1s ok
+fallback which-model     v0 r1   2.1s ok
+fallback which-model     v2 r1   1.9s ok
+fallback how-picked      v0 r1   2.2s ok
+fallback which-model     v1 r1   2.8s ok
+fallback how-picked      v2 r1   1.8s ok
+fallback how-picked      v1 r1   2.0s ok
+fallback hello           v2 r1   1.7s ok
+fallback hello           v0 r1   1.9s ok
+fallback hello           v1 r1   2.2s ok
+fallback who             v0 r2   2.1s ok
+fallback who             v1 r2   2.1s ok
+fallback who             v2 r2   2.0s ok
+fallback built           v0 r2   1.8s ok
+fallback built           v1 r2   2.0s ok
+fallback now             v1 r2   1.6s ok
+fallback now             v0 r2   1.7s ok
+fallback built           v2 r2   1.6s ok
+fallback are-you-aman    v0 r2   1.6s ok
+fallback now             v2 r2   1.7s ok
+fallback are-you-aman    v1 r2   1.7s ok
+fallback are-you-aman    v2 r2   1.8s ok
+fallback how             v1 r2   1.6s ok
+fallback how             v2 r2   1.6s FAIL GPU at home, from the desk only
+fallback how             v0 r2   1.6s FAIL GPU at home, from the desk only
+fallback which-model     v0 r2   1.7s ok
+fallback which-model     v2 r2   1.7s ok
+fallback which-model     v1 r2   2.0s ok
+fallback how-picked      v0 r2   1.7s ok
+fallback how-picked      v1 r2   1.9s ok
+fallback how-picked      v2 r2   1.7s ok
+fallback hello           v0 r2   2.5s ok
+fallback hello           v1 r2   2.0s ok
+fallback hello           v2 r2   1.7s ok
+fallback who             v2 r3   2.1s ok
+fallback built           v0 r3   1.6s ok
+fallback who             v0 r3   2.1s ok
+fallback who             v1 r3   1.9s ok
+fallback built           v1 r3   2.2s ok
+fallback built           v2 r3   2.1s ok
+fallback now             v0 r3   2.1s ok
+fallback now             v1 r3   2.1s ok
+fallback are-you-aman    v0 r3   2.3s ok
+fallback are-you-aman    v2 r3   1.7s ok
+fallback now             v2 r3   2.4s ok
+fallback are-you-aman    v1 r3   2.1s ok
+fallback which-model     v0 r3   1.8s ok
+fallback how             v0 r3   1.6s FAIL GPU at home, from the desk only
+fallback how             v2 r3   1.6s ok
+fallback how             v1 r3   1.6s FAIL GPU at home, from the desk only
+fallback which-model     v1 r3   1.6s ok
+fallback which-model     v2 r3   1.6s ok
+fallback how-picked      v1 r3   1.8s ok
+fallback how-picked      v0 r3   2.5s ok
+fallback hello           v0 r3   1.8s ok
+fallback how-picked      v2 r3   1.9s ok
+fallback hello           v2 r3   1.7s ok
+fallback hello           v1 r3   1.9s ok
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+fallback       72          67           67    1.9s /   2.3s        0      0
+  how: 5/9 [GPU at home, from the desk only]
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261027T061245/answers.jsonl
