@@ -1,0 +1,4 @@
+run 20261025T120820: 8 dev wordings × 1 for desk (gemma4:26b-a4b-it-qat)
+desk     now             v0 r1 161.0s FAIL not cut off; 3 follow-ups
+desk     now             v1 r1 105.6s ok
+desk     hire            v0 r1     — FAIL not cut off; has an answer; 3 follow-ups

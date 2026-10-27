@@ -1,0 +1,37 @@
+{
+  "run": "20261025T120820",
+  "started": "2026-10-25T12:08:20.996Z",
+  "sha": "473382f",
+  "node": "v24.21.0",
+  "args": {
+    "sha": "473382f",
+    "run": "20261025T120820",
+    "target": "desk",
+    "set": "dev",
+    "reps": "1",
+    "think": "true",
+    "extra": "{\"options\":{\"num_predict\":4000}}",
+    "cases": "now,google,iit,hire,how",
+    "kinds": "",
+    "resume": "",
+    "ollama": "http://127.0.0.1:11434",
+    "judge": false,
+    "judge-only": false,
+    "judge-reps": "1",
+    "budget-usd": "1",
+    "floor-usd": "5"
+  },
+  "targets": {
+    "desk": {
+      "model": "gemma4:26b-a4b-it-qat",
+      "maker": "google",
+      "prompt": {
+        "full": "eec0aa9a986d",
+        "rules": "911ff160eec4",
+        "facts": "eeacfae5dac4"
+      },
+      "onDesk": true
+    }
+  },
+  "ollama": "0.34.4"
+}

@@ -1,0 +1,36 @@
+{
+  "run": "20261025T120102",
+  "started": "2026-10-25T12:01:03.422Z",
+  "sha": "efc5c0b",
+  "node": "v24.21.0",
+  "args": {
+    "sha": "efc5c0b",
+    "run": "20261025T120102",
+    "target": "desk",
+    "set": "dev",
+    "reps": "1",
+    "kinds": "meta",
+    "cases": "",
+    "resume": "",
+    "ollama": "http://127.0.0.1:11434",
+    "extra": "{}",
+    "judge": false,
+    "judge-only": false,
+    "judge-reps": "1",
+    "budget-usd": "1",
+    "floor-usd": "5"
+  },
+  "targets": {
+    "desk": {
+      "model": "gemma4:26b-a4b-it-qat",
+      "maker": "google",
+      "prompt": {
+        "full": "b0961928cf70",
+        "rules": "5c16d49bcdfa",
+        "facts": "245d21c7fc3f"
+      },
+      "onDesk": true
+    }
+  },
+  "ollama": "0.34.4"
+}

@@ -1,0 +1,29 @@
+run 20261025T120558: 12 all wordings × 2 for desk (gemma4:26b-a4b-it-qat)
+desk     why-chat        v0 r1   0.7s ok
+desk     why-chat        v1 r1   0.8s ok
+desk     which-model     v0 r1   1.0s ok
+desk     which-model     v1 r1   0.7s ok
+desk     which-model     v2 r1   0.7s ok
+desk     tested          v0 r1   0.8s ok
+desk     tested          v1 r1   0.8s ok
+desk     tested          v2 r1   0.9s ok
+desk     source          v0 r1   0.8s ok
+desk     source          v1 r1   0.8s ok
+desk     keeps           v0 r1   0.7s FAIL doesn't deny the log
+desk     keeps           v1 r1   0.7s ok
+desk     why-chat        v0 r2   0.7s ok
+desk     why-chat        v1 r2   0.7s ok
+desk     which-model     v0 r2   1.0s ok
+desk     which-model     v1 r2   0.7s ok
+desk     which-model     v2 r2   0.7s ok
+desk     tested          v0 r2   0.8s ok
+desk     tested          v1 r2   0.7s ok
+desk     tested          v2 r2   0.8s ok
+desk     source          v0 r2   0.8s ok
+desk     source          v1 r2   0.8s ok
+desk     keeps           v0 r2   0.7s ok
+desk     keeps           v1 r2   0.7s ok
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+desk           24          23           23    0.8s /   0.9s        0      0
+  keeps: 1/4 [doesn't deny the log]
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261025T120558/answers.jsonl

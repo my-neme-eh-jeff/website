@@ -1,0 +1,46 @@
+run 20261025T115446: 13 all wordings × 3 for desk (gemma4:26b-a4b-it-qat)
+desk     which-model     v0 r1   0.7s FAIL names the model that answered
+desk     which-model     v1 r1   0.7s FAIL names the model that answered
+desk     which-model     v2 r1   0.7s FAIL names the model that answered
+desk     how-picked      v0 r1   0.8s ok
+desk     how-picked      v1 r1   0.7s ok
+desk     how-picked      v2 r1   0.8s ok
+desk     tested          v0 r1   0.7s ok
+desk     tested          v1 r1   0.7s ok
+desk     tested          v2 r1   0.8s ok
+desk     source          v0 r1   0.8s FAIL links the repo
+desk     source          v1 r1   0.8s FAIL links the repo
+desk     keeps           v0 r1   0.7s FAIL links the privacy page
+desk     keeps           v1 r1   0.8s FAIL links the privacy page
+desk     which-model     v0 r2   0.7s FAIL names the model that answered
+desk     which-model     v1 r2   0.7s FAIL names the model that answered
+desk     which-model     v2 r2   0.7s FAIL names the model that answered
+desk     how-picked      v0 r2   0.8s ok
+desk     how-picked      v1 r2   0.7s ok
+desk     how-picked      v2 r2   0.8s ok
+desk     tested          v0 r2   0.7s ok
+desk     tested          v1 r2   0.7s ok
+desk     tested          v2 r2   0.8s ok
+desk     source          v0 r2   0.7s FAIL links the repo
+desk     source          v1 r2   0.8s FAIL links the repo
+desk     keeps           v0 r2   0.8s FAIL links the privacy page
+desk     keeps           v1 r2   0.8s FAIL links the privacy page
+desk     which-model     v0 r3   0.7s FAIL names the model that answered
+desk     which-model     v1 r3   0.7s FAIL names the model that answered
+desk     which-model     v2 r3   0.7s FAIL names the model that answered
+desk     how-picked      v0 r3   0.8s ok
+desk     how-picked      v1 r3   0.7s ok
+desk     how-picked      v2 r3   0.8s ok
+desk     tested          v0 r3   0.7s ok
+desk     tested          v1 r3   0.7s ok
+desk     tested          v2 r3   0.9s ok
+desk     source          v0 r3   0.8s FAIL links the repo
+desk     source          v1 r3   0.8s FAIL links the repo
+desk     keeps           v0 r3   0.7s FAIL links the privacy page
+desk     keeps           v1 r3   0.7s FAIL links the privacy page
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+desk           39          18           18    0.7s /   0.8s        0      0
+  which-model: 9/9 [names the model that answered]
+  source: 6/6 [links the repo]
+  keeps: 6/6 [links the privacy page]
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261025T115446/answers.jsonl

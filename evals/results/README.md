@@ -17,6 +17,9 @@ visitors. How the evals work, and why they're built that way, is in
 - [The final round, 2026-10-22](2026-10-22-desk-model-finalists.md): the
   two best, Qwen3.6-35B-A3B and Gemma 4 26B-A4B, three times on every
   wording. Gemma won and now runs on the desk.
+- [What the shell knows about itself, and plain words, 2026-10-25/26](2026-10-26-shell-context-and-plain-words.md):
+  the shell told how it works, then his work described in plain words with
+  new starter questions. Code checks only; not judged yet.
 
 The shell's model tells visitors how it was picked, from
 [`src/content/evals.ts`](../../src/content/evals.ts). When a round changes
@@ -117,5 +120,20 @@ are in dollars.
 | `20261020T155238` | Nemotron 3.5 Lightning (`nemotron-3.5-lightning:30b`), think off                                                                                                | `95f81f3`       | 117     | 117    | 0.278  |
 | `20261020T173111` | Gemma 4 31B (`gemma4:31b-it-qat`, dense), think off                                                                                                             | `95f81f3`       | 117     | 117    | 0.203  |
 | `20261022T050412` | The final round: Gemma 4 26B-A4B and Qwen3.6-35B-A3B, every dev and holdout wording ×3, think off, `num_predict` 700                                            | `e48b2c1`       | 1,104   | 1,104  | 2.210  |
+| `20261025T111439` | First draft of the "About this chat" facts and rules; every wording ×3                                                                                          | `0b7d7da`       | 591     | 0      | —      |
+| `20261025T115446` | The old prompt (`328344d1a43e`) on the five new meta cases, every wording ×3: the before for `983f270`                                                          | `41846c4`       | 39      | 0      | —      |
+| `20261025T115705` | Thinking on; stopped before its first answer was saved                                                                                                          | `bd38752`       | 0       | 0      | —      |
+| `20261025T115854` | Identity rule wording 1; meta dev wordings ×1                                                                                                                   | `a0b166e`       | 22      | 0      | —      |
+| `20261025T120102` | Identity rule wording 2; meta dev wordings ×1                                                                                                                   | `efc5c0b`       | 22      | 0      | —      |
+| `20261025T120306` | Identity rule wording 3; meta dev wordings ×1                                                                                                                   | `34ae037`       | 22      | 0      | —      |
+| `20261025T120558` | What the chat keeps; five meta cases, every wording ×2                                                                                                          | `3ef24c1`       | 24      | 0      | —      |
+| `20261025T120820` | Thinking on again; stopped after 3 answers                                                                                                                      | `473382f`       | 3       | 0      | —      |
+| `20261025T121840` | A softened help rule; every wording ×3. Replaced: it took "wat does aman do these days" for a typo                                                              | `473382f`       | 591     | 0      | —      |
+| `20261025T125946` | The help rule restored; now, typo and hello ×3                                                                                                                  | `c209050`       | 27      | 0      | —      |
+| `20261025T130133` | **`983f270` as shipped** (`eedb0e49abab`), every wording ×3                                                                                                     | `c209050`       | 591     | 0      | —      |
+| `20261026T081103` | Production prompt on nine cases, dev wordings ×3: arm A of the plain-words test                                                                                 | `983f270-dirty` | 54      | 0      | —      |
+| `20261026T081607` | Arm B: a plain-words rule                                                                                                                                       | `983f270-dirty` | 54      | 0      | —      |
+| `20261026T082110` | Arm C: the rule, a plain bio and links for "how does this chat work"                                                                                            | `983f270-dirty` | 54      | 0      | —      |
+| `20261026T084215` | **`7364006` as shipped** (`a230fd13c128`), every wording ×3; the box lost power at 535 answers and the run was resumed                                          | `7364006`       | 609     | 0      | —      |
 
-All 22 runs together: 4,260 answers, and $8.36 spent on judges.
+All 37 runs together: 6,963 answers, and $8.36 spent on judges.

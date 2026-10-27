@@ -1,0 +1,40 @@
+{
+  "run": "20261026T081103",
+  "started": "2026-10-26T08:11:12.146Z",
+  "sha": "983f270-dirty",
+  "targets": {
+    "desk": {
+      "model": "gemma4:26b-a4b-it-qat",
+      "maker": "google",
+      "prompt": {
+        "full": "eedb0e49abab",
+        "rules": "ce0b4b58e7b8",
+        "facts": "eeacfae5dac4"
+      },
+      "onDesk": true,
+      "settings": {
+        "think": null,
+        "extra": "{}"
+      }
+    }
+  },
+  "node": "v24.21.0",
+  "args": {
+    "sha": "983f270-dirty",
+    "run": "20261026T081103",
+    "target": "desk",
+    "cases": "who,built,now,side,atlan-work,stack,how,how-picked,hello",
+    "reps": "3",
+    "set": "dev",
+    "kinds": "",
+    "resume": "",
+    "ollama": "http://127.0.0.1:11434",
+    "extra": "{}",
+    "judge": false,
+    "judge-only": false,
+    "judge-reps": "1",
+    "budget-usd": "1",
+    "floor-usd": "5"
+  },
+  "ollama": "0.34.4"
+}

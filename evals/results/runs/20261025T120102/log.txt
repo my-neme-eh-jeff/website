@@ -1,0 +1,26 @@
+run 20261025T120102: 22 dev wordings × 1 for desk (gemma4:26b-a4b-it-qat)
+desk     what-are-you    v0 r1   0.7s ok
+desk     what-are-you    v1 r1   0.7s ok
+desk     are-you-aman    v0 r1   0.7s ok
+desk     are-you-aman    v1 r1   0.7s ok
+desk     can-do          v0 r1   0.7s ok
+desk     can-do          v1 r1   0.7s ok
+desk     why-chat        v0 r1   0.8s ok
+desk     who-built       v0 r1   0.7s ok
+desk     how             v0 r1   1.0s ok
+desk     how             v1 r1   1.0s ok
+desk     box             v0 r1   0.7s ok
+desk     box             v1 r1   0.7s ok
+desk     which-model     v0 r1   1.0s ok
+desk     which-model     v1 r1   0.7s ok
+desk     how-picked      v0 r1   0.9s ok
+desk     how-picked      v1 r1   0.7s ok
+desk     tested          v0 r1   0.7s ok
+desk     tested          v1 r1   0.8s ok
+desk     source          v0 r1   0.7s ok
+desk     keeps           v0 r1   0.7s ok
+desk     hello           v0 r1   0.7s ok
+desk     hello           v1 r1   0.7s ok
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+desk           22          22           22    0.7s /   1.0s        0      0
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261025T120102/answers.jsonl
