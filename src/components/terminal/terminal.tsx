@@ -13,7 +13,16 @@ import { haptic } from "./haptics";
 import { sound, isMuted, setMuted, type Tone } from "./sounds";
 import { caretLine, grow, setField } from "./caret";
 import { load as loadHistory, save as saveHistory } from "./history";
-import { run, completions, ASK, PICK, type Line } from "./commands";
+import {
+  run,
+  completions,
+  ASK,
+  PICK,
+  PING,
+  TRACE,
+  type Line,
+} from "./commands";
+import { abortProbe, endProbe, pingDesk, startProbe, traceDesk } from "./ping";
 import { ThemePick, PICKS, type PickState } from "./theme-pick";
 import { FACE_COLS, Face, Wire } from "./wire";
 import { abortChat, sendChat, type Outcome, type Turn } from "./chat";
@@ -414,6 +423,27 @@ function clearBusy() {
   shell?.removeAttribute("data-cold");
 }
 
+/** Standing until an answer is in, and again after a restart. */
+function deskUp() {
+  const shell = document.querySelector("[data-shell]");
+  return !(
+    shell?.hasAttribute("data-desk-broken") ||
+    shell?.hasAttribute("data-answered")
+  );
+}
+
+/**
+ * `k rollout restart desk`: drop what the first answer set, and the desk's
+ * room and light, which listen for `desk:restart`, put it back.
+ */
+function restartDesk() {
+  const shell = document.querySelector("[data-shell]");
+  if (!shell) return;
+  shell.removeAttribute("data-desk-broken");
+  shell.removeAttribute("data-answered");
+  shell.dispatchEvent(new Event("desk:restart"));
+}
+
 export const Terminal = component$(() => {
   const lines = useStore<{ items: Line[] }>({ items: [INTRO] });
   const partial = useSignal("");
@@ -612,6 +642,31 @@ export const Terminal = component$(() => {
     }
   });
 
+  /** `ping desk` and `traceroute desk`, printed as each hop answers. */
+  const probe = $(async (kind: typeof PING | typeof TRACE) => {
+    const epoch = convo.cleared;
+    const controller = startProbe();
+    convo.phase = "answering";
+    await feedback("enter");
+    const shell = document.querySelector("[data-shell]");
+    try {
+      await (kind === PING ? pingDesk : traceDesk)({
+        say: (more) => {
+          if (convo.cleared !== epoch) return;
+          lines.items = [...lines.items, ...more];
+          stickToBottom(renderGroups(lines.items).length);
+        },
+        pulse: (dir) =>
+          shell?.dispatchEvent(new CustomEvent("desk:pulse", { detail: dir })),
+        signal: controller.signal,
+      });
+    } finally {
+      endProbe(controller);
+      convo.phase = "idle";
+      clearBusy();
+    }
+  });
+
   const openPick = $(async () => {
     const t = window.siteTheme?.get();
     pick.saved = t?.name ?? DEFAULT_PALETTE;
@@ -668,6 +723,7 @@ export const Terminal = component$(() => {
 
   const clearScreen = $(async () => {
     abortChat();
+    abortProbe();
     convo.queued = "";
     convo.cleared++;
     lines.items = [];
@@ -689,7 +745,9 @@ export const Terminal = component$(() => {
         return;
       }
 
-      const result = run(raw, shellColumns(), window.siteTheme?.get());
+      const result = run(raw, shellColumns(), window.siteTheme?.get(), {
+        up: deskUp(),
+      });
       if (result === ASK) {
         handedOff = true;
         void converse(raw.trim());
@@ -697,6 +755,11 @@ export const Terminal = component$(() => {
       }
       if (result === PICK) {
         await openPick();
+        return;
+      }
+      if (result === PING || result === TRACE) {
+        handedOff = true;
+        void probe(result);
         return;
       }
       if (result === null) {
@@ -707,7 +770,9 @@ export const Terminal = component$(() => {
       lines.items = [...lines.items, ...result];
       const colours = result.find((l) => l.theme)?.theme;
       if (colours) window.siteTheme?.set(colours.name, colours.mode);
-      stickToBottom(renderGroups(lines.items).length);
+      // A restart scrolls up to the desk instead of down to its own line.
+      if (result.some((l) => l.desk === "restart")) restartDesk();
+      else stickToBottom(renderGroups(lines.items).length);
       await feedback(result.some((l) => l.kind === "err") ? "error" : "enter");
     } finally {
       if (!handedOff) clearBusy();
@@ -777,7 +842,7 @@ export const Terminal = component$(() => {
       }
       if (k === "c") {
         if (window.getSelection()?.toString()) return;
-        if (abortChat()) {
+        if (abortChat() || abortProbe()) {
           await feedback("error");
           return;
         }
@@ -1120,6 +1185,21 @@ export const Terminal = component$(() => {
       const ro = new ResizeObserver(fit);
       for (const box of [live, pending, mid]) ro.observe(box);
       log.addEventListener("scroll", fit, { passive: true });
+      // `k rollout restart desk`: the room comes back, and the log scrolls up
+      // to where the desk stands.
+      shell.addEventListener("desk:restart", () => {
+        clearTimeout(wait);
+        wait = 0;
+        gone = false;
+        room.hidden = false;
+        fit();
+        log.scrollTo({
+          top: 0,
+          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? "auto"
+            : "smooth",
+        });
+      });
       fit();
     }),
   );

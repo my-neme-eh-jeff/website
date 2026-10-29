@@ -34,6 +34,7 @@ interface Env {
   /** Workers VPC binding to the desk's log proxy, through a Cloudflare Tunnel. */
   DESK: { fetch(input: Request): Promise<Response> };
   CHAT_LIMIT: RateLimit;
+  PING_LIMIT: RateLimit;
   DESK_MODEL: string;
   /** A secret. Unset, a desk that can't answer is reported as offline. */
   POE_API_KEY?: string;
@@ -344,10 +345,44 @@ async function withTimeout(
   return null;
 }
 
+/**
+ * `GET /api/ping`, for the shell's `ping desk` and `traceroute desk`: one
+ * round trip through the tunnel to the desk's proxy. The proxy answers
+ * anything but `POST /api/chat` with a 404 at once and asks Ollama nothing,
+ * so that 404 is the desk saying it is up, and the tunnel's reach is
+ * unchanged.
+ */
+async function ping(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "GET") {
+    return json({ error: "method_not_allowed" }, 405, { allow: "GET" });
+  }
+  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  if (!(await env.PING_LIMIT.limit({ key: ip })).success) {
+    return json({ error: "rate_limited" }, 429);
+  }
+  const colo = (request as { cf?: { colo?: string } }).cf?.colo ?? "";
+  const started = Date.now();
+  const up = await env.DESK.fetch(
+    new Request("http://127.0.0.1:11434/ping", {
+      signal: AbortSignal.timeout(HEADERS_TIMEOUT_MS),
+    }),
+  ).then(
+    async (res) => {
+      await res.body?.cancel();
+      return res.status === 404;
+    },
+    () => false,
+  );
+  // Workers' clock only moves across I/O, which is all this times.
+  const deskMs = up ? Date.now() - started : null;
+  return json({ up, colo, deskMs }, 200);
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url);
     if (pathname === "/api/chat") return chat(request, env);
+    if (pathname === "/api/ping") return ping(request, env);
     return json({ error: "not_found" }, 404);
   },
 };

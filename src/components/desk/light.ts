@@ -151,6 +151,8 @@ function page() {
     clearTimeout(restTimer);
     shell.removeEventListener("pointermove", onMove);
     shell.removeEventListener("pointerleave", onLeave);
+    shell.removeEventListener("desk:restart", restart);
+    shell.removeEventListener("desk:pulse", pulse);
     field?.removeEventListener("input", follow);
     field?.removeEventListener("keyup", onKeyUp);
     field?.removeEventListener("keydown", onKeyDown);
@@ -304,15 +306,20 @@ function page() {
     });
   };
 
+  // Restarting a desk that still stands takes it down for a moment first.
+  let restarting = false;
   const state = () =>
-    post({ type: "state", clear: shell.hasAttribute("data-desk-broken") });
+    post({
+      type: "state",
+      clear: restarting || shell.hasAttribute("data-desk-broken"),
+    });
 
   /*
-   * A question goes up the cable. The answer comes down it a few words at a
-   * time, and each piece drops from its end into its place in the line; until
-   * it lands, a highlight paints its text transparent, so the terminal's DOM
-   * is never touched. Once the first answer is in and has landed, the desk
-   * breaks for the rest of the visit.
+   * A question's words drop into the cable's end and go up it. The answer
+   * comes down it a few words at a time, and each piece drops from its end
+   * into its place in the line; until it lands, a highlight paints its text
+   * transparent, so the terminal's DOM is never touched. Once the first answer
+   * is in and has landed, the desk breaks until `k rollout restart desk`.
    */
   const live = shell.querySelector("[aria-live]");
   const hl = CSS.highlights ? new Highlight() : null;
@@ -474,10 +481,77 @@ function page() {
     const gen = answers;
     setTimeout(() => fly(gen, from, len), DOWN_S * 1020);
   };
+  /** Each word lifts off the line just asked, and the cable's end takes it in. */
+  const IN_MS = 600;
+  const ask = () => {
+    const ins = live?.querySelectorAll('pre[data-kind="in"]');
+    const pre = ins?.[ins.length - 1];
+    const desk = visible();
+    const text = pre?.textContent ?? "";
+    // After the prompt's `$`.
+    const from = text.indexOf("$") + 1;
+    const words = [...text.slice(from).matchAll(/\S+/g)].slice(0, 24);
+    if (!pre || !desk || !from || !words.length) return post({ type: "send" });
+    const sr = shell.getBoundingClientRect();
+    const dr = desk.getBoundingClientRect();
+    const x1 =
+      dr.left - sr.left + ((CABLE_END[0] - VIEW.x) / VIEW.w) * dr.width;
+    const y1 = dr.top - sr.top + ((CABLE_END[1] - VIEW.y) / VIEW.h) * dr.height;
+    const cs = getComputedStyle(pre);
+    const t0 = performance.now();
+    const parts = words.flatMap((m, i) => {
+      const r = rangeAt(pre, from + m.index);
+      if (!r) return [];
+      const node = r.startContainer as Text;
+      r.setEnd(node, Math.min(r.startOffset + m[0].length, node.length));
+      const at = r.getBoundingClientRect();
+      const el = document.createElement("span");
+      el.className = "desk-fly";
+      el.setAttribute("aria-hidden", "true");
+      el.textContent = m[0];
+      // The colour it was typed in. Here, not in global.css, which is at its inlining limit.
+      el.style.color = cs.color;
+      el.style.fontFamily = cs.fontFamily;
+      el.style.fontSize = cs.fontSize;
+      el.style.fontWeight = cs.fontWeight;
+      el.style.lineHeight = cs.lineHeight;
+      const x0 = at.left - sr.left;
+      const y0 = at.top - sr.top;
+      el.style.transform = `translate(${x0}px, ${y0}px)`;
+      shell.append(el);
+      return [{ el, x0, y0, t0: t0 + i * 45 }];
+    });
+    if (!parts.length) return post({ type: "send" });
+    const frame = (now: number) => {
+      let left = 0;
+      for (const p of parts) {
+        const t = Math.min(1, Math.max(0, (now - p.t0) / IN_MS));
+        if (t >= 1 || stopped) {
+          p.el.remove();
+          continue;
+        }
+        left++;
+        const k = t * t * (3 - 2 * t);
+        const q = 1 - k;
+        const cx = p.x0 + (x1 - p.x0) * 0.25;
+        const cy = Math.min(p.y0, y1) - 36;
+        const x = q * q * p.x0 + 2 * q * k * cx + k * k * x1;
+        const y = q * q * p.y0 + 2 * q * k * cy + k * k * y1;
+        p.el.style.transform = `translate(${x}px, ${y}px) scale(${1 - 0.6 * k})`;
+        p.el.style.opacity = String(t < 0.8 ? 1 : (1 - t) / 0.2);
+      }
+      if (left) requestAnimationFrame(frame);
+      else if (!stopped) post({ type: "send" });
+    };
+    requestAnimationFrame(frame);
+  };
   const watchChat = () => {
     if (!live) return;
     const n = live.querySelectorAll('pre[data-kind="in"]').length;
-    if (n > asked && !broken) post({ type: "send" });
+    if (n > asked && !broken) {
+      if (carrying()) ask();
+      else post({ type: "send" });
+    }
     asked = n;
     const count = live.querySelectorAll('pre[data-kind="ai"]').length;
     if (count !== answers) {
@@ -495,6 +569,33 @@ function page() {
     hide();
     breakDesk();
   };
+
+  // `k rollout restart desk`: counted again from what is on screen, so the
+  // next answer comes down the cable and breaks the desk as the first did.
+  const restart = () => {
+    const standing = !broken;
+    broken = false;
+    asked = live?.querySelectorAll('pre[data-kind="in"]').length ?? 0;
+    answers = live?.querySelectorAll('pre[data-kind="ai"]').length ?? 0;
+    said = landed = lastAnswer()?.textContent?.length ?? 0;
+    hide();
+    restarting = standing;
+    state();
+    if (standing)
+      setTimeout(() => {
+        restarting = false;
+        state();
+      }, 520);
+  };
+  // `ping` and `traceroute`: up the cable per probe, back down per reply.
+  const pulse = (e: Event) => {
+    if (broken || stopped) return;
+    post({
+      type: (e as CustomEvent<string>).detail === "down" ? "token" : "send",
+    });
+  };
+  shell.addEventListener("desk:restart", restart);
+  shell.addEventListener("desk:pulse", pulse);
 
   let down = shell.hasAttribute("data-desk-down");
   if (down) post({ type: "online", on: false });

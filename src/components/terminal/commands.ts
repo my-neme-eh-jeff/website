@@ -15,6 +15,7 @@ import {
   skills,
 } from "~/content/profile";
 import { ORIGIN } from "~/content/seo";
+import { DESK_REVISIONS } from "~/content/desk-history";
 
 export type Line = {
   /**
@@ -29,6 +30,8 @@ export type Line = {
   live?: boolean;
   /** A colour change for the shell to apply; handlers only say what changes. */
   theme?: { name?: string; mode?: ModeChoice };
+  /** Likewise for the desk: put it back up. */
+  desk?: "restart";
   /** Of a hint's `commands`, those a click types in and runs. */
   cmds?: readonly string[];
 };
@@ -44,6 +47,13 @@ let current: { name: string; mode: ModeChoice } = {
   name: DEFAULT_PALETTE,
   mode: "auto",
 };
+
+/** Whether the desk is standing: it comes down once the first answer lands. */
+let deskUp = true;
+
+/** kubectl's AGE, in whole days. */
+const age = (iso: string) =>
+  `${Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 864e5))}d`;
 
 /**
  * Whether a column layout survives `cols`: it fits outright, or its last
@@ -245,6 +255,23 @@ const RESOURCES: Resource[] = [
         ],
       ),
   },
+  {
+    name: "deployments",
+    aliases: ["deployment", "deploy"],
+    list: () =>
+      table(
+        ["NAME", "READY", "UP-TO-DATE", "AVAILABLE", "AGE"],
+        [
+          [
+            "desk",
+            deskUp ? "1/1" : "0/1",
+            "1",
+            deskUp ? "1" : "0",
+            age(DESK_REVISIONS[0]!.date),
+          ],
+        ],
+      ),
+  },
 ];
 
 const findResource = (word: string) =>
@@ -347,6 +374,64 @@ function config(sub: string | undefined, rest: string[]): Line[] {
   ];
 }
 
+/** `desk`, `deploy/desk` and `deployment.apps/desk`, or the kind and the name as two words. */
+function rollout(sub: string | undefined, words: string[]): Line[] {
+  const verbs = ["restart", "status", "history"];
+  if (!sub || !verbs.includes(sub)) {
+    return [
+      err(
+        sub
+          ? `error: unknown command "${sub}" for "kubectl rollout"`
+          : "error: you must specify a rollout command",
+      ),
+      out(`Available: ${verbs.join(", ")}`),
+    ];
+  }
+  const args = words.filter((w) => !w.startsWith("-"));
+  const target = (
+    /^deploy(?:ments?)?(?:\.apps)?$/i.test(args[0] ?? "") ? args[1] : args[0]
+  )?.toLowerCase();
+  if (!target) {
+    return [
+      err("error: required resource not specified"),
+      {
+        kind: "hint",
+        text: `Try \`k rollout ${sub} desk\`.`,
+        cmds: [`k rollout ${sub} desk`],
+      },
+    ];
+  }
+  const name = target.replace(/^deploy(?:ments?)?(?:\.apps)?\//, "");
+  if (name !== "desk") {
+    return [
+      err(`Error from server (NotFound): deployments.apps "${name}" not found`),
+      out("The one deployment here is the desk."),
+    ];
+  }
+  if (sub === "restart") {
+    return [
+      { kind: "out", text: "deployment.apps/desk restarted", desk: "restart" },
+    ];
+  }
+  if (sub === "status") {
+    return deskUp
+      ? [out('deployment "desk" successfully rolled out')]
+      : [
+          out(
+            'Waiting for deployment "desk" rollout to finish: 0 of 1 updated replicas are available...',
+          ),
+          err('error: deployment "desk" exceeded its progress deadline'),
+        ];
+  }
+  return [
+    out("deployment.apps/desk"),
+    ...table(
+      ["REVISION", "DATE", "CHANGE-CAUSE"],
+      DESK_REVISIONS.map((r, i) => [String(i + 1), r.date, r.cause]),
+    ),
+  ];
+}
+
 type Command = {
   name: string;
   usage: string;
@@ -378,7 +463,7 @@ function kubectl(args: string[]): Line[] {
     return [
       out("Usage: k <verb> <resource> [name]"),
       out(""),
-      out(`Verbs:     get, describe, config`),
+      out(`Verbs:     get, describe, config, rollout`),
       out(`Resources: ${RESOURCES.map((r) => r.name).join(", ")}`),
       out(""),
       hint("Try: k get projects"),
@@ -386,6 +471,7 @@ function kubectl(args: string[]): Line[] {
   }
 
   if (verb === "config") return config(resourceWord, rest);
+  if (verb === "rollout") return rollout(resourceWord, rest);
 
   if (verb === "get" || verb === "describe") {
     if (!resourceWord) {
@@ -421,7 +507,7 @@ function kubectl(args: string[]): Line[] {
 
   return [
     err(`unknown verb "${verb}"`),
-    out("Supported: get, describe, config"),
+    out("Supported: get, describe, config, rollout"),
   ];
 }
 
@@ -447,6 +533,9 @@ function registry(): Command[] {
           ),
           out(""),
           out(`Resources: ${RESOURCES.map((r) => r.name).join(", ")}`),
+          out(
+            "The desk is a deployment: k rollout restart|status|history desk",
+          ),
           out(""),
           out("Aliases (the ones already in your shell profile):"),
           ...Object.entries(ALIASES).map(([a, full]) =>
@@ -496,6 +585,19 @@ function registry(): Command[] {
       summary: "Answered by a model running on Aman's desk.",
       run: () => ABOUT_CHAT,
     },
+    // Only so `help` lists them: `run` hands both to the shell, which times them.
+    {
+      name: "ping",
+      usage: "ping desk",
+      summary: "Reach the PC on Aman's desk, through Cloudflare.",
+      run: () => [],
+    },
+    {
+      name: "traceroute",
+      usage: "traceroute desk",
+      summary: "The way a question goes to that PC, timed.",
+      run: () => [],
+    },
     {
       name: "clear",
       usage: "clear",
@@ -522,6 +624,35 @@ export const ASK = "ask";
 
 /** Returned by `run` for a bare `theme`: the shell opens its colour picker. */
 export const PICK = "pick";
+
+/** Returned by `run` for `ping desk` and `traceroute desk`: the shell times them. */
+export const PING = "ping";
+export const TRACE = "traceroute";
+
+/** Only the desk answers; a sentence that starts with "ping" is a question. */
+function probe(
+  name: "ping" | "traceroute",
+  rest: string[],
+  trimmed: string,
+): Line[] | typeof PING | typeof TRACE | typeof ASK {
+  const words = rest.filter((w) => !w.startsWith("-"));
+  if (words.length === 1 && words[0]!.toLowerCase() === "desk") {
+    return name === "ping" ? PING : TRACE;
+  }
+  if (trimmed.endsWith("?") || words.length > 1) return ASK;
+  return [
+    err(
+      words.length
+        ? `${name}: ${words[0]}: only the desk answers here`
+        : `usage: ${name} desk`,
+    ),
+    {
+      kind: "hint",
+      text: `Try \`${name} desk\`: it reaches the PC on Aman's desk.`,
+      cmds: [`${name} desk`],
+    },
+  ];
+}
 
 /** Typed as a command, these get "command not found" rather than the model. */
 const SHELL_VERBS = new Set([
@@ -553,16 +684,19 @@ const SHELL_VERBS = new Set([
 const ARG = /^[-/.~]|\/|\w\.\w/;
 
 /**
- * Returns `null` for `clear`, `ASK` for a question and `PICK` for a bare
- * `theme`, all of which the shell handles. `width` is in characters.
+ * Returns `null` for `clear`, `ASK` for a question, `PICK` for a bare `theme`
+ * and `PING` or `TRACE` to reach the desk, all of which the shell handles.
+ * `width` is in characters.
  */
 export function run(
   input: string,
   width = 80,
   colours?: { name: string; mode: ModeChoice },
-): Line[] | null | typeof ASK | typeof PICK {
+  desk?: { up: boolean },
+): Line[] | null | typeof ASK | typeof PICK | typeof PING | typeof TRACE {
   cols = width;
   if (colours) current = colours;
+  if (desk) deskUp = desk.up;
   const trimmed = input.trim();
   if (!trimmed) return [];
 
@@ -586,6 +720,9 @@ export function run(
     return [err("Error: pull model manifest: file does not exist")];
   }
   if (KUBECTL.has(name)) return kubectl(rest);
+  if (name === "ping" || name === "traceroute") {
+    return probe(name, rest, trimmed);
+  }
 
   const alias = ALIASES[name];
   if (alias) return kubectl([...alias, ...rest]);
@@ -632,5 +769,8 @@ export function completions(): string[] {
     "k config get-contexts",
     "k config current-context",
     ...PALETTES.map((p) => `k config use-context ${p.id}`),
+    ...["restart", "status", "history"].map((v) => `k rollout ${v} desk`),
+    "ping desk",
+    "traceroute desk",
   ];
 }
