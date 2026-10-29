@@ -13,9 +13,16 @@ export type Probe = {
   signal: AbortSignal;
 };
 
-type Pong =
-  | { ok: true; up: boolean; colo: string; deskMs: number | null; ms: number }
-  | { ok: false; code: "rate_limited" | "offline" | "aborted" };
+/** One probe: `deskMs` is timed from the edge, `ms` from this page. */
+type Reply = {
+  seq: number;
+  up: boolean;
+  colo: string;
+  deskMs: number | null;
+  ms: number;
+};
+
+type Failure = "rate_limited" | "offline" | "aborted";
 
 // Module scope, as chat.ts's: Ctrl+C and `clear` stop a probe.
 let inflight: AbortController | null = null;
@@ -74,40 +81,51 @@ const edge = (colo: string) =>
 
 const ms = (n: number) => `${Math.max(1, Math.round(n))} ms`;
 
-const pause = (n: number, signal: AbortSignal) =>
-  new Promise<void>((done) => {
-    const t = setTimeout(done, n);
-    signal.addEventListener("abort", () => {
-      clearTimeout(t);
-      done();
-    });
-  });
-
-async function pong(signal: AbortSignal): Promise<Pong> {
+/** All `count` probes ride one request; see the Worker's `ping`. */
+async function probes(
+  count: number,
+  signal: AbortSignal,
+  each: (r: Reply) => void,
+): Promise<Failure | null> {
   const t0 = performance.now();
   try {
-    const res = await fetch("/api/ping", { cache: "no-store", signal });
-    const took = performance.now() - t0;
-    if (res.status === 429) return { ok: false, code: "rate_limited" };
-    if (!res.ok) return { ok: false, code: "offline" };
-    const body = (await res.json()) as {
-      up?: unknown;
-      colo?: unknown;
-      deskMs?: unknown;
-    };
-    return {
-      ok: true,
-      up: body.up === true,
-      colo: typeof body.colo === "string" ? body.colo : "",
-      deskMs: typeof body.deskMs === "number" ? body.deskMs : null,
-      ms: took,
-    };
+    const res = await fetch(`/api/ping?count=${count}`, {
+      cache: "no-store",
+      signal,
+    });
+    if (res.status === 429) return "rate_limited";
+    if (!res.ok || !res.body) return "offline";
+    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buffer = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) return null;
+      buffer += value;
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const text of lines) {
+        if (!text.trim()) continue;
+        const b = JSON.parse(text) as {
+          seq?: unknown;
+          up?: unknown;
+          colo?: unknown;
+          deskMs?: unknown;
+        };
+        each({
+          seq: typeof b.seq === "number" ? b.seq : 0,
+          up: b.up === true,
+          colo: typeof b.colo === "string" ? b.colo : "",
+          deskMs: typeof b.deskMs === "number" ? b.deskMs : null,
+          ms: performance.now() - t0,
+        });
+      }
+    }
   } catch {
-    return { ok: false, code: signal.aborted ? "aborted" : "offline" };
+    return signal.aborted ? "aborted" : "offline";
   }
 }
 
-function failed(code: "rate_limited" | "offline" | "aborted"): Line[] {
+function failed(code: Failure): Line[] {
   if (code === "aborted") return [];
   return [
     err(
@@ -119,30 +137,37 @@ function failed(code: "rate_limited" | "offline" | "aborted"): Line[] {
 }
 
 export async function pingDesk({ say, pulse, signal }: Probe, count = 3) {
-  say([out(`PING desk (${WHERE}) through Cloudflare`)]);
+  say([out(`PING desk (${WHERE}), timed from Cloudflare's edge`)]);
   const times: number[] = [];
   let sent = 0;
-  for (let seq = 1; seq <= count && !signal.aborted; seq++) {
-    const t0 = performance.now();
-    sent++;
-    pulse("up");
-    const r = await pong(signal);
-    if (!r.ok) {
-      say(failed(r.code));
-      return;
-    }
-    if (r.up) {
+  pulse("up");
+  const failure = await probes(count, signal, (r) => {
+    sent = r.seq;
+    if (r.up && r.deskMs !== null) {
       pulse("down");
-      times.push(r.ms);
+      times.push(r.deskMs);
       say([
-        out(`reply from desk via ${edge(r.colo)}: seq=${seq} time=${ms(r.ms)}`),
+        out(
+          `reply from desk via ${edge(r.colo)}: seq=${r.seq} time=${ms(r.deskMs)}`,
+        ),
       ]);
     } else {
-      say([out(`seq=${seq}: no reply. The PC is asleep or switched off.`)]);
+      say([out(`seq=${r.seq}: no reply. The PC is asleep or switched off.`)]);
     }
-    if (seq < count) await pause(1000 - (performance.now() - t0), signal);
+    if (r.seq < count) {
+      setTimeout(
+        () => {
+          if (!signal.aborted) pulse("up");
+        },
+        Math.max(0, 1000 - (r.deskMs ?? 1000)),
+      );
+    }
+  });
+  if (failure) {
+    say(failed(failure));
+    return;
   }
-  if (signal.aborted) return;
+  if (signal.aborted || !sent) return;
   const lost = Math.round((100 * (sent - times.length)) / sent);
   const range = times.length
     ? ` · min/avg/max ${Math.round(Math.min(...times))}/${Math.round(
@@ -177,9 +202,11 @@ export async function traceDesk({ say, pulse, signal }: Probe) {
   }
 
   pulse("up");
-  const r = await pong(signal);
-  if (!r.ok) {
-    say(failed(r.code));
+  const got: Reply[] = [];
+  const failure = await probes(1, signal, (r) => got.push(r));
+  const r = got[0];
+  if (failure || !r) {
+    say(failed(failure ?? "offline"));
     return;
   }
   colo ||= r.colo;

@@ -346,11 +346,16 @@ async function withTimeout(
 }
 
 /**
- * `GET /api/ping`, for the shell's `ping desk` and `traceroute desk`: one
- * round trip through the tunnel to the desk's proxy. The proxy answers
- * anything but `POST /api/chat` with a 404 at once and asks Ollama nothing,
- * so that 404 is the desk saying it is up, and the tunnel's reach is
- * unchanged.
+ * `GET /api/ping?count=n`, n from 1 to 3, for the shell's `ping desk` and
+ * `traceroute desk`: n round trips through the tunnel to the desk's proxy, a
+ * second apart, one NDJSON line each. The proxy answers anything but
+ * `POST /api/chat` with a 404 at once and asks Ollama nothing, so that 404 is
+ * the desk saying it is up, and the tunnel's reach is unchanged.
+ *
+ * One request for all n: Cloudflare's rate limiting rule on /api/* let 3
+ * requests a 10 s window through per IP and answered the 4th, a chat
+ * included, with `429 error code: 1015` (measured 2026-10-29). Re-check: four
+ * quick `curl https://amannambisan.com/api/ping`.
  */
 async function ping(request: Request, env: Env): Promise<Response> {
   if (request.method !== "GET") {
@@ -360,22 +365,46 @@ async function ping(request: Request, env: Env): Promise<Response> {
   if (!(await env.PING_LIMIT.limit({ key: ip })).success) {
     return json({ error: "rate_limited" }, 429);
   }
-  const colo = (request as { cf?: { colo?: string } }).cf?.colo ?? "";
-  const started = Date.now();
-  const up = await env.DESK.fetch(
-    new Request("http://127.0.0.1:11434/ping", {
-      signal: AbortSignal.timeout(HEADERS_TIMEOUT_MS),
-    }),
-  ).then(
-    async (res) => {
-      await res.body?.cancel();
-      return res.status === 404;
-    },
-    () => false,
+  const asked = Number.parseInt(
+    new URL(request.url).searchParams.get("count") ?? "",
+    10,
   );
-  // Workers' clock only moves across I/O, which is all this times.
-  const deskMs = up ? Date.now() - started : null;
-  return json({ up, colo, deskMs }, 200);
+  const count = Math.min(3, Math.max(1, asked || 1));
+  const colo = (request as { cf?: { colo?: string } }).cf?.colo ?? "";
+  let gone = false;
+
+  return stream(
+    new ReadableStream({
+      async start(c) {
+        for (let seq = 1; seq <= count && !gone; seq++) {
+          const started = Date.now();
+          const up = await env.DESK.fetch(
+            new Request("http://127.0.0.1:11434/ping", {
+              signal: AbortSignal.timeout(HEADERS_TIMEOUT_MS),
+            }),
+          ).then(
+            async (res) => {
+              await res.body?.cancel();
+              return res.status === 404;
+            },
+            () => false,
+          );
+          // Workers' clock only moves across I/O, which is all this times.
+          const deskMs = up ? Date.now() - started : null;
+          if (gone) return;
+          c.enqueue(line({ seq, up, colo, deskMs }));
+          const wait = 1000 - (Date.now() - started);
+          if (seq < count && wait > 0) {
+            await new Promise((done) => setTimeout(done, wait));
+          }
+        }
+        if (!gone) c.close();
+      },
+      cancel() {
+        gone = true;
+      },
+    }),
+  );
 }
 
 export default {
