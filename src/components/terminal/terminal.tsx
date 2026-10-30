@@ -330,7 +330,7 @@ function prose(text: string, allow?: ReadonlySet<string>) {
  * whole shell per token.
  */
 const Streaming = component$<{ text: Signal<string> }>(({ text }) => (
-  <>{prose(text.value)}</>
+  <>{prose(text.value, KNOWN_HREFS)}</>
 ));
 
 /**

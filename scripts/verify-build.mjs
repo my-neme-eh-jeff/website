@@ -1089,6 +1089,19 @@ check(
   },
 );
 
+check("model answers link only KNOWN_HREFS, while streaming too", () => {
+  const src = read("src", "components", "terminal", "terminal.tsx");
+  const calls = [...src.matchAll(/(?<!function )\bprose\(([^)]*)\)/g)];
+  assert(calls.length > 0, "terminal.tsx: no prose() calls found");
+  const open = calls.filter((c) => !/,\s*KNOWN_HREFS\s*$/.test(c[1]));
+  assert(
+    open.length === 0,
+    `terminal.tsx: prose(${open[0]?.[1]}) renders model text without ` +
+      "KNOWN_HREFS, so any URL a visitor talks the model into is a live link",
+  );
+  return `${calls.length} prose() calls`;
+});
+
 check("q-manifest.json stays out of the upload, and nothing fetches it", () => {
   const ignore = existsSync(p("dist", ".assetsignore"))
     ? read("dist", ".assetsignore")
