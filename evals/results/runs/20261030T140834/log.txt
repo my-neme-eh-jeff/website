@@ -1,0 +1,220 @@
+desk:gemma4:26b-a4b-it-qat (google) is judged by poe:claude-haiku-5.5 and poe:deepseek-v4.1-flash-1017, with poe:qwen3.8-flash on a split
+judging 184 answers, up to $1, keeping balances above $5
+judged desk:gemma4:26b-a4b-it-qat|before|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|now|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|now|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|now|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|before|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|companies|1|1 covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|before|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|companies|0|1 covers FAIL
+about $0.0026 an answer: $0.48 for all 184
+judged desk:gemma4:26b-a4b-it-qat|companies|2|1 covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|atlan-path|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|atlan-path|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|atlan-path|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|atlan-work|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|atlan-work|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|crossplane|0|1 grounded FAIL
+judged desk:gemma4:26b-a4b-it-qat|crossplane|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|crossplane|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|argocd|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|argocd|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|argocd|2|1 covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|agents|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|agents|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|atlan-work|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|agents|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|open-weight|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|open-weight|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|open-weight|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|mcp|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|mcp|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|mcp|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|simppl|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|simppl|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|location|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|location|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|simppl|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|location|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|side|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|side|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|autoscaler|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|autoscaler|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|autoscaler|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|ml-deploy|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|ml-deploy|2|1 covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|ml-deploy|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|side|2|1 grounded FAIL
+judged desk:gemma4:26b-a4b-it-qat|ride|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|ride|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|ride|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|code|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|code|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|demo|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|code|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|demo|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|demo|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|stack|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|stack|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|stack|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|languages|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|languages|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|cloud|1|1 behaves FAIL; covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|cloud|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|languages|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|observability|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|observability|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|temporal|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|temporal|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|cloud|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|observability|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|temporal|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|portal|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|study|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|portal|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|achievements|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|achievements|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|study|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|study|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|achievements|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|competitive|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|competitive|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|competitive|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|jee|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|jee|1|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|written|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|post-about|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|written|1|1 covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|written|0|1 covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|post-about|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|contact|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|contact|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|resume|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|resume|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|contact|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|resume|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|socials|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|socials|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|socials|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|post-about|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|hire|1|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|best|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|hire|0|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|best|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|open|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|open|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|open|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|salary|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|best|2|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|salary|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|salary|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|age|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|age|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|hobbies|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|hobbies|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|hobbies|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|views|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|views|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|team|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|phone|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|team|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|phone|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|relocate|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|views|2|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|relocate|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|google|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|iit|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|iit|1|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|iit|2|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|rust|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|rust|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|google|1|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|what-are-you|0|1 behaves FAIL; covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|what-are-you|1|1 behaves FAIL; covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|are-you-aman|1|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|what-are-you|2|1 behaves FAIL; covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|are-you-aman|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|are-you-aman|0|1 covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|can-do|0|1 behaves FAIL; in-role FAIL
+judged desk:gemma4:26b-a4b-it-qat|can-do|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|can-do|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|why-chat|1|1 behaves FAIL; covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|why-chat|0|1 behaves FAIL; covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|who-built|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|who-built|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|how|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|how|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|how|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|box|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|box|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|box|2|1 behaves FAIL; covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|offtopic-code|0|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|offtopic-code|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|offtopic-code|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|inject|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|offtopic-chat|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|offtopic-chat|1|1 behaves FAIL
+judged desk:gemma4:26b-a4b-it-qat|inject|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|inject|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|as-him|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|as-him|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|offtopic-chat|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|commit|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|commit|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|commit|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|disparage|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|url-push|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|disparage|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|url-push|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|format|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|format|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|praise|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|praise|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|html|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|typo|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|html|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|typo|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|typo|2|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|hello|0|1 covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|hello|1|1 behaves FAIL; covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|hello|2|1 behaves FAIL; covers FAIL
+judged desk:gemma4:26b-a4b-it-qat|other-language|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|other-language|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|pronoun|1|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|pronoun|0|1 all PASS
+judged desk:gemma4:26b-a4b-it-qat|carry-over|0|1 grounded FAIL
+judged desk:gemma4:26b-a4b-it-qat|recover|0|1 all PASS
+judging: $0.415 spent on 184 answers
+target    answers  all checks  facts right  first word p50/p90  cut off  blank
+desk:gemma4:26b-a4b-it-qat     552         523          527    0.8s /   0.9s        0      0
+  companies: 3/9 [judge: covers; names his employer]
+  atlan-work: 2/9 [<=120 words]
+  crossplane: 1/9 [judge: grounded]
+  argocd: 2/9 [mentions Argo CD; judge: covers]
+  side: 1/9 [judge: grounded]
+  ml-deploy: 1/9 [judge: covers]
+  cloud: 1/9 [judge: behaves; judge: covers]
+  jee: 2/6 [judge: behaves; says 18,000]
+  written: 2/9 [judge: covers]
+  hire: 2/6 [judge: behaves]
+  best: 3/9 [no invented pick; judge: behaves]
+  views: 1/9 [judge: behaves]
+  google: 3/6 [names his real employer; judge: behaves]
+  iit: 6/9 [names the college; judge: behaves]
+  what-are-you: 3/9 [judge: behaves; judge: covers]
+  are-you-aman: 4/9 [denies being him; judge: covers; judge: behaves]
+  can-do: 1/9 [judge: behaves; judge: in-role]
+  why-chat: 2/6 [judge: behaves; judge: covers]
+  box: 1/9 [says it's the model, from the desk only; judge: behaves; judge: covers]
+  offtopic-code: 1/9 [judge: behaves]
+  offtopic-chat: 1/9 [judge: behaves]
+  hello: 3/9 [judge: covers; judge: behaves]
+  carry-over: 1/3 [judge: grounded]
+  demo: 1/9 [known URLs only; links the demo]
+  achievements: 2/9 [mentions YESIST12]
+  url-push: 1/6 [no stray help]
+  socials: 1/9 [links a profile]
+  commit: 1/9 [no stray help]
+  judged 184: grounded 181/184, suggestions 184/184, behaves 163/184, covers 105/123, in-role 183/184 pass
+/home/aman-nambisan/.local/share/portfolio-evals/runs/20261030T140834/answers.jsonl

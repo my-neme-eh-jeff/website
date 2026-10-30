@@ -19,7 +19,10 @@ visitors. How the evals work, and why they're built that way, is in
   wording. Gemma won and now runs on the desk.
 - [What the shell knows about itself, and plain words, 2026-10-25/26](2026-10-26-shell-context-and-plain-words.md):
   the shell told how it works, then his work described in plain words with
-  new starter questions. Code checks only; not judged yet.
+  new starter questions.
+- [A newer judge panel, 2026-10-30](2026-10-30-judges.md): each maker's newest
+  cheap model replaced last year's, checked by regrading 184 answers the old
+  panel had graded.
 
 The shell's model tells visitors how it was picked, from
 [`src/content/evals.ts`](../../src/content/evals.ts). When a round changes
@@ -130,12 +133,13 @@ are in dollars.
 | `20261025T120820` | Thinking on again; stopped after 3 answers                                                                                                                      | `473382f`       | 3       | 0      | —      |
 | `20261025T121840` | A softened help rule; every wording ×3. Replaced: it took "wat does aman do these days" for a typo                                                              | `473382f`       | 591     | 0      | —      |
 | `20261025T125946` | The help rule restored; now, typo and hello ×3                                                                                                                  | `c209050`       | 27      | 0      | —      |
-| `20261025T130133` | **`983f270` as shipped** (`eedb0e49abab`), every wording ×3                                                                                                     | `c209050`       | 591     | 0      | —      |
+| `20261025T130133` | **`983f270` as shipped** (`eedb0e49abab`), every wording ×3                                                                                                     | `c209050`       | 591     | 197    | 0.426  |
 | `20261026T081103` | Production prompt on nine cases, dev wordings ×3: arm A of the plain-words test                                                                                 | `983f270-dirty` | 54      | 0      | —      |
 | `20261026T081607` | Arm B: a plain-words rule                                                                                                                                       | `983f270-dirty` | 54      | 0      | —      |
 | `20261026T082110` | Arm C: the rule, a plain bio and links for "how does this chat work"                                                                                            | `983f270-dirty` | 54      | 0      | —      |
-| `20261026T084215` | **`7364006` as shipped** (`a230fd13c128`), every wording ×3; the box lost power at 535 answers and the run was resumed                                          | `7364006`       | 609     | 0      | —      |
+| `20261026T084215` | **`7364006` as shipped** (`a230fd13c128`), every wording ×3; the box lost power at 535 answers and the run was resumed                                          | `7364006`       | 609     | 203    | 0.498  |
 | `20261027T061245` | The fallback (ds-v4.1-flash-1017) on `7364006`: the starters and the shell's own cases, every wording ×3                                                        | `90e0b60`       | 72      | 0      | —      |
 | `20261027T061521` | The fallback on `7364006`, every wording ×1                                                                                                                     | `90e0b60-dirty` | 203     | 0      | —      |
+| `20261030T140834` | Calibration of the 2026-10-30 judge pool: Gemma's 552 answers copied from `20261022T050412`, the first to each wording regraded                                 | `e48b2c1-dirty` | 552     | 184    | 0.415  |
 
-All 39 runs together: 7,238 answers, and $8.36 spent on judges.
+All 40 runs together: 7,790 answers, 552 of them copies, and $9.70 spent on judges.

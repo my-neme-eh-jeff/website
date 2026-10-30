@@ -35,14 +35,15 @@ export const EXTRA = {
 /**
  * The judge pool, in order of preference, each from a different maker. A
  * target's panel is the first two whose maker isn't the target's; the next
- * one breaks a tie. `extra` is merged into the request body as is.
+ * one breaks a tie. `extra` is merged into the request body as is. Each
+ * maker's newest cheap model on Poe as of 2026-10-30.
  */
 export const JUDGES = [
   { provider: "poe", model: "claude-haiku-5.5" },
-  { provider: "poe", model: "deepseek-v3.2" },
-  { provider: "poe", model: "gpt-5-mini" },
-  { provider: "poe", model: "gemini-3-flash" },
-  { provider: "poe", model: "kimi-k2.6" },
+  { provider: "poe", model: "deepseek-v4.1-flash-1017" },
+  { provider: "poe", model: "qwen3.8-flash" },
+  { provider: "poe", model: "gpt-5.4-mini" },
+  { provider: "poe", model: "gemini-3.8-flash" },
 ];
 
 /**

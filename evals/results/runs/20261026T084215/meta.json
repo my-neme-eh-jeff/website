@@ -20,25 +20,26 @@
   },
   "node": "v24.21.0",
   "args": {
-    "sha": "7364006",
+    "sha": "7364006-dirty",
     "resume": "20261026T084215",
-    "set": "all",
-    "reps": "3",
+    "judge-only": true,
     "target": "desk",
+    "set": "all",
+    "judge-reps": "1",
+    "budget-usd": "1",
+    "reps": "3",
     "cases": "",
     "kinds": "",
     "run": "",
     "ollama": "http://127.0.0.1:11434",
     "extra": "{}",
     "judge": false,
-    "judge-only": false,
-    "judge-reps": "1",
-    "budget-usd": "1",
     "floor-usd": "5"
   },
   "ollama": "0.34.4",
   "resumed": [
     "2026-10-27T05:21:10.878Z",
-    "2026-10-27T05:32:32.183Z"
+    "2026-10-27T05:32:32.183Z",
+    "2026-10-30T14:39:46.065Z"
   ]
 }

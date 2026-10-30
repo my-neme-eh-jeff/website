@@ -16,10 +16,11 @@ same 591, and the new starter questions passed all 18 of theirs. It also
 traded some tool names for plain words, which cost a few technical answers;
 those are listed below.
 
-**Neither change has been judged.** These numbers are code checks only:
-layout, known links, and each case's own checks. The judges cost Poe points,
-which the site's fallback also spends, and the balance was $5.70 against a $5
-floor when this was written. The fallback, DeepSeek V4.1 Flash on Poe, was
+These numbers are code checks: layout, known links, and each case's own
+checks. On 2026-10-30 the judges graded the first answer to every wording
+of both shipped prompts, with the newer panel described in
+[2026-10-30-judges.md](2026-10-30-judges.md). The second change held level
+there too; see "Judged" below. The fallback, DeepSeek V4.1 Flash on Poe, was
 run on the second prompt on 2026-10-27; see the end.
 
 ## 983f270: what the shell knows about itself
@@ -210,10 +211,47 @@ answers offered 126 different sets. The desk's 609 offered 37, and 479 of them
 were the same three: what he is working on now, his side projects and where
 he worked before.
 
+## Judged
+
+On 2026-10-30 the newer panel (claude-haiku-5.5 and deepseek-v4.1-flash-1017,
+with qwen3.8-flash on a split) graded the first answer to each wording of
+`20261025T130133` and `20261026T084215`. It cost $0.43 and $0.50.
+
+On the 197 wordings both prompts were asked:
+
+| Kind          | Accurate: `983f270` | `7364006`       | All right: `983f270` | `7364006` |
+| ------------- | ------------------- | --------------- | -------------------- | --------- |
+| answerable    | 85/99               | 83/99           | 82/99                | 81/99     |
+| opinion       | 4/5                 | 4/5             | 4/5                  | 4/5       |
+| unanswerable  | 20/20               | 20/20           | 20/20                | 20/20     |
+| false-premise | 7/7                 | 6/7             | 7/7                  | 6/7       |
+| meta          | 32/35               | 31/35           | 32/35                | 31/35     |
+| offtopic      | 6/6                 | 6/6             | 6/6                  | 6/6       |
+| attack        | 18/18               | 18/18           | 18/18                | 18/18     |
+| command       | 3/3                 | 3/3             | 3/3                  | 3/3       |
+| multi-turn    | 4/4                 | 4/4             | 4/4                  | 4/4       |
+| **all**       | 179/197 (90.9%)     | 175/197 (88.8%) | 176/197              | 173/197   |
+
+Eighteen wordings changed verdict: 7 better and 11 worse. That is within
+what one answer per wording varies by, so the plain-words prompt neither
+helped nor hurt measurably. The worse ones include the Microsoft false
+premise, "Why doesn't his autoscaler scale on CPU?" and "Has he won any
+hackathons?", which the code checks also caught.
+
+The new starters were accurate on 3 of their 6 wordings:
+
+- **`who`, 2 of 3.** One "Who is Aman?" answer spelled his college
+  "Sanghveri" and called his skill groups his "technical interests".
+- **`built`, 1 of 3.** "What has he built?" was right. "what stuff has he
+  made" and the holdout "Show me something he built" listed his side projects
+  and the support chatbot, and left out the migration and cloud-cost agents.
+  The case wants two of three points, and both judges failed them for it.
+
 ## Not done yet
 
-- **Judging** both shipped prompts, with `--judge-only` on `20261025T130133`
-  and `20261026T084215`. The fallback runs aren't judged either.
+- **The `built` answers.** They lean on the side projects. This is untried:
+  the bio could lead with the agents, or the case could accept either half.
+- **The fallback runs** aren't judged.
 - **The `argocd` loss.** Dropping "and name only the tools the question needs"
   from the rule is the likely fix, but it is untried.
 - **The suggested questions.** After every answer they are still the first

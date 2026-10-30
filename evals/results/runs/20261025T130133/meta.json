@@ -4,20 +4,20 @@
   "sha": "c209050",
   "node": "v24.21.0",
   "args": {
-    "sha": "c209050",
-    "run": "20261025T130133",
+    "sha": "983f270-dirty",
+    "resume": "20261025T130133",
+    "judge-only": true,
     "target": "desk",
     "set": "all",
+    "judge-reps": "1",
+    "budget-usd": "1",
     "reps": "3",
     "cases": "",
     "kinds": "",
-    "resume": "",
+    "run": "",
     "ollama": "http://127.0.0.1:11434",
     "extra": "{}",
     "judge": false,
-    "judge-only": false,
-    "judge-reps": "1",
-    "budget-usd": "1",
     "floor-usd": "5"
   },
   "targets": {
@@ -29,8 +29,15 @@
         "rules": "ce0b4b58e7b8",
         "facts": "eeacfae5dac4"
       },
-      "onDesk": true
+      "onDesk": true,
+      "settings": {
+        "think": null,
+        "extra": "{}"
+      }
     }
   },
-  "ollama": "0.34.4"
+  "ollama": "0.34.4",
+  "resumed": [
+    "2026-10-30T14:24:31.167Z"
+  ]
 }

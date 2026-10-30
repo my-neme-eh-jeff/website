@@ -5,7 +5,8 @@ const prices = new Map();
 
 /**
  * USD per token from the provider's /models list, which Poe and OpenRouter
- * give as `pricing.prompt` and `pricing.completion`. Null when it doesn't.
+ * give as `pricing.prompt` and `pricing.completion`, and cached input as
+ * `pricing.input_cache_read`. Null when it doesn't.
  */
 async function priceOf(provider, model) {
   if (!prices.has(provider)) {
@@ -22,6 +23,10 @@ async function priceOf(provider, model) {
                   ? {
                       in: Number(m.pricing.prompt),
                       out: Number(m.pricing.completion),
+                      cached:
+                        m.pricing.input_cache_read != null
+                          ? Number(m.pricing.input_cache_read)
+                          : null,
                     }
                   : null,
               ]),
@@ -85,6 +90,9 @@ export async function chat(
     const usage = {
       in: body.usage?.prompt_tokens ?? null,
       out: body.usage?.completion_tokens ?? null,
+      // Poe caches a repeated prompt prefix by itself for some models
+      // (deepseek-v4.1-flash-1017, qwen3.8-flash, 2026-10-30).
+      cached: body.usage?.prompt_tokens_details?.cached_tokens ?? 0,
     };
     const price = await priceOf(provider, model);
     return {
@@ -92,7 +100,9 @@ export async function chat(
       usage,
       usd:
         price && usage.in != null && usage.out != null
-          ? usage.in * price.in + usage.out * price.out
+          ? (usage.in - usage.cached) * price.in +
+            usage.cached * (price.cached ?? price.in) +
+            usage.out * price.out
           : null,
       ms: Math.round(performance.now() - t0),
     };

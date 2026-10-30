@@ -138,9 +138,12 @@ holdout:
 loop, at most 120 words, plain text, known URLs only, 3 follow-ups and no stray
 "help", then the question's own `must`.
 
-**Judges** (`judges.mjs`) are called through Poe. On 2026-10-21 the pool in
-`models.mjs` was claude-haiku-5.5, deepseek-v3.2, gpt-5-mini, gemini-3-flash
-and kimi-k2.6, in that order. A model is graded by the first two not made by
+**Judges** (`judges.mjs`) are called through Poe. Since 2026-10-30 the pool in
+`models.mjs` is claude-haiku-5.5, deepseek-v4.1-flash-1017, qwen3.8-flash,
+gpt-5.4-mini and gemini-3.8-flash, in that order: each maker's newest cheap
+model on Poe. Runs judged before then used claude-haiku-5.5, deepseek-v3.2,
+gpt-5-mini, gemini-3-flash and kimi-k2.6; how the two pools compare is in
+[`results/2026-10-30-judges.md`](results/2026-10-30-judges.md). A model is graded by the first two not made by
 its maker, and the next one breaks a split. Each answer gets two passes, and
 the judges in each see different things:
 

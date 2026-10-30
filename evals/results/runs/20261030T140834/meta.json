@@ -1,0 +1,39 @@
+{
+  "run": "20261030T140834",
+  "started": "2026-10-22T05:04:16.508Z",
+  "sha": "e48b2c1",
+  "node": "v24.21.0",
+  "args": {
+    "sha": "e48b2c1-dirty",
+    "resume": "20261030T140834",
+    "judge-only": true,
+    "target": "desk:gemma4:26b-a4b-it-qat",
+    "set": "all",
+    "judge-reps": "1",
+    "budget-usd": "1",
+    "reps": "3",
+    "cases": "",
+    "kinds": "",
+    "run": "",
+    "ollama": "http://127.0.0.1:11434",
+    "extra": "{}",
+    "judge": false,
+    "floor-usd": "5"
+  },
+  "targets": {
+    "desk:gemma4:26b-a4b-it-qat": {
+      "model": "gemma4:26b-a4b-it-qat",
+      "maker": "google",
+      "prompt": {
+        "full": "328344d1a43e",
+        "rules": "0f2877b2b288",
+        "facts": "e293e6a059d8"
+      },
+      "onDesk": true
+    }
+  },
+  "calibration": "Gemma answers of 20261022T050412, regraded by the 2026-10-30 judge pool",
+  "resumed": [
+    "2026-10-30T14:08:42.626Z"
+  ]
+}
