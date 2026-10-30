@@ -37,6 +37,13 @@ if (detach) args.splice(args.indexOf("--detach"), 1);
 const fetchOnly = take("--fetch");
 const publish = take("--publish");
 
+// Run ids reach remote paths and a remote shell, so nothing else gets through.
+const runId = (id) => {
+  if (/^\d{8}T\d{6}$/.test(id ?? "")) return id;
+  console.error(`not a run id: ${id}`);
+  process.exit(1);
+};
+
 const q = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
 const ssh = (script, opts = {}) =>
   spawnSync("ssh", [HOST, "bash", "-s"], {
@@ -65,7 +72,7 @@ function fetchRun(run) {
 }
 
 if (fetchOnly) {
-  fetchRun(fetchOnly);
+  fetchRun(runId(fetchOnly));
   process.exit(0);
 }
 
@@ -75,11 +82,7 @@ if (fetchOnly) {
  * the repo ignores *.log.
  */
 if (publish) {
-  // It goes into a remote shell command, so only run ids get through.
-  if (!/^\d{8}T\d{6}$/.test(publish)) {
-    console.error(`not a run id: ${publish}`);
-    process.exit(1);
-  }
+  runId(publish);
   const out = `evals/results/runs/${publish}`;
   mkdirSync(out, { recursive: true });
   const read = (path) =>
@@ -118,7 +121,7 @@ const sha =
   (git("status", "--porcelain", "--", ...FILES) ? "-dirty" : "");
 const resume = args[args.indexOf("--resume") + 1];
 const run = args.includes("--resume")
-  ? resume
+  ? runId(resume)
   : new Date().toISOString().replace(/[-:]/g, "").slice(0, 15);
 
 execFileSync(
