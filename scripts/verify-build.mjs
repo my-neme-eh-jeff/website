@@ -150,6 +150,44 @@ check("wrangler.jsonc runs the Worker on /api/* only", () => {
   return `Worker on ${first.join(", ")}`;
 });
 
+check(
+  "Durable Objects deploy on the free plan, and Poe has a daily cap",
+  () => {
+    const config = JSON.parse(
+      read("wrangler.jsonc")
+        .split("\n")
+        .filter((l) => !l.trim().startsWith("//"))
+        .join("\n")
+        .replace(/,(\s*[}\]])/g, "$1"),
+    );
+    const main = read(config.main);
+    const sqlite = (config.migrations ?? []).flatMap(
+      (m) => m.new_sqlite_classes ?? [],
+    );
+    const classes = (config.durable_objects?.bindings ?? []).map(
+      (b) => b.class_name,
+    );
+    for (const c of classes) {
+      assert(
+        new RegExp(
+          `export\\s+(class\\s+${c}\\b|\\{[^}]*\\b${c}\\b[^}]*\\})`,
+        ).test(main),
+        `${config.main} doesn't export ${c}, so the deploy fails`,
+      );
+      assert(
+        sqlite.includes(c),
+        `${c} has no new_sqlite_classes migration; the free plan has SQLite-backed Durable Objects only`,
+      );
+    }
+    const cap = config.vars?.POE_DAILY_CAP;
+    assert(
+      /^[1-9]\d*$/.test(cap ?? ""),
+      `POE_DAILY_CAP is ${JSON.stringify(cap)}: the Worker would refuse Poe every time`,
+    );
+    return `${classes.join(", ")}; ${cap} Poe answers a day`;
+  },
+);
+
 check("the best-work pick in context.ts names a project", () => {
   if (!bestWork) return "none picked yet";
   assert(

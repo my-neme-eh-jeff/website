@@ -8,6 +8,9 @@ import {
 import { callPoe, fromPoe } from "./poe";
 import { DESK_STATE_HEADER, deskEvent, relay, untilAnswer } from "./relay";
 
+// Wrangler finds Durable Object classes among the main module's exports.
+export { PoeBudget } from "./poe-budget";
+
 /**
  * `POST /api/chat`, streamed back as NDJSON events:
  *
@@ -40,6 +43,12 @@ interface Env {
   POE_API_KEY?: string;
   POE_LIMIT: RateLimit;
   POE_MODEL: string;
+  /** Poe answers a UTC day, all locations together; counted by POE_BUDGET. */
+  POE_DAILY_CAP: string;
+  POE_BUDGET: {
+    idFromName(name: string): unknown;
+    get(id: unknown): { fetch(input: string): Promise<Response> };
+  };
 }
 
 type Turn = { role: "user" | "assistant"; content: string };
@@ -282,7 +291,7 @@ function deskOrPoe(
 
 /**
  * Poe's answer as the shell's events, after `first`, or null: no key, over
- * POE_LIMIT, or Poe didn't start.
+ * POE_LIMIT or POE_DAILY_CAP, or Poe didn't start.
  */
 async function askPoe(
   env: Env,
@@ -298,6 +307,7 @@ async function askPoe(
     console.log("poe: over POE_LIMIT");
     return null;
   }
+  if (!(await takeFromDailyCap(env))) return null;
 
   const res = await withTimeout(
     "poe",
@@ -309,6 +319,23 @@ async function askPoe(
   return res.body
     .pipeThrough(fromPoe())
     .pipeThrough(relay(asked, { first, stats: false }));
+}
+
+/**
+ * Counts one Poe answer against today's POE_DAILY_CAP. False once it's spent,
+ * and also if the count can't be made: a cap on money fails closed.
+ */
+async function takeFromDailyCap(env: Env): Promise<boolean> {
+  try {
+    const budget = env.POE_BUDGET.get(env.POE_BUDGET.idFromName("poe"));
+    const cap = encodeURIComponent(env.POE_DAILY_CAP);
+    const res = await budget.fetch(`https://poe-budget/take?cap=${cap}`);
+    if (res.status === 204) return true;
+    console.log(`poe: over POE_DAILY_CAP (${res.status})`);
+  } catch (err) {
+    console.log(`poe budget: ${err instanceof Error ? err.name : "failed"}`);
+  }
+  return false;
 }
 
 /**

@@ -52,10 +52,24 @@
       "simple": { "limit": 20, "period": 60 },
     },
   ],
+  // POE_LIMIT is per location, so a script spread over many could still spend
+  // without end. POE_BUDGET is one counter for all of them, per UTC day. Poe
+  // itself can't cap a key: a key spends the whole balance (creator.poe.com
+  // external application guide, read 2026-10-31). The free plan has SQLite-
+  // backed Durable Objects only, 100k requests a day
+  // (developers.cloudflare.com/durable-objects/platform/pricing, 2026-10-31).
+  "durable_objects": {
+    "bindings": [{ "name": "POE_BUDGET", "class_name": "PoeBudget" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PoeBudget"] }],
   // POE_API_KEY is a secret, set with `wrangler secret put` on the desk.
   "vars": {
     "DESK_MODEL": "gemma4:26b-a4b-it-qat",
     "POE_MODEL": "ds-v4.1-flash-1017",
+    // An answer cost about $0.002, $0.005 with the longest history the
+    // terminal sends, at ds-v4.1-flash-1017's price on api.poe.com/v1/models
+    // (2026-10-31): $0.60-1.50 a day at most.
+    "POE_DAILY_CAP": "300",
   },
   "routes": [
     {
