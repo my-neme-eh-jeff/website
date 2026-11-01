@@ -7,6 +7,8 @@
   "engines-annotation": "Floor set by lighthouse 13.5 (>=22.19). CI and Cloudflare both build on 24 -- see .node-version",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.12.1",
+  "packageManager-annotation": "Workers Builds installs with this pnpm; without it, its image default, 9.10.0 (developers.cloudflare.com/workers/ci-cd/builds/build-image, read 2026-11-01). Change it together with version: in .github/workflows/ci.yml: pnpm/action-setup fails CI when the two differ.",
   "scripts": {
     "build": "qwik build && node scripts/csp.mjs",
     "build.client": "vite build",
