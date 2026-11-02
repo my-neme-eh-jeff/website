@@ -108,6 +108,31 @@ check("dist/404.html exists at the exact path Cloudflare serves", () => {
   );
 });
 
+check("every HTML file starts with a UTF-8 byte order mark", () => {
+  const BOM = Buffer.from([0xef, 0xbb, 0xbf]);
+  const files = readdirSync(p("dist"), { recursive: true }).filter((f) =>
+    f.endsWith(".html"),
+  );
+  let latest = { end: 0, file: "" };
+  for (const file of files) {
+    const bytes = readFileSync(p("dist", file));
+    assert(
+      bytes.subarray(0, 3).equals(BOM),
+      `${file} has no byte order mark. Cloudflare sends no charset, and a ` +
+        "browser looks for <meta charset> only in the first 1,024 bytes. " +
+        "scripts/charset.mjs adds it: is it still in `pnpm run build`?",
+    );
+    const at = bytes.indexOf('charset="utf-8">');
+    assert(at > 0, `${file}: no <meta charset="utf-8">`);
+    const end = at - BOM.length + 'charset="utf-8">'.length;
+    if (end > latest.end) latest = { end, file };
+  }
+  return (
+    `${files.length} files; without it, <meta charset> would end at byte ` +
+    `${latest.end.toLocaleString("en")} of ${latest.file}`
+  );
+});
+
 check("sitemap.xml excludes the 404 page", () => {
   const locs = [
     ...read("dist", "sitemap.xml").matchAll(/<loc>([^<]*)<\/loc>/g),
@@ -1126,6 +1151,30 @@ check(
     return `${pages.length} pages, ${scripts} inline scripts, each allowed by hash`;
   },
 );
+
+// Inside a <script>, "<!--" and then "<script" make the parser skip the next
+// </script>, so the rest of the page turns into script text and nothing
+// resumes. Qwik escapes only "</" in the state it writes: see outputString in
+// node_modules/@qwik.dev/core/dist/core.mjs (2.0.0-rc.3 and rc.4).
+check("no inline script holds <!-- and then <script", () => {
+  const files = readdirSync(p("dist"), { recursive: true }).filter((f) =>
+    f.endsWith(".html"),
+  );
+  let scripts = 0;
+  for (const file of files) {
+    for (const [, raw, body] of read("dist", file).matchAll(SCRIPT)) {
+      if (body === "") continue;
+      assert(
+        !/<!--[\s\S]*<script/i.test(body),
+        `${file}: <script${raw.slice(0, 40)}> holds "<!--" and then ` +
+          '"<script", so the rest of the page becomes script text. A post ' +
+          "title or description is the likely source: reword it.",
+      );
+      scripts++;
+    }
+  }
+  return `${scripts} inline scripts in ${files.length} files`;
+});
 
 check("model answers link only KNOWN_HREFS, while streaming too", () => {
   const src = read("src", "components", "terminal", "terminal.tsx");

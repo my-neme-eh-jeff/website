@@ -10,7 +10,7 @@
   "packageManager": "pnpm@10.12.1",
   "packageManager-annotation": "Workers Builds installs with this pnpm; without it, its image default, 9.10.0 (developers.cloudflare.com/workers/ci-cd/builds/build-image, read 2026-11-01). Change it together with version: in .github/workflows/ci.yml: pnpm/action-setup fails CI when the two differ.",
   "scripts": {
-    "build": "qwik build && node scripts/csp.mjs",
+    "build": "qwik build && node scripts/csp.mjs && node scripts/charset.mjs",
     "build.client": "vite build",
     "build.preview": "vite build --ssr src/entry.preview.tsx",
     "build.types": "tsc --incremental --noEmit",
