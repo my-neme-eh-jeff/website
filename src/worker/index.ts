@@ -151,6 +151,24 @@ function parseTurns(body: unknown): Turn[] | null {
   return turns;
 }
 
+/**
+ * Who a rate limit counts: an IPv6 visitor by their /64, the block one host is
+ * usually given, so a fresh address per request isn't a fresh limit.
+ */
+function limitKey(ip: string | null): string {
+  if (!ip) return "unknown";
+  if (!ip.includes(":") || ip.includes(".")) return ip;
+  const [head = "", tail] = ip.split("::");
+  const left = head ? head.split(":") : [];
+  const right = tail ? tail.split(":") : [];
+  const gap = tail === undefined ? 0 : 8 - left.length - right.length;
+  const groups = [...left, ...Array<string>(gap).fill("0"), ...right];
+  return `${groups
+    .slice(0, 4)
+    .map((g) => parseInt(g, 16).toString(16))
+    .join(":")}::/64`;
+}
+
 /** The only visitor fact the desk's log gets. /privacy/ promises exactly this. */
 function visitorHeaders(request: Request): Record<string, string> {
   const country = (request as { cf?: { country?: string } }).cf?.country;
@@ -194,7 +212,7 @@ async function chat(request: Request, env: Env): Promise<Response> {
     return json({ error: "unsupported_media_type" }, 415);
   }
 
-  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const ip = limitKey(request.headers.get("cf-connecting-ip"));
   if (!(await env.CHAT_LIMIT.limit({ key: ip })).success) {
     return json({ error: "rate_limited" }, 429);
   }
@@ -388,7 +406,7 @@ async function ping(request: Request, env: Env): Promise<Response> {
   if (request.method !== "GET") {
     return json({ error: "method_not_allowed" }, 405, { allow: "GET" });
   }
-  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const ip = limitKey(request.headers.get("cf-connecting-ip"));
   if (!(await env.PING_LIMIT.limit({ key: ip })).success) {
     return json({ error: "rate_limited" }, 429);
   }
