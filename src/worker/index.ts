@@ -7,6 +7,7 @@ import {
 } from "../content/chat";
 import { callPoe, fromPoe } from "./poe";
 import { DESK_STATE_HEADER, deskEvent, relay, untilAnswer } from "./relay";
+import { visitorHeaders } from "./visitor";
 
 // Wrangler finds Durable Object classes among the main module's exports.
 export { PoeBudget } from "./poe-budget";
@@ -167,12 +168,6 @@ function limitKey(ip: string | null): string {
     .slice(0, 4)
     .map((g) => parseInt(g, 16).toString(16))
     .join(":")}::/64`;
-}
-
-/** The only visitor fact the desk's log gets. /privacy/ promises exactly this. */
-function visitorHeaders(request: Request): Record<string, string> {
-  const country = (request as { cf?: { country?: string } }).cf?.country;
-  return country ? { "x-visitor-country": country } : {};
 }
 
 function callDesk(

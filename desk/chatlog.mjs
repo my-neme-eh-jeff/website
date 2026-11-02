@@ -57,6 +57,13 @@ function fromTrace(o) {
   return {
     ts: new Date(ms(http.startTimeUnixNano)).toISOString(),
     country: a["geo.country.iso_code"] ?? null,
+    visitor: {
+      ip: a["client.address"] ?? null,
+      city: a["geo.locality.name"] ?? null,
+      network: a["visitor.network"] ?? null,
+      device: device(a["user_agent.original"]),
+      page: a["http.request.header.referer"] ?? null,
+    },
     question: turns.at(-1)?.content ?? "",
     history: turns.slice(0, -1),
     answer: text(out),
@@ -103,6 +110,29 @@ if (entries.length === 0) {
   process.exit(0);
 }
 
+/** "iPhone Safari", "Mac Chrome (headless)": enough to tell devices apart. */
+function device(ua) {
+  if (!ua) return null;
+  const os = [
+    [/iPhone/, "iPhone"],
+    [/iPad/, "iPad"],
+    [/Android/, "Android"],
+    [/Macintosh|Mac OS X/, "Mac"],
+    [/Windows/, "Windows"],
+    [/Linux/, "Linux"],
+  ].find(([re]) => re.test(ua))?.[1];
+  const browser = [
+    [/Edg\//, "Edge"],
+    [/OPR\//, "Opera"],
+    [/Firefox\/|FxiOS/, "Firefox"],
+    [/HeadlessChrome/, "Chrome (headless)"],
+    [/Chrome\/|CriOS/, "Chrome"],
+    [/Safari\//, "Safari"],
+    [/curl|python|node|bot|crawl|spider/i, "script or bot"],
+  ].find(([re]) => re.test(ua))?.[1];
+  return [os, browser].filter(Boolean).join(" ") || ua.slice(0, 40);
+}
+
 const dim = (s) => (process.stdout.isTTY ? `\x1b[2m${s}\x1b[0m` : s);
 const bold = (s) => (process.stdout.isTTY ? `\x1b[1m${s}\x1b[0m` : s);
 
@@ -113,9 +143,13 @@ for (const e of entries) {
     e.stats?.genMs > 0
       ? `${(e.stats.tokens / (e.stats.genMs / 1000)).toFixed(1)} tok/s`
       : "";
+  const v = e.visitor ?? {};
   const head = [
     when,
-    where,
+    [where, v.city].filter(Boolean).join(" "),
+    v.network,
+    v.device,
+    v.ip,
     e.outcome === "ok" ? "" : e.outcome.toUpperCase(),
     `${(e.totalMs / 1000).toFixed(1)}s`,
     speed,

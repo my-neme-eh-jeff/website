@@ -35,7 +35,49 @@ const IN_USE_MS = Number(process.env.IN_USE_MS ?? 120_000);
 const RETENTION_DAYS = 30;
 const DAY_MS = 86_400_000;
 
-const COUNTRY_HEADER = "x-visitor-country";
+/**
+ * The x-visitor-* headers the Worker sends (src/worker/visitor.ts), as span
+ * attributes. Only the Worker reaches this port, so they're taken as given;
+ * verify checks both name the same facts.
+ */
+const VISITOR = {
+  "x-visitor-country": "geo.country.iso_code",
+  "x-visitor-ip": "client.address",
+  "x-visitor-user-agent": "user_agent.original",
+  "x-visitor-language": "http.request.header.accept-language",
+  "x-visitor-page": "http.request.header.referer",
+  "x-visitor-city": "geo.locality.name",
+  "x-visitor-region": "visitor.region",
+  "x-visitor-postal": "geo.postal_code",
+  "x-visitor-latitude": "geo.location.lat",
+  "x-visitor-longitude": "geo.location.lon",
+  "x-visitor-timezone": "visitor.timezone",
+  "x-visitor-asn": "visitor.asn",
+  "x-visitor-network": "visitor.network",
+};
+const NUMERIC = new Set([
+  "geo.location.lat",
+  "geo.location.lon",
+  "visitor.asn",
+]);
+
+function visitorOf(headers) {
+  const out = {};
+  for (const [header, key] of Object.entries(VISITOR)) {
+    const raw = headers[header];
+    if (typeof raw !== "string" || !raw) continue;
+    let v = raw;
+    try {
+      v = decodeURIComponent(raw);
+    } catch {
+      // Not percent-encoded after all: keep it as sent.
+    }
+    v = v.slice(0, 512);
+    const n = Number(v);
+    out[key] = NUMERIC.has(key) && Number.isFinite(n) ? n : v;
+  }
+  return out;
+}
 /** DESK_STATE_HEADER in src/worker/relay.ts; verify checks they match. */
 const STATE_HEADER = "x-desk-model";
 /** SENTINEL in src/worker/follow-ups.ts; verify checks they match. */
@@ -277,7 +319,7 @@ function trace(x) {
       "url.path": "/api/chat",
       "http.response.status_code": x.status,
       "error.type": x.status >= 500 ? String(x.status) : null,
-      "geo.country.iso_code": x.country,
+      ...x.visitor,
       "desk.state": x.state,
       "desk.outcome": x.outcome,
       // Asked but never sent to Ollama, as when it was busy.
@@ -385,11 +427,13 @@ async function relay(req, res) {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const turns = messages.filter((m) => m.role !== "system");
 
+  const visitor = visitorOf(req.headers);
   const x = {
     arrived,
     ended: null,
     parent: traceparent(req.headers.traceparent),
-    country: req.headers[COUNTRY_HEADER] ?? null,
+    country: visitor["geo.country.iso_code"] ?? null,
+    visitor,
     body,
     messages,
     state: null,
