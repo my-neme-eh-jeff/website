@@ -1083,12 +1083,25 @@ check(
     const pages = readdirSync(p("dist"), { recursive: true }).filter((f) =>
       f.endsWith("index.html"),
     );
+    const metaPolicy = (html) => {
+      const m =
+        /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/.exec(
+          html,
+        );
+      assert(m, "404.html: no Content-Security-Policy <meta>");
+      assert(
+        m.index < html.search(/<script[\s>]/i),
+        "404.html: a <script> comes before its CSP <meta>, so runs unchecked",
+      );
+      return m[1];
+    };
     const rendered = new Map();
     let scripts = 0;
-    for (const page of pages) {
+    for (const page of [...pages, "404.html"]) {
       const html = read("dist", page);
-      const path = `/${page.slice(0, -"index.html".length)}`;
-      const policy = csp.get(path);
+      const path =
+        page === "404.html" ? page : `/${page.slice(0, -"index.html".length)}`;
+      const policy = page === "404.html" ? metaPolicy(html) : csp.get(path);
       assert(policy, `${page}: no Content-Security-Policy rule for ${path}`);
       const scriptSrc =
         policy
@@ -1148,7 +1161,7 @@ check(
       "Component-rendered inline scripts differ between pages, so one would " +
         "run under another page's policy after a client-side navigation.",
     );
-    return `${pages.length} pages, ${scripts} inline scripts, each allowed by hash`;
+    return `${pages.length} pages and 404.html, ${scripts} inline scripts, each allowed by hash`;
   },
 );
 

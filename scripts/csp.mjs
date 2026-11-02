@@ -4,11 +4,16 @@
  *
  * A static site has no server to add a nonce, so each page allows its own
  * inline scripts by sha256 hash. One rule per page: Cloudflare ignores a
- * _headers line over 2,000 characters. 404.html gets none: it is served at
- * every unknown path, and a response matching two policies must satisfy both.
+ * _headers line over 2,000 characters. 404.html is served at every unknown
+ * path, which no _headers rule can single out, so its policy is a <meta> tag.
  */
 import { createHash } from "node:crypto";
-import { appendFileSync, readFileSync, readdirSync } from "node:fs";
+import {
+  appendFileSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -49,10 +54,7 @@ const policy = (hashes) =>
     "frame-ancestors 'none'",
   ].join("; ");
 
-const rules = [];
-for (const file of readdirSync(DIST, { recursive: true }).sort()) {
-  if (!file.endsWith("index.html")) continue;
-  const html = readFileSync(join(DIST, file), "utf8");
+function hashesOf(html) {
   const hashes = new Set();
   for (const [, raw, body] of html.matchAll(SCRIPT)) {
     const attrs = attrsOf(raw);
@@ -63,9 +65,34 @@ for (const file of readdirSync(DIST, { recursive: true }).sort()) {
       `'sha256-${createHash("sha256").update(body).digest("base64")}'`,
     );
   }
-  const path = `/${file.slice(0, -"index.html".length)}`;
-  rules.push(`${path}\n  ${HEADER}: ${policy([...hashes].sort())}`);
+  return [...hashes].sort();
 }
+
+const rules = [];
+for (const file of readdirSync(DIST, { recursive: true }).sort()) {
+  if (!file.endsWith("index.html")) continue;
+  const html = readFileSync(join(DIST, file), "utf8");
+  const path = `/${file.slice(0, -"index.html".length)}`;
+  rules.push(`${path}\n  ${HEADER}: ${policy(hashesOf(html))}`);
+}
+
+const notFound = join(DIST, "404.html");
+const page = readFileSync(notFound, "utf8");
+const head = /<head\b(?:[^>"']|"[^"]*"|'[^']*')*>/i.exec(page);
+if (!head) throw new Error("csp: no <head> in dist/404.html");
+if (/http-equiv=["']?content-security-policy/i.test(page)) {
+  throw new Error("csp: dist/404.html already has a policy");
+}
+// Browsers ignore frame-ancestors in a <meta> policy; X-Frame-Options covers it.
+const meta = policy(hashesOf(page))
+  .split("; ")
+  .filter((d) => !d.startsWith("frame-ancestors "))
+  .join("; ");
+const at = head.index + head[0].length;
+writeFileSync(
+  notFound,
+  `${page.slice(0, at)}<meta http-equiv="${HEADER}" content="${meta}">${page.slice(at)}`,
+);
 
 appendFileSync(
   join(DIST, "_headers"),
@@ -73,4 +100,6 @@ appendFileSync(
     rules.join("\n") +
     "\n",
 );
-console.log(`csp: ${rules.length} page policies written to dist/_headers`);
+console.log(
+  `csp: ${rules.length} page policies written to dist/_headers, one to dist/404.html`,
+);
