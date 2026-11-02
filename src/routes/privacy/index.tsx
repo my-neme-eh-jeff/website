@@ -6,7 +6,7 @@ import { profile } from "~/content/profile";
 import { ld, privacyGraph, seoMeta } from "~/content/seo";
 
 // Each sentence states how the site behaves: change it with that behaviour.
-const UPDATED = "2026-10-19";
+const UPDATED = "2026-11-02";
 
 export default component$(() => {
   return (
@@ -68,8 +68,8 @@ export default component$(() => {
         own computer. It answers from my CV and can be wrong. When you ask one,
         your question and up to {MAX_TURNS - 1} earlier messages of the
         conversation pass through Cloudflare to that computer. Cloudflare uses
-        your IP address only to limit how many questions one network can send
-        per minute; my computer never receives it.
+        your IP address to limit how many questions one network can send per
+        minute, and passes it to my computer with the details below.
       </p>
       <p>
         If my computer is off, busy, unreachable or too slow to start an answer,
@@ -80,10 +80,12 @@ export default component$(() => {
       </p>
       <p>
         My computer keeps a log of each exchange: your question, the earlier
-        turns, the answer and the model’s working notes, the time and your
-        country. I read it to see what people ask and to improve the answers.
-        Each log is deleted after 30 days. Please don’t type anything sensitive.
-        The chat is optional; the rest of the site works without it.
+        turns, the answer and the model’s working notes, the time, and details
+        of your connection: your IP address, country and approximate location,
+        time zone, network, browser, language and the page you asked from. I
+        read it to see what people ask and to improve the answers. Each log is
+        deleted after 30 days. Please don’t type anything sensitive. The chat is
+        optional; the rest of the site works without it.
       </p>
 
       <h2 class="pt-6">Why, and who else</h2>
@@ -98,12 +100,12 @@ export default component$(() => {
       <h2 class="pt-6">Your rights</h2>
       <p>
         You can ask me to show, correct or delete chat records about you. Tell
-        me roughly when you chatted and what you asked, because I don’t know who
-        you are. You can also complain to your data protection authority.
+        me roughly when you chatted and what you asked. You can also complain to
+        your data protection authority.
       </p>
 
       <p class="text-muted pt-6 text-sm">
-        Last updated <time dateTime={UPDATED}>19 October 2026</time>.
+        Last updated <time dateTime={UPDATED}>2 November 2026</time>.
       </p>
     </div>
   );
