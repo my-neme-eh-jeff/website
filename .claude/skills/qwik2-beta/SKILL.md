@@ -71,8 +71,10 @@ without an import. A `sync$` cannot close over state: it keeps what it needs in
 Each cost real time, and none is stated accurately on the docs site.
 
 - **`preloader: false` silently disables every `<Link>` prefetch.** Link hands
-  bundle names to the preloader, and core drops them until the preloader module
-  has set `globalThis.qPreload`. Measured cost and the trade: `src/entry.ssr.tsx`.
+  bundle names to the preloader. Until the preloader module sets
+  `globalThis.qPreload`, core queues them in `globalThis.qPreloadQueue` (rc.4;
+  rc.3 dropped them), and without the preloader nothing ever drains the queue.
+  Measured cost and the trade: `src/entry.ssr.tsx`.
   `grep -n -A3 'const requestPreload' node_modules/@qwik.dev/core/dist/core.mjs`
 - **`maxIdlePreloads` caps concurrency, not volume, and `0` is ignored.**
   `grep -n 'options.maxIdlePreloads' node_modules/@qwik.dev/core/dist/server.mjs`
@@ -91,16 +93,19 @@ Each cost real time, and none is stated accurately on the docs site.
   handler's `updateCallbackDone.then` does not work: Chrome has already
   captured the new page by then.
 - **A JSX expression only becomes a signal binding if it has no function or
-  method call, names nothing from module scope, and is at most 150 characters.**
-  Otherwise rc.3 evaluates it in the render, which subscribes the whole
-  component, so it re-runs on every change -- silently. "Module scope" is by
+  method call, names nothing from module scope, and is at most 150 characters
+  as compiled** (`s.value ? "x" : "y"` counts as `p0.value?"x":"y"`). Otherwise
+  it is evaluated in the render, which subscribes the whole component, so it
+  re-runs on every change -- silently. Tested on rc.4 (optimizer 2.1.0-rc.10)
+  on 2026-11-02: 150 binds, 151 renders. "Module scope" is by
   name: a local `head` in a route file that also exports `head` counts, and
   blocks every expression that uses it. A long Tailwind ternary is enough to
   trip the length limit. The bindings a page got are its serialised functions:
   `grep -o '<script q:func="qwik/json">.*</script>' dist/index.html`. For the
   root layout this is a `pnpm run verify` invariant. To see compiled output,
-  `pnpm run build.client` (4 s) and read `dist/build/`; `createOptimizer` is in
-  `optimizer.d.ts` but not exported at runtime:
+  `pnpm run build.client` (4 s) and read `dist/build/`, or, since rc.4, run
+  one component through `(await createOptimizer()).transformModules(...)`: a
+  binding appears as a `_hf0_str` constant.
   `node --input-type=module -e 'import("@qwik.dev/core/optimizer").then(m=>console.log(Object.keys(m)))'`
 - **The preloader's own two links cost first paint even with `ssrPreloads: 0`**
   (the default). The server always puts the preloader module and the bundle

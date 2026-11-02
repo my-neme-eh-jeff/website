@@ -49,7 +49,10 @@ before you write the code:
   silently installed beta.39. verify fails on a caret, but only after the install.
 - **Generated geometry is seeded, never `Math.random()`.** SSG runs at build
   time, so random rewrites the HTML every deploy. Unchecked;
-  `grep -rn 'Math.random' src` should print nothing.
+  `grep -rn 'Math.random' src` should print nothing. Qwik's own `q:instance`
+  is random anyway, so no two builds are byte-identical and a diff of `dist`
+  can't show "nothing changed":
+  `grep -n 'instanceHash\$ = randomStr' node_modules/@qwik.dev/core/dist/server.mjs`.
 - **Images on a page are WebP.** Keep the source in `public/` and import it
   with `?jsx`, which emits a WebP srcset under `/assets/`;
   `src/routes/blog/index.tsx` is the example. og:image is the one exception: it

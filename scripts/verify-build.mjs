@@ -2544,7 +2544,7 @@ check("every page has an empty route announcer", () => {
 });
 
 /*
- * Qwik rc.3 compiles a JSX read to a binding in the page's q:func script,
+ * Qwik rc.3 and rc.4 compile a JSX read to a binding in the page's q:func script,
  * except an expression with a call, a module-scope name (even shadowed) or
  * over 150 characters: that is evaluated in the render, which subscribes the
  * whole layout. Silently, so a missing binding here is the only sign.
