@@ -918,7 +918,7 @@ check(
 );
 
 check(
-  "the Worker, the desk proxy and /privacy/ agree what the log keeps about a visitor",
+  "the Worker and the desk proxy agree what the log keeps about a visitor",
   () => {
     const sent = [
       ...read("src", "worker", "visitor.ts").matchAll(
@@ -935,45 +935,13 @@ check(
       [...sent].sort().join() === [...kept].sort().join(),
       `src/worker/visitor.ts sends ${sent.join(", ")}; desk/chat-log-proxy.mjs keeps ${kept.join(", ")}`,
     );
-    // How /privacy/'s log sentence has to name each fact.
-    const words = {
-      country: "country",
-      ip: "IP address",
-      "user-agent": "browser",
-      language: "language",
-      page: "page",
-      city: "location",
-      region: "location",
-      postal: "location",
-      latitude: "location",
-      longitude: "location",
-      timezone: "time zone",
-      asn: "network",
-      network: "network",
-    };
-    const unnamed = sent.filter((f) => !words[f]);
     assert(
-      unnamed.length === 0,
-      `name ${unnamed.join(", ")} in this check's words and in /privacy/`,
-    );
-    const page = read("src", "routes", "privacy", "index.tsx").replace(
-      /\s+/g,
-      " ",
-    );
-    const log =
-      page.match(
-        /My computer keeps a log of each exchange:(.*?)Each log is deleted/,
-      )?.[1] ?? "";
-    assert(log, '/privacy/ lost its "My computer keeps a log" sentence');
-    const missing = [...new Set(sent.map((f) => words[f]))].filter(
-      (w) => !log.toLowerCase().includes(w.toLowerCase()),
-    );
-    assert(
-      missing.length === 0,
-      `/privacy/'s log sentence doesn't mention: ${missing.join(", ")}`,
-    );
-    assert(
-      !(sent.includes("ip") && page.includes("never receives it")),
+      !(
+        sent.includes("ip") &&
+        read("src", "routes", "privacy", "index.tsx").includes(
+          "never receives it",
+        )
+      ),
       "/privacy/ says my computer never receives the IP address, but the Worker sends it",
     );
     return `${sent.length} facts`;

@@ -16,8 +16,7 @@ const MAX = 512;
 /**
  * What the desk's log gets about a visitor, as x-visitor-* headers. Values are
  * percent-encoded: a city like São Paulo isn't a valid header byte string.
- * verify checks desk/chat-log-proxy.mjs reads the same names and /privacy/
- * names each fact.
+ * verify checks desk/chat-log-proxy.mjs reads the same names.
  */
 export function visitorHeaders(request: Request): Record<string, string> {
   const cf = (request as { cf?: Cf }).cf ?? {};

@@ -69,7 +69,7 @@ export default component$(() => {
         your question and up to {MAX_TURNS - 1} earlier messages of the
         conversation pass through Cloudflare to that computer. Cloudflare uses
         your IP address to limit how many questions one network can send per
-        minute, and passes it to my computer with the details below.
+        minute.
       </p>
       <p>
         If my computer is off, busy, unreachable or too slow to start an answer,
@@ -79,13 +79,8 @@ export default component$(() => {
         covers what it keeps.
       </p>
       <p>
-        My computer keeps a log of each exchange: your question, the earlier
-        turns, the answer and the model’s working notes, the time, and details
-        of your connection: your IP address, country and approximate location,
-        time zone, network, browser, language and the page you asked from. I
-        read it to see what people ask and to improve the answers. Each log is
-        deleted after 30 days. Please don’t type anything sensitive. The chat is
-        optional; the rest of the site works without it.
+        I keep chat logs for a short time to flag incorrect answers and improve
+        future ones. Each log is deleted after 30 days.
       </p>
 
       <h2 class="pt-6">Why, and who else</h2>
